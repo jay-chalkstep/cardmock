@@ -85,7 +85,8 @@ export default function ClientDetailPage() {
   const [loading, setLoading] = useState(true);
   const [loadingChildren, setLoadingChildren] = useState(false);
   const [loadingUsers, setLoadingUsers] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'contracts' | 'projects' | 'users'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'contracts' | 'projects' | 'users' | 'children'>('overview');
+  const [parentClient, setParentClient] = useState<Client | null>(null);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [showAssignUserModal, setShowAssignUserModal] = useState(false);
 
@@ -104,6 +105,7 @@ export default function ClientDetailPage() {
 
   useEffect(() => {
     if (clientId && organization?.id && isAdmin) {
+      setParentClient(null); // Clear parent client when switching clients
       fetchClient();
       fetchContracts();
       fetchProjects();
@@ -125,7 +127,21 @@ export default function ClientDetailPage() {
       const response = await fetch(`/api/clients/${clientId}`);
       if (!response.ok) throw new Error('Failed to fetch client');
       const result = await response.json();
-      setClient(result.data?.client || result.client);
+      const fetchedClient = result.data?.client || result.client;
+      setClient(fetchedClient);
+      
+      // If this client has a parent, fetch the parent client details
+      if (fetchedClient?.parent_client_id) {
+        try {
+          const parentResponse = await fetch(`/api/clients/${fetchedClient.parent_client_id}`);
+          if (parentResponse.ok) {
+            const parentResult = await parentResponse.json();
+            setParentClient(parentResult.data?.client || parentResult.client);
+          }
+        } catch (error) {
+          console.error('Error fetching parent client:', error);
+        }
+      }
     } catch (error) {
       console.error('Error fetching client:', error);
       showToast('Failed to load client', 'error');
@@ -229,7 +245,28 @@ export default function ClientDetailPage() {
           ← Back to Clients
         </button>
       </div>
+      
+      {/* Parent Client Indicator in Context Panel */}
+      {client.parent_client_id && parentClient && (
+        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+          <div className="text-xs font-medium text-blue-900 mb-1">Secondary Client of:</div>
+          <button
+            onClick={() => router.push(`/clients/${parentClient.id}`)}
+            className="text-sm text-blue-600 hover:text-blue-800 font-semibold hover:underline"
+          >
+            {parentClient.name}
+          </button>
+        </div>
+      )}
+      
       <h2 className="text-lg font-semibold mb-2">{client.name}</h2>
+      {client.parent_client_id && (
+        <div className="mb-2">
+          <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 font-medium">
+            Secondary Client
+          </span>
+        </div>
+      )}
       <div className="space-y-2 text-sm">
         {client.email && (
           <div>
@@ -254,6 +291,7 @@ export default function ClientDetailPage() {
     { id: 'overview', label: 'Overview' },
     { id: 'contracts', label: `Contracts (${contracts.length})` },
     { id: 'projects', label: `Projects (${projects.length})` },
+    ...(childClients.length > 0 ? [{ id: 'children' as const, label: `Secondary Clients (${childClients.length})` }] : []),
     { id: 'users', label: `Assigned Users (${assignedUsers.length})` },
   ];
 
@@ -394,6 +432,43 @@ export default function ClientDetailPage() {
             )}
           </div>
         );
+      case 'children':
+        return (
+          <div className="p-6">
+            <h3 className="text-lg font-semibold mb-4">Secondary Clients</h3>
+            {loadingChildren ? (
+              <div className="text-center text-gray-500 py-8">Loading secondary clients...</div>
+            ) : childClients.length === 0 ? (
+              <p className="text-gray-500">No secondary clients found for this client.</p>
+            ) : (
+              <div className="space-y-2">
+                {childClients.map((child) => (
+                  <div
+                    key={child.id}
+                    onClick={() => router.push(`/clients/${child.id}`)}
+                    className="p-4 border border-gray-200 rounded-md hover:bg-gray-50 cursor-pointer"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <h4 className="font-medium text-gray-900">{child.name}</h4>
+                        <div className="mt-1 space-y-1 text-sm text-gray-600">
+                          {child.email && <div>Email: {child.email}</div>}
+                          {child.phone && <div>Phone: {child.phone}</div>}
+                          {child.ein && <div>EIN: {child.ein}</div>}
+                        </div>
+                      </div>
+                      <div className="ml-4">
+                        <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
+                          Secondary Client
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
       case 'users':
         return (
           <div className="p-6">
@@ -486,6 +561,25 @@ export default function ClientDetailPage() {
 
   const previewArea = (
     <div className="flex flex-col h-full">
+      {/* Parent Client Banner - Show prominently if this is a child client */}
+      {client.parent_client_id && parentClient && (
+        <div className="bg-blue-50 border-b border-blue-200 px-6 py-3">
+          <div className="flex items-center gap-2 text-sm">
+            <span className="font-medium text-blue-900">Secondary Client of:</span>
+            <button
+              onClick={() => router.push(`/clients/${parentClient.id}`)}
+              className="text-blue-600 hover:text-blue-800 font-semibold hover:underline"
+            >
+              {parentClient.name}
+            </button>
+            <span className="text-blue-600">•</span>
+            {parentClient.email && (
+              <span className="text-blue-700">{parentClient.email}</span>
+            )}
+          </div>
+        </div>
+      )}
+      
       <div className="border-b border-gray-200 bg-white">
         <div className="flex gap-1 px-4">
           {tabs.map((tab) => (

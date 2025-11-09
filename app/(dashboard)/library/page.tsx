@@ -21,6 +21,7 @@ import DeleteFolderModal from '@/components/folders/DeleteFolderModal';
 import FolderSelector from '@/components/folders/FolderSelector';
 import BrandCard from '@/components/brand/BrandCard';
 import BrandDetailModal from '@/components/brand/BrandDetailModal';
+import BrandPreview from '@/components/brand/BrandPreview';
 import TemplateUploadModal from '@/components/templates/TemplateUploadModal';
 import { Search, Plus, Loader2, Upload, Library, Package, LayoutTemplate, Images } from 'lucide-react';
 import { createFolder, renameFolder, deleteFolder } from '@/app/actions/folders';
@@ -113,6 +114,8 @@ function LibraryPageContent() {
   // Update URL when tab changes
   const handleTabChange = (tab: LibraryTab) => {
     setActiveTab(tab);
+    setSelectedBrand(null); // Clear selected brand when switching tabs
+    setSelectedIds([]); // Clear selected assets when switching tabs
     router.push(`/library?tab=${tab}`, { scroll: false });
   };
 
@@ -671,10 +674,11 @@ function LibraryPageContent() {
                   <button
                     onClick={() => {
                       setSelectedBrand(brand);
-                      setIsBrandModalOpen(true);
                     }}
                     disabled={isDeleting}
-                    className="w-full text-left disabled:opacity-50"
+                    className={`w-full text-left disabled:opacity-50 ${
+                      selectedBrand?.id === brand.id ? 'ring-2 ring-blue-500' : ''
+                    }`}
                   >
                     {/* Logo preview */}
                     <div className="h-40 bg-gray-50 flex items-center justify-center p-4 group-hover:bg-gray-100 transition-colors">
@@ -864,6 +868,15 @@ function LibraryPageContent() {
         })()}
       </div>
     </div>
+  ) : activeTab === 'brands' && selectedBrand ? (
+    <BrandPreview
+      brand={selectedBrand}
+      onDelete={async (brandId) => {
+        await handleDeleteBrand(brandId, selectedBrand.company_name);
+        setSelectedBrand(null);
+      }}
+      showActions={true}
+    />
   ) : null;
 
   return (
@@ -924,7 +937,9 @@ function LibraryPageContent() {
           </div>
         }
         listViewWidth={activeTab === 'brands' || activeTab === 'templates' ? 'flex' : 'fixed'}
-        previewArea={activeTab === 'assets' ? <PreviewArea>{previewContent}</PreviewArea> : null}
+        previewArea={(activeTab === 'assets' || activeTab === 'brands') && previewContent ? (
+          <PreviewArea>{previewContent}</PreviewArea>
+        ) : null}
       />
 
       {/* Modals */}

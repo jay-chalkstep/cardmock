@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { X, Upload, FileText } from 'lucide-react';
 
 interface Client {
   id: string;
@@ -24,9 +24,7 @@ interface NewContractModalProps {
     parent_contract_id?: string;
     title?: string;
     description?: string;
-    start_date?: string;
-    end_date?: string;
-  }) => Promise<void>;
+  }) => Promise<{ id: string }>;
 }
 
 export default function NewContractModal({ isOpen, onClose, onCreate }: NewContractModalProps) {
@@ -39,9 +37,10 @@ export default function NewContractModal({ isOpen, onClose, onCreate }: NewContr
   const [parentContractId, setParentContractId] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
   const [loading, setLoading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -85,6 +84,31 @@ export default function NewContractModal({ isOpen, onClose, onCreate }: NewContr
 
   if (!isOpen) return null;
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      const allowedTypes = [
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
+        'application/msword', // .doc
+      ];
+      
+      if (!allowedTypes.includes(file.type)) {
+        alert('Only Word documents (.docx, .doc) are allowed');
+        return;
+      }
+      
+      // Validate file size (10MB max)
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      if (file.size > maxSize) {
+        alert('File size must be less than 10MB');
+        return;
+      }
+      
+      setSelectedFile(file);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!clientId) return;
@@ -92,16 +116,41 @@ export default function NewContractModal({ isOpen, onClose, onCreate }: NewContr
 
     setLoading(true);
     try {
-      await onCreate({
+      // Create contract first
+      const result = await onCreate({
         client_id: clientId,
         project_id: projectId || undefined,
         type,
         parent_contract_id: type === 'amendment' ? parentContractId : undefined,
         title: title.trim() || undefined,
         description: description.trim() || undefined,
-        start_date: startDate || undefined,
-        end_date: endDate || undefined,
       });
+      
+      // If a file was selected, upload it
+      if (selectedFile && result?.id) {
+        setUploading(true);
+        try {
+          const formData = new FormData();
+          formData.append('file', selectedFile);
+
+          const uploadResponse = await fetch(`/api/contracts/${result.id}/documents`, {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (!uploadResponse.ok) {
+            const error = await uploadResponse.json();
+            throw new Error(error.message || 'Failed to upload document');
+          }
+        } catch (uploadError: any) {
+          console.error('Error uploading document:', uploadError);
+          // Contract was created but upload failed - show warning but don't fail
+          alert(`Contract created but document upload failed: ${uploadError.message}`);
+        } finally {
+          setUploading(false);
+        }
+      }
+      
       // Reset form
       setClientId('');
       setProjectId('');
@@ -109,8 +158,10 @@ export default function NewContractModal({ isOpen, onClose, onCreate }: NewContr
       setParentContractId('');
       setTitle('');
       setDescription('');
-      setStartDate('');
-      setEndDate('');
+      setSelectedFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
       onClose();
     } catch (error) {
       console.error('Error creating contract:', error);
@@ -245,30 +296,50 @@ export default function NewContractModal({ isOpen, onClose, onCreate }: NewContr
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="startDate" className="block text-sm font-medium mb-1">
-                Start Date
-              </label>
+          <div>
+            <label htmlFor="document" className="block text-sm font-medium mb-1">
+              Contract Document
+            </label>
+            <div className="space-y-2">
               <input
-                id="startDate"
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                ref={fileInputRef}
+                id="document"
+                type="file"
+                accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                onChange={handleFileSelect}
+                className="hidden"
               />
-            </div>
-            <div>
-              <label htmlFor="endDate" className="block text-sm font-medium mb-1">
-                End Date
-              </label>
-              <input
-                id="endDate"
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full px-4 py-2 border-2 border-dashed border-gray-300 rounded-md hover:border-blue-500 hover:bg-blue-50 transition-colors flex items-center justify-center gap-2"
+              >
+                <Upload size={18} className="text-gray-500" />
+                <span className="text-sm font-medium text-gray-700">
+                  {selectedFile ? selectedFile.name : 'Upload Contract Document'}
+                </span>
+              </button>
+              {selectedFile && (
+                <div className="flex items-center gap-2 p-2 bg-blue-50 border border-blue-200 rounded-md">
+                  <FileText size={16} className="text-blue-600" />
+                  <span className="text-sm text-blue-900 flex-1 truncate">{selectedFile.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedFile(null);
+                      if (fileInputRef.current) {
+                        fileInputRef.current.value = '';
+                      }
+                    }}
+                    className="text-blue-600 hover:text-blue-800"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              )}
+              <p className="text-xs text-gray-500">
+                Word documents (.doc, .docx) only. Max 10MB.
+              </p>
             </div>
           </div>
 
@@ -282,10 +353,10 @@ export default function NewContractModal({ isOpen, onClose, onCreate }: NewContr
             </button>
             <button
               type="submit"
-              disabled={loading || !clientId || (type === 'amendment' && !parentContractId)}
+              disabled={loading || uploading || !clientId || (type === 'amendment' && !parentContractId)}
               className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Creating...' : 'Create Contract'}
+              {uploading ? 'Uploading...' : loading ? 'Creating...' : 'Create Contract'}
             </button>
           </div>
         </form>

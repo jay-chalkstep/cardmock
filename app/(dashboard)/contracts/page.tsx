@@ -132,9 +132,7 @@ export default function ContractsPage() {
     parent_contract_id?: string;
     title?: string;
     description?: string;
-    start_date?: string;
-    end_date?: string;
-  }) => {
+  }): Promise<{ id: string }> => {
     try {
       const response = await fetch('/api/contracts', {
         method: 'POST',
@@ -147,8 +145,10 @@ export default function ContractsPage() {
         throw new Error(error.message || 'Failed to create contract');
       }
 
+      const result = await response.json();
       await fetchContracts();
       showToast('Contract created successfully', 'success');
+      return { id: result.data?.contract?.id || result.data?.id || '' };
     } catch (error: any) {
       console.error('Error creating contract:', error);
       showToast(error.message || 'Failed to create contract', 'error');
