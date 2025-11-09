@@ -133,7 +133,8 @@ export async function POST(
         `${userName} gave final approval to ${mockup.mockup_name}. All workflow stages are complete.`,
         `/mockups/${mockupId}`,
         mockupId,
-        mockup.project_id,
+        mockup.project_id || undefined,
+        undefined,
         {
           approved_by: userName,
           project_name: project.name,

@@ -392,6 +392,7 @@ export async function createContractNotification(
     `/contracts/${contractId}`,
     undefined, // relatedAssetId
     undefined, // relatedProjectId
+    contractId, // relatedContractId
     {
       ...metadata,
       contract_id: contractId,

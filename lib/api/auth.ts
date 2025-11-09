@@ -180,20 +180,12 @@ export async function requireInternalUser(): Promise<boolean | NextResponse> {
  * Get the client ID assigned to the current user
  * Returns null if no client is assigned
  */
-export async function getUserAssignedClientId(): Promise<string | null> {
+export async function getUserAssignedClientId(userId?: string, orgId?: string): Promise<string | null> {
   try {
-    const { userId, orgId } = await getAuthContext();
-    
-    const { data: assignment } = await supabaseServer
-      .from('client_users')
-      .select('client_id')
-      .eq('user_id', userId)
-      .eq('organization_id', orgId)
-      .single();
-
-    return assignment?.client_id || null;
+    const client = await getUserAssignedClient(userId, orgId);
+    return client?.id || null;
   } catch (error) {
-    logger.error('Failed to get user assigned client', error);
+    logger.error('Failed to get user assigned client ID', error);
     return null;
   }
 }
@@ -202,15 +194,22 @@ export async function getUserAssignedClientId(): Promise<string | null> {
  * Get the full client object assigned to the current user
  * Returns null if no client is assigned
  */
-export async function getUserAssignedClient(): Promise<Client | null> {
+export async function getUserAssignedClient(userId?: string, orgId?: string): Promise<Client | null> {
   try {
-    const { userId, orgId } = await getAuthContext();
+    let finalUserId = userId;
+    let finalOrgId = orgId;
+    
+    if (!finalUserId || !finalOrgId) {
+      const authContext = await getAuthContext();
+      finalUserId = finalUserId || authContext.userId;
+      finalOrgId = finalOrgId || authContext.orgId;
+    }
     
     const { data: assignment } = await supabaseServer
       .from('client_users')
       .select('*, client:clients(*)')
-      .eq('user_id', userId)
-      .eq('organization_id', orgId)
+      .eq('user_id', finalUserId)
+      .eq('organization_id', finalOrgId)
       .single();
 
     if (!assignment || !assignment.client) {
@@ -248,10 +247,10 @@ export async function getUserClientHierarchy(): Promise<Client[]> {
 
 
 /**
- * Get the client hierarchy for a user (parent + children)
+ * Get the client with hierarchy for a user (parent + children)
  * Returns the user's assigned client with parent and child clients populated
  */
-export async function getUserClientHierarchy(userId?: string, orgId?: string): Promise<Client | null> {
+export async function getUserClientWithHierarchy(userId?: string, orgId?: string): Promise<Client | null> {
   try {
     const client = await getUserAssignedClient(userId, orgId);
     if (!client) {
@@ -289,13 +288,4 @@ export async function getUserClientHierarchy(userId?: string, orgId?: string): P
   }
 }
 
-/**
- * Get the client ID assigned to a user
- * Returns null if user is not a Client-role user or has no client assigned
- * This is a convenience function that returns just the client ID
- */
-export async function getUserAssignedClientId(userId?: string, orgId?: string): Promise<string | null> {
-  const client = await getUserAssignedClient(userId, orgId);
-  return client?.id || null;
-}
 

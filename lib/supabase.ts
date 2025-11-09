@@ -385,6 +385,7 @@ export interface Project {
     mockup_image_url: string;
   }>;
   workflow?: Workflow; // Populated via JOIN
+  contract?: { id: string; contract_number: string }; // Populated via JOIN
 }
 
 // Workflow types

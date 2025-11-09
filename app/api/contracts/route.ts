@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     const { orgId } = authResult;
 
     const { searchParams } = new URL(request.url);
-    const clientId = searchParams.get('client_id');
+    let clientId = searchParams.get('client_id');
     const statusFilter = searchParams.get('status');
     const typeFilter = searchParams.get('type');
 

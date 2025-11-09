@@ -13,6 +13,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Complete transformation of the platform into a comprehensive customer onboarding, collaboration, and approval record system with full contract management capabilities.
 
+### Fixed
+
+#### Build & Dependencies
+- **Fixed build errors** - Resolved all TypeScript and module resolution errors
+  - Fixed missing `svix` package dependency for Clerk webhook integration
+  - Fixed missing `NewContractModal` export in contracts components
+  - Fixed `const` reassignment error in contracts API route
+  - Fixed duplicate function definitions in auth utilities
+  - Fixed TypeScript type errors in Project interface and notification function calls
+  - Fixed naming conflicts with global `document` object in DocumentViewer component
+- **DocuSign Integration** - Temporarily disabled due to package compatibility issues
+  - DocuSign integration code preserved with clear comments for future re-enablement
+  - All DocuSign-related functions return helpful error messages when called
+  - See README for instructions on re-enabling DocuSign integration
+
 ### Added
 
 #### Contracts Module ⭐️ NEW

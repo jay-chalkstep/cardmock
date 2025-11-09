@@ -228,7 +228,7 @@ export default function ProjectDetailPage() {
                 {project.contract && (
                   <span 
                     className="text-blue-600 text-sm truncate cursor-pointer hover:underline"
-                    onClick={() => router.push(`/contracts/${project.contract.id}`)}
+                    onClick={() => project.contract && router.push(`/contracts/${project.contract.id}`)}
                   >
                     • Contract: {project.contract.contract_number}
                   </span>

@@ -135,8 +135,8 @@ export async function POST(
     const clerk = await clerkClient();
     try {
       const user = await clerk.users.getUser(user_id);
-      const orgMembership = user.organizationMemberships.find(
-        (m) => m.organization.id === orgId
+      const orgMembership = (user as any).organizationMemberships?.find(
+        (m: any) => m.organization.id === orgId
       );
 
       if (!orgMembership) {

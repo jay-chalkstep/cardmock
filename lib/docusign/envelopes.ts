@@ -1,9 +1,12 @@
 /**
  * DocuSign Envelope Management
  * Handles envelope creation, sending, and status tracking
+ * 
+ * NOTE: DocuSign integration is temporarily disabled
+ * Uncomment the import below when docusign-esign package is properly configured
  */
 
-import { EnvelopesApi, EnvelopeDefinition, Document, Signer, Tabs, Recipients, SignHereTab } from 'docusign-esign';
+// import { EnvelopesApi, EnvelopeDefinition, Document, Signer, Tabs, Recipients, SignHereTab } from 'docusign-esign';
 import { getDocuSignClient } from './client';
 
 export interface EnvelopeRecipient {
@@ -24,8 +27,12 @@ export interface CreateEnvelopeOptions {
 
 /**
  * Create a DocuSign envelope
+ * NOTE: Temporarily disabled - returns error when called
  */
 export async function createEnvelope(options: CreateEnvelopeOptions): Promise<string> {
+  throw new Error('DocuSign integration is temporarily disabled. Please configure docusign-esign package.');
+  
+  /* Uncomment when docusign-esign is available:
   const apiClient = getDocuSignClient();
   const envelopesApi = new EnvelopesApi(apiClient);
   const accountId = process.env.DOCUSIGN_ACCOUNT_ID || '';
@@ -78,24 +85,34 @@ export async function createEnvelope(options: CreateEnvelopeOptions): Promise<st
   });
 
   return results.envelopeId || '';
+  */
 }
 
 /**
  * Get envelope status
+ * NOTE: Temporarily disabled
  */
 export async function getEnvelopeStatus(envelopeId: string): Promise<any> {
+  throw new Error('DocuSign integration is temporarily disabled. Please configure docusign-esign package.');
+  
+  /* Uncomment when docusign-esign is available:
   const apiClient = getDocuSignClient();
   const envelopesApi = new EnvelopesApi(apiClient);
   const accountId = process.env.DOCUSIGN_ACCOUNT_ID || '';
 
   const envelope = await envelopesApi.getEnvelope(accountId, envelopeId);
   return envelope;
+  */
 }
 
 /**
  * Get recipient view (signing URL)
+ * NOTE: Temporarily disabled
  */
 export async function getRecipientView(envelopeId: string, recipientEmail: string, recipientName: string): Promise<string> {
+  throw new Error('DocuSign integration is temporarily disabled. Please configure docusign-esign package.');
+  
+  /* Uncomment when docusign-esign is available:
   const apiClient = getDocuSignClient();
   const envelopesApi = new EnvelopesApi(apiClient);
   const accountId = process.env.DOCUSIGN_ACCOUNT_ID || '';
@@ -112,12 +129,17 @@ export async function getRecipientView(envelopeId: string, recipientEmail: strin
   });
 
   return results.url || '';
+  */
 }
 
 /**
  * Void an envelope
+ * NOTE: Temporarily disabled
  */
 export async function voidEnvelope(envelopeId: string, reason: string = 'Voided by user'): Promise<void> {
+  throw new Error('DocuSign integration is temporarily disabled. Please configure docusign-esign package.');
+  
+  /* Uncomment when docusign-esign is available:
   const apiClient = getDocuSignClient();
   const envelopesApi = new EnvelopesApi(apiClient);
   const accountId = process.env.DOCUSIGN_ACCOUNT_ID || '';
@@ -128,5 +150,6 @@ export async function voidEnvelope(envelopeId: string, reason: string = 'Voided 
       voidedReason: reason,
     },
   });
+  */
 }
 

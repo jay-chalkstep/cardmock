@@ -1,9 +1,12 @@
 /**
  * DocuSign API Client Setup
  * Handles authentication and client initialization
+ * 
+ * NOTE: DocuSign integration is temporarily disabled
+ * Uncomment the import below when docusign-esign package is properly configured
  */
 
-import { ApiClient, OAuth, Configuration } from 'docusign-esign';
+// import { ApiClient, OAuth, Configuration } from 'docusign-esign';
 
 export interface DocuSignConfig {
   integrationKey: string;
@@ -13,12 +16,17 @@ export interface DocuSignConfig {
   apiBaseUrl: string; // 'https://demo.docusign.net/restapi' or 'https://www.docusign.net/restapi'
 }
 
-let apiClient: ApiClient | null = null;
+// Temporarily disabled - uncomment when docusign-esign is properly configured
+// let apiClient: ApiClient | null = null;
 
 /**
  * Initialize DocuSign API client
+ * NOTE: Temporarily disabled - returns error when called
  */
-export function initializeDocuSignClient(config: DocuSignConfig): ApiClient {
+export function initializeDocuSignClient(config: DocuSignConfig): any {
+  throw new Error('DocuSign integration is temporarily disabled. Please configure docusign-esign package.');
+  
+  /* Uncomment when docusign-esign is available:
   if (apiClient) {
     return apiClient;
   }
@@ -48,12 +56,17 @@ export function initializeDocuSignClient(config: DocuSignConfig): ApiClient {
   apiClient.addDefaultHeader('Authorization', `Bearer ${results.body.access_token}`);
 
   return apiClient;
+  */
 }
 
 /**
  * Get DocuSign API client from environment variables
+ * NOTE: Temporarily disabled - returns error when called
  */
-export function getDocuSignClient(): ApiClient {
+export function getDocuSignClient(): any {
+  throw new Error('DocuSign integration is temporarily disabled. Please configure docusign-esign package.');
+  
+  /* Uncomment when docusign-esign is available:
   const config: DocuSignConfig = {
     integrationKey: process.env.DOCUSIGN_INTEGRATION_KEY || '',
     userId: process.env.DOCUSIGN_USER_ID || '',
@@ -68,12 +81,17 @@ export function getDocuSignClient(): ApiClient {
   }
 
   return initializeDocuSignClient(config);
+  */
 }
 
 /**
  * Refresh access token if needed
+ * NOTE: Temporarily disabled
  */
-export async function refreshDocuSignToken(apiClient: ApiClient, config: DocuSignConfig): Promise<void> {
+export async function refreshDocuSignToken(apiClient: any, config: DocuSignConfig): Promise<void> {
+  throw new Error('DocuSign integration is temporarily disabled. Please configure docusign-esign package.');
+  
+  /* Uncomment when docusign-esign is available:
   const privateKey = Buffer.from(config.rsaPrivateKey, 'base64').toString('utf-8');
   const oAuth = new OAuth();
   
@@ -86,5 +104,6 @@ export async function refreshDocuSignToken(apiClient: ApiClient, config: DocuSig
   );
 
   apiClient.addDefaultHeader('Authorization', `Bearer ${results.body.access_token}`);
+  */
 }
 

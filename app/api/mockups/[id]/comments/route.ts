@@ -182,7 +182,8 @@ export async function POST(
               `${fullName} added a comment on ${mockup.mockup_name}.`,
               `/mockups/${mockupId}`,
               mockupId,
-              mockup.project_id,
+              mockup.project_id || undefined,
+              undefined,
               {
                 commenter_name: fullName,
               }

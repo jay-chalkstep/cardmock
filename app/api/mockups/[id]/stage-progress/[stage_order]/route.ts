@@ -201,7 +201,8 @@ export async function POST(
             `${userName} approved Stage ${stageOrder}. ${mockup.mockup_name} is now in "${nextStage.name}" and needs your review.`,
             `/mockups/${mockupId}`,
             mockupId,
-            mockup.project_id,
+            mockup.project_id || undefined,
+            undefined,
             {
               stage_name: nextStage.name,
               stage_order: nextStage.order,

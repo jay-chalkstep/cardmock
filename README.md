@@ -277,7 +277,54 @@ NEXT_PUBLIC_BRANDFETCH_API_KEY=your_brandfetch_key
 # SendGrid (optional, for email notifications)
 SENDGRID_API_KEY=SG.your_sendgrid_key
 SENDGRID_FROM_EMAIL=noreply@yourdomain.com
+
+# Clerk Webhook (for user/client assignment automation)
+CLERK_WEBHOOK_SECRET=whsec_... # Get from Clerk Dashboard > Webhooks
+
+# DocuSign Integration (optional, currently disabled - see below)
+# DOCUSIGN_INTEGRATION_KEY=your_integration_key
+# DOCUSIGN_USER_ID=your_user_id
+# DOCUSIGN_ACCOUNT_ID=your_account_id
+# DOCUSIGN_RSA_PRIVATE_KEY=base64_encoded_private_key
+# DOCUSIGN_API_BASE_URL=https://demo.docusign.net/restapi
 ```
+
+---
+
+## 📝 DocuSign Integration (Future)
+
+DocuSign integration is currently **disabled** due to package compatibility issues with Next.js/Turbopack. The integration code is preserved and can be re-enabled in the future.
+
+### To Re-enable DocuSign Integration:
+
+1. **Install the package:**
+   ```bash
+   npm install docusign-esign
+   ```
+
+2. **Uncomment the imports** in the following files:
+   - `lib/docusign/client.ts` - Uncomment line 9: `import { ApiClient, OAuth, Configuration } from 'docusign-esign';`
+   - `lib/docusign/envelopes.ts` - Uncomment line 9: `import { EnvelopesApi, EnvelopeDefinition, Document, Signer, Tabs, Recipients, SignHereTab } from 'docusign-esign';`
+
+3. **Uncomment the implementation code** in both files:
+   - Replace all `throw new Error(...)` statements with the commented-out implementation code
+   - Remove the `/* Uncomment when docusign-esign is available: */` comment blocks
+
+4. **Configure environment variables** (see above):
+   - `DOCUSIGN_INTEGRATION_KEY`
+   - `DOCUSIGN_USER_ID`
+   - `DOCUSIGN_ACCOUNT_ID`
+   - `DOCUSIGN_RSA_PRIVATE_KEY` (Base64 encoded)
+   - `DOCUSIGN_API_BASE_URL` (demo or production)
+
+5. **Test the integration:**
+   - The `send-for-signature` API endpoint will automatically use DocuSign when configured
+   - Check `app/api/contracts/[id]/documents/[docId]/send-for-signature/route.ts` for usage
+
+**Note:** The `docusign-esign` package has known compatibility issues with Next.js 15 and Turbopack. You may need to:
+- Use dynamic imports for DocuSign code
+- Configure Next.js to handle it as an external dependency
+- Or wait for package updates that resolve the compatibility issues
 
 ---
 
