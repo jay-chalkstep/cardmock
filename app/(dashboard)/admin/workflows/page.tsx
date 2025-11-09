@@ -72,10 +72,17 @@ export default function WorkflowsPage() {
     try {
       const url = `/api/workflows?is_archived=${showArchived}`;
       const response = await fetch(url);
-      if (!response.ok) throw new Error('Failed to fetch workflows');
+      
+      const result = await response.json();
 
-      const { workflows: fetchedWorkflows } = await response.json();
-      setWorkflows(fetchedWorkflows || []);
+      if (!response.ok || !result.success) {
+        const errorMessage = result.error || 'Failed to fetch workflows';
+        throw new Error(errorMessage);
+      }
+
+      // Extract data from the response structure { success: true, data: { workflows: [...] } }
+      const fetchedWorkflows = result.data?.workflows || [];
+      setWorkflows(fetchedWorkflows);
     } catch (error) {
       console.error('Error fetching workflows:', error);
       showToast('Failed to load workflows', 'error');

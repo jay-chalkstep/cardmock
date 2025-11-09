@@ -71,9 +71,12 @@ export default function EditProjectModal({
     setLoadingWorkflows(true);
     try {
       const response = await fetch('/api/workflows?is_archived=false');
-      if (response.ok) {
-        const { workflows: fetchedWorkflows } = await response.json();
-        setWorkflows(fetchedWorkflows || []);
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        // Extract data from the response structure { success: true, data: { workflows: [...] } }
+        const fetchedWorkflows = result.data?.workflows || [];
+        setWorkflows(fetchedWorkflows);
       }
     } catch (error) {
       console.error('Error fetching workflows:', error);

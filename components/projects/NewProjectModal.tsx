@@ -62,12 +62,15 @@ export default function NewProjectModal({
     setLoadingWorkflows(true);
     try {
       const response = await fetch('/api/workflows?is_archived=false');
-      if (response.ok) {
-        const { workflows: fetchedWorkflows } = await response.json();
-        setWorkflows(fetchedWorkflows || []);
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        // Extract data from the response structure { success: true, data: { workflows: [...] } }
+        const fetchedWorkflows = result.data?.workflows || [];
+        setWorkflows(fetchedWorkflows);
 
         // Pre-select default workflow if exists
-        const defaultWorkflow = (fetchedWorkflows || []).find((w: Workflow) => w.is_default);
+        const defaultWorkflow = fetchedWorkflows.find((w: Workflow) => w.is_default);
         if (defaultWorkflow) {
           setWorkflowId(defaultWorkflow.id);
         }

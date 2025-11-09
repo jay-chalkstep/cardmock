@@ -31,6 +31,14 @@ Fixed critical bugs that prevented annotations from being visible when drawing a
   - Impact: Brand search now correctly displays results and shows proper error messages
   - Files modified: `app/(dashboard)/search/page.tsx`, `app/(dashboard)/test-brandfetch/page.tsx`
 
+#### Workflow API Response Parsing
+- **Incorrect Response Structure Handling** - Fixed workflows not displaying in admin page and project modals
+  - Error: Workflows not appearing after successful API call
+  - Root cause: API returns `{ success: true, data: { workflows: [...] } }` but frontend was using entire response object
+  - Fix: Extract `result.data.workflows` from API response structure and properly handle error responses
+  - Impact: Workflows now correctly display in admin page, new project modal, and edit project modal
+  - Files modified: `app/(dashboard)/admin/workflows/page.tsx`, `components/projects/NewProjectModal.tsx`, `components/projects/EditProjectModal.tsx`
+
 #### Annotation Visibility Issue
 - **Coordinate Transformation** - Fixed annotations not appearing when using annotation tools
   - Error: Annotations were drawn but not visible on canvas
