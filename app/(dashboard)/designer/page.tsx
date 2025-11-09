@@ -14,7 +14,8 @@ import DesignerSizeControls from '@/components/designer/DesignerSizeControls';
 import DesignerSavePanel from '@/components/designer/DesignerSavePanel';
 import DesignerBrandSelector from '@/components/designer/DesignerBrandSelector';
 import {
-  Grid
+  Grid,
+  Loader2
 } from 'lucide-react';
 import { KonvaEventObject } from 'konva/lib/Node';
 import type { KonvaCanvasRef } from '@/components/designer/KonvaCanvas';
