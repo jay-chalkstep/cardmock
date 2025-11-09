@@ -7,6 +7,244 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.1.0] - 2025-01-XX
+
+### 🚀 **MAJOR RELEASE - Platform Integrations**
+
+Complete platform integration system bringing approvals into existing design and communication tools, enabling external reviewers without accounts, and providing powerful presentation tools for stakeholder reviews.
+
+### Added
+
+#### Platform Integrations ⭐️ NEW
+- **Figma Plugin Integration** - Send Figma frames directly for approval
+  - OAuth 2.0 authentication with Figma
+  - Direct frame upload from Figma plugin
+  - Real-time status sync (approved/pending/rejected)
+  - Comment sync between Figma and Aiproval (bidirectional)
+  - Automatic version detection
+  - Project mapping based on Figma file organization
+  - Figma metadata storage (file_id, node_ids, file_url, version_key)
+  - **Figma Integration Settings Page** - Connect/disconnect Figma account ⭐️ NEW
+  - **Figma Status Badge** - Display approval status in asset lists ⭐️ NEW
+  - **Figma Metadata Display** - Show Figma file/node information ⭐️ NEW
+
+- **Public Share Pages** - External reviewers without account creation
+  - JWT-based secure share links with expiration
+  - Progressive identity capture (view → comment → approve)
+  - Password protection option
+  - Link expiration controls (time-based or use-based)
+  - Branded review experience (org logo/colors)
+  - Session persistence via secure cookies
+  - Full audit trail with captured identity
+  - **Public Review Canvas** - Full annotation and commenting capabilities ⭐️ NEW
+  - **Identity Capture Modal** - Progressive identity collection ⭐️ NEW
+  - **Public Share Settings** - Generate and manage share links ⭐️ NEW
+  - **Public Share Analytics** - Track share link usage and engagement ⭐️ NEW
+
+- **Gmail Add-on Integration** - Send approval requests from Gmail
+  - OAuth 2.0 authentication with Google Workspace
+  - Send for approval directly from Gmail compose
+  - Attachments upload as new mockups
+  - Recipients added as reviewers automatically
+  - Embedded review links in emails
+  - Quick approve/reject buttons in email
+  - Automatic feedback ingestion from replies
+  - Thread tracking (link emails to assets)
+  - **Gmail Connect Button** - OAuth connection component ⭐️ NEW
+
+- **Slack Integration** - Real-time notifications and quick actions
+  - OAuth 2.0 workspace installation
+  - Real-time notifications for:
+    - New approval requests
+    - Stage progression
+    - Comments/feedback
+    - Final approvals
+  - Slash commands:
+    - `/aiproval status [project]` - Check approval status
+    - `/aiproval pending` - List pending reviews
+    - `/aiproval share [mockup]` - Share for quick feedback
+  - Interactive message buttons (Approve/Request Changes/View Details)
+  - Daily/weekly digest summaries
+  - Channel-based project mapping
+  - **Slack Install Button** - Workspace installation component ⭐️ NEW
+
+- **Drive/Dropbox Magic Import** - Import existing folder structures
+  - OAuth for Google Drive and Dropbox
+  - Import wizard with preview
+  - Mapping rules:
+    - Level 1 folders → Clients
+    - Level 2 folders → Projects
+    - Level 3+ folders → Aiproval folders
+    - File naming patterns → Asset metadata
+    - Modified dates → Version history
+  - Duplicate detection
+  - Batch processing with progress tracking
+  - Ongoing sync options (one-time, periodic, real-time)
+  - **Cloud Storage Connect Button** - OAuth connection component ⭐️ NEW
+
+- **Comparison/Presentation Mode** - Side-by-side comparison and presentation tools
+  - Comparison views:
+    - Side-by-side (2-4 mockups)
+    - Overlay/onion skin (version comparison)
+    - Timeline view (version history)
+    - Grid view (all options)
+  - Presentation features:
+    - Full-screen presentation mode
+    - Keyboard navigation (arrow keys)
+    - Presenter notes (private)
+    - Live voting/polling
+    - Annotation toggle
+    - Export to PDF/PowerPoint (placeholder)
+  - Meeting tools:
+    - Screen share optimization
+    - Participant cursor tracking
+    - Live approval capture during meeting
+    - Meeting recording (optional, placeholder)
+    - Auto-generated meeting summary (placeholder)
+  - **Create Presentation Modal** - Create presentation sessions ⭐️ NEW
+  - **Comparison View** - Side-by-side, grid, timeline views ⭐️ NEW
+  - **Presentation Mode** - Full-screen presentation with keyboard navigation ⭐️ NEW
+  - **Voting Panel** - Live voting/polling component ⭐️ NEW
+
+#### Shared Infrastructure ⭐️ NEW
+- **Integration Credentials Storage** - Encrypted OAuth token storage
+  - AES-256-GCM encryption for all OAuth tokens
+  - Automatic token refresh before expiration
+  - Secure credential management
+- **Integration Events Tracking** - Activity logging for all integrations
+  - Success/error/pending status tracking
+  - Error message logging
+  - Payload storage for debugging
+- **Integration Analytics** - Usage metrics for all integrations
+  - Event type tracking
+  - Metadata storage
+  - Organization-scoped analytics
+- **OAuth Flow Helpers** - Standardized OAuth 2.0 flow management
+  - Initiate OAuth flow
+  - Handle OAuth callback
+  - Refresh OAuth tokens
+  - Revoke OAuth tokens
+- **Webhook Signature Verification** - Secure webhook handling
+  - Slack signature verification
+  - Gmail signature verification
+  - Figma signature verification
+  - Timestamp validation (prevent replay attacks)
+- **Rate Limiting** - Per-integration rate limiting
+  - Figma: 100 requests/minute
+  - Gmail: 20 requests/minute
+  - Slack: 50 requests/minute
+  - Drive/Dropbox: 100 requests/minute
+- **JWT Token Management** - Secure public share links
+  - Token generation with expiration
+  - Token verification
+  - Token decoding
+- **Public Session Management** - Anonymous reviewer sessions
+  - Session creation and persistence
+  - Identity capture and storage
+  - Session cookie management
+
+#### Database Schema
+- **Migration 28** - Integrations Foundation
+  - `integration_credentials` table - Encrypted OAuth token storage
+  - `integration_events` table - Activity tracking
+  - `integration_analytics` table - Usage metrics
+- **Migration 29** - Public Sharing
+  - `public_share_links` table - Share link management
+  - `public_reviewers` table - Identity capture
+  - `public_share_analytics` table - Usage tracking
+  - `assets.public_share_enabled` column
+- **Migration 30** - Figma Integration
+  - `figma_integrations` table - OAuth credentials
+  - `figma_sync_events` table - Sync tracking
+  - `assets.figma_metadata` JSONB column
+- **Migration 31** - Gmail Integration
+  - `gmail_integrations` table - OAuth credentials
+  - `gmail_threads` table - Thread tracking
+  - `gmail_feedback_events` table - Feedback tracking
+- **Migration 32** - Slack Integration
+  - `slack_integrations` table - Workspace credentials
+  - `slack_channels` table - Channel-project mapping
+  - `slack_notification_events` table - Notification tracking
+- **Migration 33** - Cloud Storage Import
+  - `cloud_storage_integrations` table - OAuth credentials
+  - `import_jobs` table - Import job tracking
+  - `import_mappings` table - Folder mapping rules
+- **Migration 34** - Presentation Mode
+  - `presentation_sessions` table - Session management
+  - `presentation_participants` table - Participant tracking
+  - `presentation_votes` table - Voting/polling
+
+#### API Routes
+- **Public Share API** (`/api/public/share/[token]`) - Public share link access
+- **Public Share Management** (`/api/assets/[id]/share`) - Create/revoke share links
+- **Public Share Analytics** (`/api/assets/share/[linkId]/analytics`) - Analytics data
+- **Figma Integration API** (`/api/integrations/figma`) - OAuth, upload, status, sync
+- **Gmail Integration API** (`/api/integrations/gmail`) - OAuth, send-approval
+- **Slack Integration API** (`/api/integrations/slack`) - OAuth, events, commands, interactive, notify
+- **Cloud Storage API** (`/api/integrations/cloud-storage/[provider]`) - OAuth, import, sync
+- **Presentation API** (`/api/presentations`) - Create, list, get, delete sessions
+- **Presentation Actions** (`/api/presentations/[id]/vote`, `/api/presentations/[id]/join`) - Voting and participation
+
+#### Components
+- **Integration Components** - FigmaConnectButton, FigmaStatusBadge, FigmaMetadataDisplay, GmailConnectButton, SlackInstallButton, CloudStorageConnectButton
+- **Public Share Components** - PublicReviewCanvas, IdentityCaptureModal, PublicShareSettings, PublicShareAnalytics
+- **Presentation Components** - CreatePresentationModal, ComparisonView, PresentationMode, VotingPanel
+- **Settings Pages** - Figma integration settings page
+
+#### Utilities
+- **Integration Utilities** (`lib/integrations/`) - OAuth, webhooks, rate-limit, encryption, status
+- **Public Utilities** (`lib/public/`) - JWT, session management
+
+### Technical
+
+#### New Dependencies
+- `jsonwebtoken` - JWT token generation/validation
+- `bcryptjs` - Password hashing for share links
+- `@types/jsonwebtoken` - TypeScript types
+- `@types/bcryptjs` - TypeScript types
+
+#### New Files
+- `supabase/28_integrations_foundation.sql` - Shared infrastructure
+- `supabase/29_public_sharing.sql` - Public share links
+- `supabase/30_figma_integration.sql` - Figma integration
+- `supabase/31_gmail_integration.sql` - Gmail integration
+- `supabase/32_slack_integration.sql` - Slack integration
+- `supabase/33_cloud_storage_import.sql` - Drive/Dropbox import
+- `supabase/34_presentation_mode.sql` - Presentation mode
+- `lib/integrations/encryption.ts` - OAuth credential encryption
+- `lib/integrations/oauth.ts` - OAuth flow helpers
+- `lib/integrations/webhooks.ts` - Webhook signature verification
+- `lib/integrations/rate-limit.ts` - Rate limiting
+- `lib/integrations/status.ts` - Integration status tracking
+- `lib/public/jwt.ts` - JWT token management
+- `lib/public/session.ts` - Public session management
+- `app/(public)/share/[token]/page.tsx` - Public review page
+- `app/api/public/share/[token]/*` - Public share API routes
+- `app/api/assets/[id]/share/route.ts` - Share link management
+- `app/api/integrations/figma/*` - Figma integration API routes
+- `app/api/integrations/gmail/*` - Gmail integration API routes
+- `app/api/integrations/slack/*` - Slack integration API routes
+- `app/api/integrations/cloud-storage/[provider]/*` - Cloud storage API routes
+- `app/api/presentations/*` - Presentation API routes
+- `components/integrations/*` - Integration UI components
+- `components/public/*` - Public share components
+- `components/presentation/*` - Presentation components
+- `app/(dashboard)/settings/integrations/figma/page.tsx` - Figma settings page
+
+#### Updated Files
+- `middleware.ts` - Added public share routes to public route matcher
+- `package.json` - Updated version to 4.1.0, added new dependencies
+
+### Migration Notes
+
+- **Database Migrations Required**: Run migrations 28-34 in order
+- **Environment Variables**: Add integration OAuth credentials and secrets (see README)
+- **Encryption Key**: Generate `INTEGRATION_ENCRYPTION_KEY` for OAuth token storage
+- **JWT Secret**: Generate `JWT_SECRET` for public share links
+- **OAuth Setup**: Configure OAuth apps for each platform (Figma, Gmail, Slack, Drive, Dropbox)
+
+---
+
 ## [4.0.0] - 2025-01-XX
 
 ### 🚀 **MAJOR RELEASE - Contracts Module**

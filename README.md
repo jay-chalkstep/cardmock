@@ -1,8 +1,8 @@
-# Aiproval v4.0.0
+# Aiproval v4.1.0
 
-> Multi-tenant SaaS for brand asset management, collaborative mockup review, and comprehensive contract management with customer onboarding workflows
+> Multi-tenant SaaS for brand asset management, collaborative mockup review, comprehensive contract management, and platform integrations
 
-A comprehensive platform for design teams, marketing departments, and agencies to search, organize, and collaborate on brand assets with real-time visual annotation, multi-stage approval workflows, project-based review management, and full contract lifecycle management.
+A comprehensive platform for design teams, marketing departments, and agencies to search, organize, and collaborate on brand assets with real-time visual annotation, multi-stage approval workflows, project-based review management, full contract lifecycle management, and seamless integrations with Figma, Gmail, Slack, and cloud storage.
 
 ---
 
@@ -25,8 +25,11 @@ A comprehensive platform for design teams, marketing departments, and agencies t
 - 🔔 **Notifications** - In-app notification system for approvals, comments, and workflow updates
 - ⚙️ **Settings** - Comprehensive settings modal with preferences, account, and organization management
 - 📊 **Track** complete audit trail of edits, resolutions, and feedback history
+- 🔗 **Platform Integrations** - Seamless integrations with Figma, Gmail, Slack, Drive/Dropbox ⭐️ NEW
+- 🌐 **Public Share Pages** - Share assets with external reviewers without account creation ⭐️ NEW
+- 🎨 **Presentation Mode** - Side-by-side comparison and presentation tools for stakeholder reviews ⭐️ NEW
 
-Built for teams who need more than basic file storage—Aiproval provides context-aware collaboration with visual feedback directly on mockup designs, organized by client projects with customizable approval workflows, and comprehensive contract management for customer onboarding.
+Built for teams who need more than basic file storage—Aiproval provides context-aware collaboration with visual feedback directly on mockup designs, organized by client projects with customizable approval workflows, comprehensive contract management for customer onboarding, and powerful integrations that bring approvals into existing design and communication tools.
 
 ---
 
@@ -192,6 +195,50 @@ Built for teams who need more than basic file storage—Aiproval provides contex
 - **Real-Time Counts** on folders
 - **Search Within Folders** for scoped discovery
 
+### Platform Integrations ⭐️ NEW in v4.1.0
+- **Figma Plugin Integration** - Send Figma frames directly for approval
+  - Direct frame upload from Figma plugin
+  - Real-time status sync (approved/pending/rejected)
+  - Comment sync between Figma and Aiproval
+  - Automatic version detection
+  - Project mapping based on Figma file organization
+- **Public Share Pages** - External reviewers without accounts
+  - JWT-based secure share links
+  - Progressive identity capture (view → comment → approve)
+  - Password protection option
+  - Link expiration controls (time or use-based)
+  - Branded review experience
+  - Full audit trail with captured identity
+  - Analytics tracking for share link usage
+- **Gmail Add-on Integration** - Send approval requests from Gmail
+  - Send for approval directly from Gmail compose
+  - Attachments upload as new mockups
+  - Quick approve/reject buttons in email
+  - Automatic feedback ingestion from replies
+  - Thread tracking (link emails to assets)
+- **Slack Integration** - Real-time notifications and quick actions
+  - Real-time notifications for approval requests, stage progression, comments
+  - Slash commands (`/aiproval status`, `/aiproval pending`, `/aiproval share`)
+  - Interactive message buttons (Approve/Request Changes/View Details)
+  - Daily/weekly digest summaries
+  - Channel-based project mapping
+- **Drive/Dropbox Import** - Import existing folder structures
+  - Magic import wizard with preview
+  - Mapping rules (folders → projects, files → assets)
+  - Duplicate detection
+  - Batch processing with progress tracking
+  - Ongoing sync options (one-time, periodic, real-time)
+- **Comparison/Presentation Mode** - Side-by-side comparison and presentation tools
+  - Side-by-side view (2-4 mockups)
+  - Overlay/onion skin version comparison
+  - Timeline view (version history)
+  - Grid view (all options)
+  - Full-screen presentation mode
+  - Keyboard navigation (arrow keys)
+  - Presenter notes (private)
+  - Live voting/polling
+  - Export to PDF/PowerPoint
+
 
 ---
 
@@ -280,6 +327,36 @@ SENDGRID_FROM_EMAIL=noreply@yourdomain.com
 
 # Clerk Webhook (for user/client assignment automation)
 CLERK_WEBHOOK_SECRET=whsec_... # Get from Clerk Dashboard > Webhooks
+
+# Platform Integrations (optional)
+# Figma Integration
+FIGMA_CLIENT_ID=your_figma_client_id
+FIGMA_CLIENT_SECRET=your_figma_client_secret
+FIGMA_WEBHOOK_SECRET=your_figma_webhook_secret
+
+# Gmail Integration
+GMAIL_CLIENT_ID=your_gmail_client_id
+GMAIL_CLIENT_SECRET=your_gmail_client_secret
+GMAIL_WEBHOOK_SECRET=your_gmail_webhook_secret
+
+# Slack Integration
+SLACK_CLIENT_ID=your_slack_client_id
+SLACK_CLIENT_SECRET=your_slack_client_secret
+SLACK_SIGNING_SECRET=your_slack_signing_secret
+
+# Google Drive Integration
+GOOGLE_DRIVE_CLIENT_ID=your_drive_client_id
+GOOGLE_DRIVE_CLIENT_SECRET=your_drive_client_secret
+
+# Dropbox Integration
+DROPBOX_CLIENT_ID=your_dropbox_client_id
+DROPBOX_CLIENT_SECRET=your_dropbox_client_secret
+
+# Integration Encryption (required for OAuth token storage)
+INTEGRATION_ENCRYPTION_KEY=your_32_byte_hex_key # Generate with: openssl rand -hex 32
+
+# JWT Secret (required for public share links)
+JWT_SECRET=your_jwt_secret # Generate with: openssl rand -hex 32
 
 # DocuSign Integration (optional, currently disabled - see below)
 # DOCUSIGN_INTEGRATION_KEY=your_integration_key
@@ -478,6 +555,59 @@ Run these migrations **in order** in your Supabase SQL Editor:
    - Display preferences (theme, layout)
    - RLS policies for user-scoped access
    - One preference record per user per organization
+
+23. **`supabase/23_contracts_module.sql`** ⭐️ NEW in v4.0.0
+   - Complete contracts module schema
+   - Clients, contracts, documents, email mockups, payment methods tables
+
+24. **`supabase/24_contract_documents_storage.sql`** ⭐️ NEW in v4.0.0
+   - Storage bucket setup for contract documents
+
+25. **`supabase/25_client_ein_and_user_association.sql`** ⭐️ NEW in v4.0.0
+   - Client EIN field and hierarchy support
+   - User-client association system
+
+26. **`supabase/26_asset_types.sql`** ⭐️ NEW in v4.0.0
+   - Asset type enum for different asset categories
+
+27. **`supabase/27_contract_notification_types.sql`** ⭐️ NEW in v4.0.0
+   - Contract-related notification types
+
+28. **`supabase/28_integrations_foundation.sql`** ⭐️ NEW in v4.1.0
+   - Shared infrastructure for all platform integrations
+   - Integration credentials storage (encrypted OAuth tokens)
+   - Integration events tracking
+   - Integration analytics
+
+29. **`supabase/29_public_sharing.sql`** ⭐️ NEW in v4.1.0
+   - Public share links for external reviewers
+   - Public reviewers identity capture
+   - Public share analytics
+
+30. **`supabase/30_figma_integration.sql`** ⭐️ NEW in v4.1.0
+   - Figma OAuth credentials storage
+   - Figma sync events tracking
+   - Figma metadata on assets
+
+31. **`supabase/31_gmail_integration.sql`** ⭐️ NEW in v4.1.0
+   - Gmail OAuth credentials storage
+   - Gmail thread tracking
+   - Gmail feedback events
+
+32. **`supabase/32_slack_integration.sql`** ⭐️ NEW in v4.1.0
+   - Slack workspace integration storage
+   - Slack channel-project mapping
+   - Slack notification events tracking
+
+33. **`supabase/33_cloud_storage_import.sql`** ⭐️ NEW in v4.1.0
+   - Cloud storage OAuth credentials (Drive/Dropbox)
+   - Import job tracking
+   - Import mapping rules
+
+34. **`supabase/34_presentation_mode.sql`** ⭐️ NEW in v4.1.0
+   - Presentation session management
+   - Presentation participants tracking
+   - Presentation voting/polling
 
 ### Storage Buckets
 
@@ -818,6 +948,8 @@ See [CHANGELOG.md](./documentation/CHANGELOG.md) for detailed version history.
 
 ### Recent Versions
 
+- **v4.1.0** (2025-01-XX) - 🎉 **MAJOR FEATURE** - Platform Integrations - Figma plugin, public share pages, Gmail add-on, Slack integration, Drive/Dropbox import, presentation mode
+- **v4.0.0** (2025-01-XX) - 🎉 **MAJOR RELEASE** - Contracts Module - Complete contract lifecycle management with document versioning, email mockups, payment methods
 - **v3.8.0** (2025-01-XX) - 🎉 **MAJOR FEATURE** - Notifications System & Settings Modal - In-app notifications with dropdown panel, comprehensive settings modal with preferences/account/org management, consolidated navigation
 - **v3.7.2** (2025-01-XX) - 🐛 **Critical Bugfixes** - Fixed annotation visibility issues by correcting coordinate transformation, and improved permission enforcement for annotations and comments
 - **v3.7.1** (2025-01-XX) - 🐛 **Critical Bugfixes** - Fixed project loading and metrics display issues by using correct Supabase client in API routes and proper response format handling

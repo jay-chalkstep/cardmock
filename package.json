@@ -1,6 +1,6 @@
 {
   "name": "aiproval",
-  "version": "3.8.0",
+  "version": "4.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
@@ -13,9 +13,13 @@
     "@clerk/themes": "^2.4.28",
     "@sendgrid/mail": "^8.1.0",
     "@supabase/supabase-js": "^2.75.0",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.10",
     "axios": "^1.12.2",
+    "bcryptjs": "^3.0.3",
     "date-fns": "^4.1.0",
     "exceljs": "^4.4.0",
+    "jsonwebtoken": "^9.0.2",
     "konva": "^10.0.2",
     "lodash": "^4.17.21",
     "lucide-react": "^0.546.0",

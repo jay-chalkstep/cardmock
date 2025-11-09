@@ -44,3 +44,4 @@ export default function EmailMockupPreview({ isOpen, onClose, mockup }: EmailMoc
   );
 }
 
+
