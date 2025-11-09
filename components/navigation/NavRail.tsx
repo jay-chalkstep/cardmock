@@ -17,6 +17,7 @@ import {
   LayoutTemplate,
   Images,
   Package,
+  Home,
 } from 'lucide-react';
 import { usePanelContext } from '@/lib/contexts/PanelContext';
 
@@ -28,11 +29,11 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
+  { id: 'home', name: 'Home', href: '/', icon: Home },
   { id: 'projects', name: 'Projects', href: '/projects', icon: Briefcase },
-  { id: 'gallery', name: 'Gallery', href: '/gallery', icon: Images },
-  { id: 'brands', name: 'Brands', href: '/brands', icon: Package },
+  { id: 'reviews', name: 'My Reviews', href: '/my-stage-reviews', icon: MessageSquare },
+  { id: 'library', name: 'Library', href: '/library', icon: Library },
   { id: 'designer', name: 'Designer', href: '/designer', icon: Palette },
-  { id: 'reviews', name: 'Reviews', href: '/my-stage-reviews', icon: MessageSquare },
 ];
 
 const adminNavItems: NavItem[] = [
@@ -50,7 +51,23 @@ export default function NavRail() {
 
   // Update active nav based on current path
   useEffect(() => {
-    const activeItem = navItems.find(item => pathname?.startsWith(item.href));
+    // Handle home route specially
+    if (pathname === '/') {
+      setActiveNav('home');
+      return;
+    }
+    
+    // Handle library route (also check for gallery for backward compatibility)
+    if (pathname?.startsWith('/library') || pathname?.startsWith('/gallery')) {
+      setActiveNav('library');
+      return;
+    }
+    
+    const activeItem = navItems.find(item => {
+      if (item.id === 'home') return false; // Skip home for other routes
+      return pathname?.startsWith(item.href);
+    });
+    
     if (activeItem) {
       setActiveNav(activeItem.id);
     }
@@ -62,7 +79,12 @@ export default function NavRail() {
       <nav className="flex-1 py-4 overflow-y-auto">
         <ul className="space-y-1 px-2">
           {navItems.map((item) => {
-            const isActive = pathname === item.href || pathname?.startsWith(item.href);
+            // Special handling for home route
+            const isActive = item.id === 'home' 
+              ? pathname === item.href
+              : item.id === 'library'
+              ? pathname?.startsWith('/library') || pathname?.startsWith('/gallery')
+              : pathname === item.href || pathname?.startsWith(item.href);
             return (
               <li key={item.id}>
                 <Link

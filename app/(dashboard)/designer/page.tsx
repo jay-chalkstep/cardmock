@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
+import { useSearchParams } from 'next/navigation';
 import { useOrganization, useUser } from '@clerk/nextjs';
 import { supabase, Logo, CardTemplate, Folder, Project } from '@/lib/supabase';
 import { buildFolderTree } from '@/lib/folders';
@@ -86,6 +87,7 @@ const getTypeColor = (type?: string) => {
 export default function DesignerPage() {
   const { organization, isLoaded } = useOrganization();
   const { user } = useUser();
+  const searchParams = useSearchParams();
 
   // State management
   const [selectedBrand, setSelectedBrand] = useState<Logo | null>(null);
@@ -148,6 +150,17 @@ export default function DesignerPage() {
       fetchProjects();
     }
   }, [organization?.id, user?.id]);
+
+  // Handle projectId from query params
+  useEffect(() => {
+    const projectIdParam = searchParams?.get('projectId');
+    if (projectIdParam && projects.length > 0) {
+      const project = projects.find(p => p.id === projectIdParam);
+      if (project) {
+        setSelectedProjectId(projectIdParam);
+      }
+    }
+  }, [searchParams, projects]);
 
 
   // Handle responsive canvas sizing

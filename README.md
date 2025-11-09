@@ -1,4 +1,4 @@
-# Aiproval v3.8.0
+# Aiproval v3.9.0
 
 > Multi-tenant SaaS for brand asset management and collaborative mockup review with user-level approval tracking
 
@@ -27,7 +27,11 @@ Built for teams who need more than basic file storage—Aiproval provides contex
 
 ## ✨ Key Features
 
-### UI/UX Excellence ⭐️ NEW in v3.3
+### UI/UX Excellence ⭐️ ENHANCED in v3.9.0
+- **Home/Dashboard** - Overview page for both creators and reviewers with quick actions
+- **Global Search** - Persistent search bar in header (Cmd+K) with unified search across all content
+- **Library Reorganization** - Unified Library page with tabs for Assets, Brands, and Templates
+- **Improved Navigation** - Clear structure: Home → Projects → My Reviews → Library → Designer
 - **Gmail-style Three-Panel Layout** - Consistent navigation with collapsible context panels
 - **Brand-Centric Interface** - Professional terminology focused on "brands" not "logos"
 - **Smart Context Panels** - Collapsible side panels for stage reviewers and folder navigation

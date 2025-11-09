@@ -7,6 +7,100 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.9.0] - 2025-01-XX
+
+### 🎨 **MAJOR UI/UX REDESIGN - Navigation & Library Reorganization**
+
+Complete redesign of application navigation and library structure to better serve creators and reviewers, with improved discoverability of key features and streamlined workflows.
+
+### Added
+
+#### Home/Dashboard Page
+- **New Home Page** (`/`) - Overview dashboard for both user types
+  - **For Creators**: Recent projects, quick create actions, recent assets
+  - **For Reviewers**: Pending reviews count, urgent items
+  - **Shared**: Recent activity, notifications
+  - **Quick Actions**: Direct access to create projects and assets
+  - **Stats Cards**: Visual overview of pending reviews, active projects, and quick actions
+
+#### Global Search
+- **Persistent Search Bar** - Always-visible search in header (Cmd+K / Ctrl+K)
+- **Unified Search API** - Search across Projects, Brands, Templates, and Assets
+- **Command Palette Style** - Modal search interface with keyboard navigation
+- **Categorized Results** - Results grouped by type with icons
+- **Quick Navigation** - Click result to navigate directly to item
+- **Recent Searches** - Search history support (future enhancement)
+
+#### Library Reorganization
+- **New Library Page** (`/library`) - Unified library with tabbed interface
+  - **Assets Tab** - All created mockups/assets with folder organization
+  - **Brands Tab** - Brand library with search and upload actions
+  - **Templates Tab** - Template library (admin-uploaded templates)
+  - **Tab Navigation** - Clear separation of content types
+  - **Query Param Support** - Deep linking with `/library?tab=brands`
+  - **Shared Search** - Search functionality across all tabs
+
+### Changed
+
+#### Navigation Structure
+- **New Navigation Order**: Home → Projects → My Reviews → Library → Designer
+- **Renamed Routes**:
+  - "Reviews" → "My Reviews" (clearer for reviewers)
+  - "Gallery" → "Library" (more professional terminology)
+- **Home Route** - Added Home as first navigation item
+- **Library Route** - Replaces Gallery with tabbed interface
+- **Backward Compatibility** - Gallery route still works, redirects to Library
+
+#### Creation Flow
+- **Create Asset Button** - Prominent button in project detail page
+- **Project Pre-Selection** - Designer accepts `projectId` query param
+- **Improved Project Selection** - Better UI for selecting project when creating assets
+- **Contextual Creation** - Create assets directly from project context
+
+#### Search Integration
+- **Consolidated Search** - Standalone search page functionality integrated into global search
+- **Library Integration** - Search brands functionality available in Library > Brands tab
+- **Upload Flow** - Upload redirects to Library > Brands tab after completion
+
+### Improved
+
+#### Reviewer Experience
+- **Better Filtering** - Enhanced filtering by project and stage in My Reviews
+- **Status Indicators** - Clear visual indicators for what needs attention
+- **Quick Actions** - Quick approve functionality from list view
+- **Approval History** - Enhanced visibility of approval history in ReviewPreview
+
+#### Link Updates
+- **Updated Internal Links** - All `/gallery` links updated to `/library`
+- **Search Links** - All `/search` links updated to use global search or Library
+- **Redirect Updates** - All redirects updated to use new structure
+- **Backward Compatibility** - Old routes still work where needed
+
+### Technical
+
+#### New Components
+- `components/search/GlobalSearch.tsx` - Global search component
+- `components/dashboard/DashboardOverview.tsx` - Dashboard overview (future enhancement)
+- `app/(dashboard)/library/page.tsx` - New unified library page
+- `app/(dashboard)/page.tsx` - New home/dashboard page
+- `app/api/search/route.ts` - Unified search API endpoint
+
+#### Updated Components
+- `components/navigation/NavRail.tsx` - New navigation structure
+- `components/layout/AppHeader.tsx` - Added global search bar
+- `app/(dashboard)/designer/page.tsx` - Project query param support
+- `app/(dashboard)/projects/[id]/page.tsx` - Create Asset button
+- `app/(dashboard)/my-stage-reviews/page.tsx` - Enhanced filtering
+
+### Migration Notes
+
+- **Gallery Route**: `/gallery` still works but redirects to `/library?tab=assets`
+- **Search Route**: `/search` functionality now in global search (Cmd+K) or Library > Brands
+- **Brands Route**: `/brands` still accessible but Library > Brands tab is preferred
+- **Navigation**: All internal links updated to new structure
+
+---
+
 ## [3.8.0] - 2025-01-XX
 
 ### 🎉 **MAJOR FEATURE - Notifications System & Settings Modal**

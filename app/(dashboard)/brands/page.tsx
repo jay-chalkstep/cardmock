@@ -135,10 +135,10 @@ export default function BrandsPage() {
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-3xl font-bold text-gray-900">Brand Library</h2>
           <button
-            onClick={() => router.push('/search')}
+            onClick={() => router.push('/library?tab=brands')}
             className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
           >
-            Search Brands
+            View Library
           </button>
         </div>
 
@@ -176,10 +176,10 @@ export default function BrandsPage() {
             </p>
             {!searchQuery && (
               <button
-                onClick={() => router.push('/search')}
+                onClick={() => router.push('/library?tab=brands')}
                 className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
               >
-                Search Brands
+                View Library
               </button>
             )}
           </div>

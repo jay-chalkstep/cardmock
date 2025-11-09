@@ -120,9 +120,9 @@ export default function UploadPage() {
 
       showToast('Brand uploaded successfully!', 'success');
 
-      // Reset form and redirect to library view
+      // Reset form and redirect to library brands tab
       setTimeout(() => {
-        router.push('/search?mode=library');
+        router.push('/library?tab=brands');
       }, 1500);
     } catch (error) {
       console.error('Upload error:', error);

@@ -39,7 +39,7 @@ export default function AdminTemplatesPage() {
   // Redirect non-admins
   useEffect(() => {
     if (membership && !isAdmin) {
-      router.push('/gallery');
+      router.push('/library?tab=templates');
     }
   }, [membership, isAdmin, router]);
 

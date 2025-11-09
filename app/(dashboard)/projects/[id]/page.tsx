@@ -10,6 +10,7 @@ import {
   Search,
   Plus,
   Settings,
+  Palette,
 } from 'lucide-react';
 import type { Project, MockupWithProgress } from '@/lib/supabase';
 import Toast from '@/components/Toast';
@@ -306,12 +307,12 @@ export default function ProjectDetailPage() {
                 <span>Settings</span>
               </button>
               <button
-                onClick={() => router.push('/gallery')}
+                onClick={() => router.push(`/designer?projectId=${projectId}`)}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
-                title="Add assets to this project"
+                title="Create a new asset for this project"
               >
-                <Plus size={16} />
-                <span>Add Assets</span>
+                <Palette size={16} />
+                <span>Create Asset</span>
               </button>
             </div>
           </div>
