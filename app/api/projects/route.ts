@@ -1,7 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getUserContext } from '@/lib/auth-context';
+import { NextRequest } from 'next/server';
+import { getAuthContext } from '@/lib/api/auth';
+import { successResponse, errorResponse, badRequestResponse } from '@/lib/api/response';
+import { checkRequiredFields } from '@/lib/api/error-handler';
+import { handleSupabaseError } from '@/lib/api/error-handler';
 import { supabase } from '@/lib/supabase';
 import type { ProjectStatus } from '@/lib/supabase';
+import { logger } from '@/lib/utils/logger';
 
 // Mark as dynamic to prevent build-time evaluation
 export const dynamic = 'force-dynamic';
@@ -16,9 +20,14 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(request: NextRequest) {
   try {
-    const { userId, orgId } = await getUserContext();
+    const authResult = await getAuthContext();
+    if (authResult instanceof Response) return authResult;
+    const { orgId } = authResult;
+
     const { searchParams } = new URL(request.url);
     const statusFilter = searchParams.get('status') as ProjectStatus | null;
+
+    logger.api('/api/projects', 'GET', { orgId, statusFilter });
 
     // Build query
     let query = supabase
@@ -35,8 +44,7 @@ export async function GET(request: NextRequest) {
     const { data: projects, error } = await query;
 
     if (error) {
-      console.error('Database error fetching projects:', error);
-      throw error;
+      return handleSupabaseError(error);
     }
 
     // Fetch mockup counts and previews for each project
@@ -66,18 +74,9 @@ export async function GET(request: NextRequest) {
       })
     );
 
-    return NextResponse.json({ projects: projectsWithCounts });
+    return successResponse({ projects: projectsWithCounts });
   } catch (error) {
-    console.error('Error fetching projects:', error);
-
-    if (error instanceof Error && error.message.includes('Unauthorized')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    return NextResponse.json(
-      { error: 'Failed to fetch projects' },
-      { status: 500 }
-    );
+    return errorResponse(error, 'Failed to fetch projects');
   }
 }
 
@@ -97,42 +96,40 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const { userId, orgId } = await getUserContext();
+    const authResult = await getAuthContext();
+    if (authResult instanceof Response) return authResult;
+    const { userId, orgId } = authResult;
 
     const body = await request.json();
     const { name, client_name, description, status, color, workflow_id } = body;
 
+    logger.api('/api/projects', 'POST', { orgId, userId });
+
     // Validate required fields
-    if (!name || typeof name !== 'string' || name.trim().length === 0) {
-      return NextResponse.json(
-        { error: 'Project name is required' },
-        { status: 400 }
-      );
+    const missingFieldsCheck = checkRequiredFields(body, ['name']);
+    if (missingFieldsCheck) {
+      return missingFieldsCheck;
+    }
+
+    // Validate name
+    if (typeof name !== 'string' || name.trim().length === 0) {
+      return badRequestResponse('Project name is required');
     }
 
     // Validate name length
     if (name.trim().length > 100) {
-      return NextResponse.json(
-        { error: 'Project name must be less than 100 characters' },
-        { status: 400 }
-      );
+      return badRequestResponse('Project name must be less than 100 characters');
     }
 
     // Validate status if provided
     const validStatuses: ProjectStatus[] = ['active', 'completed', 'archived'];
     if (status && !validStatuses.includes(status)) {
-      return NextResponse.json(
-        { error: 'Invalid status. Must be: active, completed, or archived' },
-        { status: 400 }
-      );
+      return badRequestResponse('Invalid status. Must be: active, completed, or archived');
     }
 
     // Validate color format if provided (basic hex check)
     if (color && !/^#[0-9A-F]{6}$/i.test(color)) {
-      return NextResponse.json(
-        { error: 'Invalid color format. Must be a hex color (e.g., #3B82F6)' },
-        { status: 400 }
-      );
+      return badRequestResponse('Invalid color format. Must be a hex color (e.g., #3B82F6)');
     }
 
     // Create project
@@ -152,24 +149,11 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error('Database error creating project:', error);
-      throw error;
+      return handleSupabaseError(error);
     }
 
-    return NextResponse.json(
-      { project: { ...project, mockup_count: 0 } },
-      { status: 201 }
-    );
+    return successResponse({ project: { ...project, mockup_count: 0 } }, 201);
   } catch (error) {
-    console.error('Error creating project:', error);
-
-    if (error instanceof Error && error.message.includes('Unauthorized')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    return NextResponse.json(
-      { error: 'Failed to create project' },
-      { status: 500 }
-    );
+    return errorResponse(error, 'Failed to create project');
   }
 }

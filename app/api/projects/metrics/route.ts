@@ -1,6 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getUserContext } from '@/lib/auth-context';
-import { supabase } from '@/lib/supabase';
+import { NextRequest } from 'next/server';
+import { getAuthContext } from '@/lib/api/auth';
+import { successResponse, errorResponse } from '@/lib/api/response';
+import { handleSupabaseError } from '@/lib/api/error-handler';
+import { supabaseServer } from '@/lib/supabase-server';
+import { logger } from '@/lib/utils/logger';
 
 // Mark as dynamic to prevent build-time evaluation
 export const dynamic = 'force-dynamic';
@@ -53,12 +56,17 @@ interface ProjectHealthItem {
  */
 export async function GET(request: NextRequest) {
   try {
-    const { userId, orgId } = await getUserContext();
+    const authResult = await getAuthContext();
+    if (authResult instanceof Response) return authResult;
+    const { userId, orgId } = authResult;
+
     const { searchParams } = new URL(request.url);
     const statusFilter = searchParams.get('status') || 'active';
 
+    logger.api('/api/projects/metrics', 'GET', { orgId, userId, statusFilter });
+
     // Fetch all projects matching filter
-    let query = supabase
+    let query = supabaseServer
       .from('projects')
       .select('*, workflows(*)')
       .eq('organization_id', orgId)
@@ -71,12 +79,12 @@ export async function GET(request: NextRequest) {
     const { data: projects, error: projectsError } = await query;
 
     if (projectsError) {
-      console.error('Error fetching projects:', projectsError);
-      throw projectsError;
+      return handleSupabaseError(projectsError);
     }
 
     if (!projects || projects.length === 0) {
-      return NextResponse.json({
+      logger.info('No projects found for metrics', { orgId, statusFilter });
+      return successResponse({
         metrics: {
           totalProjects: 0,
           totalMockups: 0,
@@ -95,15 +103,14 @@ export async function GET(request: NextRequest) {
 
     // Get all mockups for these projects
     const projectIds = projects.map(p => p.id);
-    const { data: allMockups, error: mockupsError } = await supabase
+    const { data: allMockups, error: mockupsError } = await supabaseServer
       .from('assets')
       .select('id, mockup_name, project_id, created_at, created_by')
       .in('project_id', projectIds)
       .eq('organization_id', orgId);
 
     if (mockupsError) {
-      console.error('Error fetching mockups:', mockupsError);
-      throw mockupsError;
+      return handleSupabaseError(mockupsError);
     }
 
     const totalMockups = allMockups?.length || 0;
@@ -112,14 +119,14 @@ export async function GET(request: NextRequest) {
     const mockupIds = (allMockups || []).map(m => m.id);
     let allProgress: any[] = [];
     if (mockupIds.length > 0) {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseServer
         .from('mockup_stage_progress')
         .select('*')
         .in('asset_id', mockupIds)
         .order('updated_at', { ascending: false });
 
       if (error) {
-        console.error('Error fetching stage progress:', error);
+        logger.warn('Error fetching stage progress, continuing without it', { error });
       } else {
         allProgress = data || [];
       }
@@ -197,7 +204,7 @@ export async function GET(request: NextRequest) {
       });
 
       // Count pending reviews for user (where user is assigned as reviewer at current stage)
-      const { data: stageReviewers } = await supabase
+      const { data: stageReviewers } = await supabaseServer
         .from('project_stage_reviewers')
         .select('stage_order')
         .eq('project_id', project.id)
@@ -206,7 +213,7 @@ export async function GET(request: NextRequest) {
       if (stageReviewers && stageReviewers.length > 0) {
         const userStages = stageReviewers.map(r => r.stage_order);
         projectMockups.forEach(mockup => {
-          const mockupProgress = allProgress.filter(p => p.mockup_id === mockup.id);
+          const mockupProgress = allProgress.filter(p => p.asset_id === mockup.id);
           const inReviewStage = mockupProgress.find(p => p.status === 'in_review');
           if (inReviewStage && userStages.includes(inReviewStage.stage_order)) {
             pendingReviewsForUser++;
@@ -237,7 +244,7 @@ export async function GET(request: NextRequest) {
 
     for (const progress of userProgressRecords) {
       const project = projects.find(p => p.id === progress.project_id);
-      const mockup = allMockups?.find(m => m.id === progress.mockup_id);
+      const mockup = allMockups?.find(m => m.id === progress.asset_id);
       const workflow = project?.workflows;
       const workflowData = Array.isArray(workflow) ? workflow[0] : workflow;
       const stage = workflowData?.stages?.find((s: any) => s.order === progress.stage_order);
@@ -279,7 +286,7 @@ export async function GET(request: NextRequest) {
     // Add stage change events
     allProgress.slice(0, 10).forEach((progress, idx) => {
       const project = projects.find(p => p.id === progress.project_id);
-      const mockup = allMockups?.find(m => m.id === progress.mockup_id);
+      const mockup = allMockups?.find(m => m.id === progress.asset_id);
       const workflow = project?.workflows;
       const workflowData = Array.isArray(workflow) ? workflow[0] : workflow;
       const stage = workflowData?.stages?.find((s: any) => s.order === progress.stage_order);
@@ -340,7 +347,14 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({
+    logger.info('Project metrics fetched successfully', {
+      orgId,
+      totalProjects: projects.length,
+      totalMockups,
+      overallProgress,
+    });
+
+    return successResponse({
       metrics: {
         totalProjects: projects.length,
         totalMockups,
@@ -356,15 +370,6 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Error fetching aggregated metrics:', error);
-
-    if (error instanceof Error && error.message.includes('Unauthorized')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    return NextResponse.json(
-      { error: 'Failed to fetch aggregated metrics' },
-      { status: 500 }
-    );
+    return errorResponse(error, 'Failed to fetch aggregated metrics');
   }
 }

@@ -1,6 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getUserContext } from '@/lib/auth-context';
-import { supabase } from '@/lib/supabase';
+import { NextRequest } from 'next/server';
+import { getAuthContext } from '@/lib/api/auth';
+import { successResponse, errorResponse, notFoundResponse } from '@/lib/api/response';
+import { handleSupabaseError } from '@/lib/api/error-handler';
+import { supabaseServer } from '@/lib/supabase-server';
+import { logger } from '@/lib/utils/logger';
 
 // Mark as dynamic to prevent build-time evaluation
 export const dynamic = 'force-dynamic';
@@ -45,11 +48,16 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId, orgId } = await getUserContext();
+    const authResult = await getAuthContext();
+    if (authResult instanceof Response) return authResult;
+    const { orgId } = authResult;
+
     const { id } = await context.params;
 
+    logger.api(`/api/projects/${id}/metrics`, 'GET', { orgId, projectId: id });
+
     // Verify project exists and belongs to organization
-    const { data: project, error: projectError } = await supabase
+    const { data: project, error: projectError } = await supabaseServer
       .from('projects')
       .select('*, workflows(*)')
       .eq('id', id)
@@ -57,11 +65,11 @@ export async function GET(
       .single();
 
     if (projectError || !project) {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+      return notFoundResponse('Project not found');
     }
 
     // Get all mockups for this project
-    const { data: mockups, error: mockupsError } = await supabase
+    const { data: mockups, error: mockupsError } = await supabaseServer
       .from('assets')
       .select('id, mockup_name, created_at, created_by')
       .eq('project_id', id)
@@ -69,8 +77,7 @@ export async function GET(
       .order('created_at', { ascending: false });
 
     if (mockupsError) {
-      console.error('Error fetching mockups:', mockupsError);
-      throw mockupsError;
+      return handleSupabaseError(mockupsError);
     }
 
     const totalMockups = mockups?.length || 0;
@@ -89,7 +96,7 @@ export async function GET(
       const mockupIds = mockups.map(m => m.id);
 
       // Fetch all stage progress
-      const { data: allProgress, error: progressError } = await supabase
+      const { data: allProgress, error: progressError } = await supabaseServer
         .from('mockup_stage_progress')
         .select('*')
         .in('asset_id', mockupIds)
@@ -97,7 +104,7 @@ export async function GET(
         .order('updated_at', { ascending: false });
 
       if (progressError) {
-        console.error('Error fetching stage progress:', progressError);
+        logger.warn('Error fetching stage progress, continuing without it', { error: progressError });
       }
 
       // Group progress by mockup
@@ -181,7 +188,7 @@ export async function GET(
       // Build reviewer activity list
       reviewerActivity = await Promise.all(
         recentProgress.map(async (p: any) => {
-          const mockup = mockups.find(m => m.id === p.mockup_id);
+          const mockup = mockups.find(m => m.id === p.asset_id);
           const stage = stages.find((s: any) => s.order === p.stage_order);
 
           return {
@@ -229,16 +236,16 @@ export async function GET(
     // Fetch recent comments
     if (mockups && mockups.length > 0) {
       const mockupIds = mockups.map(m => m.id);
-      const { data: comments } = await supabase
+      const { data: comments } = await supabaseServer
         .from('mockup_comments')
-        .select('id, comment_text, created_at, created_by, mockup_id')
-        .in('mockup_id', mockupIds)
+        .select('id, comment_text, created_at, created_by, asset_id')
+        .in('asset_id', mockupIds)
         .is('deleted_at', null)
         .order('created_at', { ascending: false })
         .limit(10);
 
       (comments || []).forEach((comment) => {
-        const mockup = mockups.find(m => m.id === comment.mockup_id);
+        const mockup = mockups.find(m => m.id === comment.asset_id);
         timeline.push({
           id: `comment-${comment.id}`,
           type: 'comment_added',
@@ -256,8 +263,10 @@ export async function GET(
     // Sort timeline by timestamp (most recent first)
     timeline.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
+    logger.info('Project metrics fetched successfully', { projectId: id, totalMockups });
+
     // Return metrics
-    return NextResponse.json({
+    return successResponse({
       metrics: {
         projectId: id,
         projectName: project.name,
@@ -269,15 +278,6 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error('Error fetching project metrics:', error);
-
-    if (error instanceof Error && error.message.includes('Unauthorized')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    return NextResponse.json(
-      { error: 'Failed to fetch project metrics' },
-      { status: 500 }
-    );
+    return errorResponse(error, 'Failed to fetch project metrics');
   }
 }

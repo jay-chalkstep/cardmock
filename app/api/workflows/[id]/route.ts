@@ -1,6 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getUserContext, isAdmin } from '@/lib/auth-context';
+import { NextRequest } from 'next/server';
+import { getAuthContext, isAdmin } from '@/lib/api/auth';
+import { successResponse, errorResponse, badRequestResponse, notFoundResponse, forbiddenResponse } from '@/lib/api/response';
+import { handleSupabaseError } from '@/lib/api/error-handler';
 import { supabase } from '@/lib/supabase';
+import { logger } from '@/lib/utils/logger';
 import type { WorkflowStage } from '@/lib/supabase';
 
 // Mark as dynamic to prevent build-time evaluation
@@ -16,8 +19,13 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId, orgId } = await getUserContext();
+    const authResult = await getAuthContext();
+    if (authResult instanceof Response) return authResult;
+    const { orgId } = authResult;
+    
     const { id } = await context.params;
+
+    logger.api(`/api/workflows/${id}`, 'GET', { orgId });
 
     // Fetch workflow
     const { data: workflow, error } = await supabase
@@ -28,7 +36,7 @@ export async function GET(
       .single();
 
     if (error || !workflow) {
-      return NextResponse.json({ error: 'Workflow not found' }, { status: 404 });
+      return notFoundResponse('Workflow not found');
     }
 
     // Calculate stage count
@@ -41,7 +49,7 @@ export async function GET(
       .eq('workflow_id', id)
       .eq('organization_id', orgId);
 
-    return NextResponse.json({
+    return successResponse({
       workflow: {
         ...workflow,
         stage_count,
@@ -49,16 +57,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error('Error fetching workflow:', error);
-
-    if (error instanceof Error && error.message.includes('Unauthorized')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    return NextResponse.json(
-      { error: 'Failed to fetch workflow' },
-      { status: 500 }
-    );
+    return errorResponse(error, 'Failed to fetch workflow');
   }
 }
 
@@ -81,16 +80,19 @@ export async function PATCH(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId, orgId } = await getUserContext();
+    const authResult = await getAuthContext();
+    if (authResult instanceof Response) return authResult;
+    const { orgId } = authResult;
+    
     const { id } = await context.params;
 
     // Check admin permission
-    if (!(await isAdmin())) {
-      return NextResponse.json(
-        { error: 'Forbidden: Admin access required' },
-        { status: 403 }
-      );
+    const adminCheck = await isAdmin();
+    if (!adminCheck) {
+      return forbiddenResponse('Admin access required');
     }
+
+    logger.api(`/api/workflows/${id}`, 'PATCH', { orgId });
 
     // Fetch workflow to check existence
     const { data: workflow, error: fetchError } = await supabase
@@ -101,7 +103,7 @@ export async function PATCH(
       .single();
 
     if (fetchError || !workflow) {
-      return NextResponse.json({ error: 'Workflow not found' }, { status: 404 });
+      return notFoundResponse('Workflow not found');
     }
 
     const body = await request.json();
@@ -113,10 +115,7 @@ export async function PATCH(
     // Validate and add name
     if (name !== undefined) {
       if (typeof name !== 'string' || name.trim().length === 0) {
-        return NextResponse.json(
-          { error: 'Workflow name cannot be empty' },
-          { status: 400 }
-        );
+        return badRequestResponse('Workflow name cannot be empty');
       }
       updateData.name = name.trim();
     }
@@ -129,10 +128,7 @@ export async function PATCH(
     // Validate and add stages
     if (stages !== undefined) {
       if (!Array.isArray(stages) || stages.length === 0) {
-        return NextResponse.json(
-          { error: 'Workflow must have at least one stage' },
-          { status: 400 }
-        );
+        return badRequestResponse('Workflow must have at least one stage');
       }
 
       // Validate each stage
@@ -140,25 +136,16 @@ export async function PATCH(
         const stage = stages[i] as WorkflowStage;
 
         if (!stage.name || typeof stage.name !== 'string' || stage.name.trim().length === 0) {
-          return NextResponse.json(
-            { error: `Stage ${i + 1} must have a name` },
-            { status: 400 }
-          );
+          return badRequestResponse(`Stage ${i + 1} must have a name`);
         }
 
         if (typeof stage.order !== 'number' || stage.order !== i + 1) {
-          return NextResponse.json(
-            { error: 'Stage orders must be sequential starting from 1' },
-            { status: 400 }
-          );
+          return badRequestResponse('Stage orders must be sequential starting from 1');
         }
 
         const validColors = ['yellow', 'green', 'blue', 'purple', 'red', 'orange', 'gray'];
         if (!stage.color || !validColors.includes(stage.color)) {
-          return NextResponse.json(
-            { error: `Stage ${i + 1} has invalid color. Must be one of: ${validColors.join(', ')}` },
-            { status: 400 }
-          );
+          return badRequestResponse(`Stage ${i + 1} has invalid color. Must be one of: ${validColors.join(', ')}`);
         }
       }
 
@@ -192,26 +179,14 @@ export async function PATCH(
       .single();
 
     if (updateError) {
-      console.error('Database error updating workflow:', updateError);
-      throw updateError;
+      return handleSupabaseError(updateError);
     }
 
-    return NextResponse.json({ workflow: updatedWorkflow });
+    logger.info('Workflow updated successfully', { workflowId: id });
+
+    return successResponse({ workflow: updatedWorkflow });
   } catch (error) {
-    console.error('Error updating workflow:', error);
-
-    if (error instanceof Error && error.message.includes('Unauthorized')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    if (error instanceof Error && error.message.includes('Forbidden')) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
-    return NextResponse.json(
-      { error: 'Failed to update workflow' },
-      { status: 500 }
-    );
+    return errorResponse(error, 'Failed to update workflow');
   }
 }
 
@@ -228,16 +203,19 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId, orgId } = await getUserContext();
+    const authResult = await getAuthContext();
+    if (authResult instanceof Response) return authResult;
+    const { orgId } = authResult;
+    
     const { id } = await context.params;
 
     // Check admin permission
-    if (!(await isAdmin())) {
-      return NextResponse.json(
-        { error: 'Forbidden: Admin access required' },
-        { status: 403 }
-      );
+    const adminCheck = await isAdmin();
+    if (!adminCheck) {
+      return forbiddenResponse('Admin access required');
     }
+
+    logger.api(`/api/workflows/${id}`, 'DELETE', { orgId });
 
     // Fetch workflow to check existence
     const { data: workflow, error: fetchError } = await supabase
@@ -248,7 +226,7 @@ export async function DELETE(
       .single();
 
     if (fetchError || !workflow) {
-      return NextResponse.json({ error: 'Workflow not found' }, { status: 404 });
+      return notFoundResponse('Workflow not found');
     }
 
     // Check if workflow is in use by any projects
@@ -259,12 +237,7 @@ export async function DELETE(
       .eq('organization_id', orgId);
 
     if (count && count > 0) {
-      return NextResponse.json(
-        {
-          error: `Cannot delete workflow: ${count} project(s) are using this workflow. Please archive it instead or reassign the projects first.`,
-        },
-        { status: 400 }
-      );
+      return badRequestResponse(`Cannot delete workflow: ${count} project(s) are using this workflow. Please archive it instead or reassign the projects first.`);
     }
 
     // Delete the workflow (projects will have workflow_id set to NULL automatically)
@@ -274,25 +247,13 @@ export async function DELETE(
       .eq('id', id);
 
     if (deleteError) {
-      console.error('Database error deleting workflow:', deleteError);
-      throw deleteError;
+      return handleSupabaseError(deleteError);
     }
 
-    return NextResponse.json({ success: true });
+    logger.info('Workflow deleted successfully', { workflowId: id });
+
+    return successResponse({ success: true });
   } catch (error) {
-    console.error('Error deleting workflow:', error);
-
-    if (error instanceof Error && error.message.includes('Unauthorized')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    if (error instanceof Error && error.message.includes('Forbidden')) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
-    return NextResponse.json(
-      { error: 'Failed to delete workflow' },
-      { status: 500 }
-    );
+    return errorResponse(error, 'Failed to delete workflow');
   }
 }

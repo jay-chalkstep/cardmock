@@ -1,21 +1,20 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { NextRequest } from 'next/server';
+import { getAuthContext } from '@/lib/api/auth';
+import { successResponse, errorResponse, badRequestResponse, forbiddenResponse } from '@/lib/api/response';
+import { handleSupabaseError, checkRequiredFields } from '@/lib/api/error-handler';
 import { supabase, LOGOS_BUCKET } from '@/lib/supabase';
+import { logger } from '@/lib/utils/logger';
 
 // Mark as dynamic to prevent build-time evaluation
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
-    // Get organization from Clerk
-    const { orgId } = await auth();
+    const authResult = await getAuthContext();
+    if (authResult instanceof Response) return authResult;
+    const { orgId } = authResult;
 
-    if (!orgId) {
-      return NextResponse.json(
-        { error: 'Organization required. Please select or create an organization.' },
-        { status: 403 }
-      );
-    }
+    logger.api('/api/upload', 'POST', { orgId });
 
     const formData = await request.formData();
     const file = formData.get('file') as File;
@@ -24,10 +23,7 @@ export async function POST(request: NextRequest) {
     const logoType = formData.get('logoType') as string;
 
     if (!file || !companyName) {
-      return NextResponse.json(
-        { error: 'File and company name are required' },
-        { status: 400 }
-      );
+      return badRequestResponse('File and company name are required');
     }
 
     // Convert file to buffer
@@ -49,20 +45,23 @@ export async function POST(request: NextRequest) {
       });
 
     if (uploadError) {
-      console.error('Upload error:', uploadError);
-      return NextResponse.json(
-        { error: 'Failed to upload file to storage' },
-        { status: 500 }
-      );
+      logger.error('Storage upload failed', uploadError, { fileName, bucket: LOGOS_BUCKET });
+      return errorResponse(uploadError, 'Failed to upload file to storage');
     }
+
+    logger.debug('Storage upload successful', { fileName });
 
     // Get public URL
     const { data: { publicUrl } } = supabase.storage
       .from(LOGOS_BUCKET)
       .getPublicUrl(fileName);
 
+    logger.debug('Public URL generated', { url: publicUrl });
+
     // Step 1: Create or find brand (within organization)
     const brandDomain = domain || `${companyName.toLowerCase().replace(/\s+/g, '')}.com`;
+
+    logger.db('Checking for existing brand', { domain: brandDomain, orgId });
 
     const { data: existingBrand } = await supabase
       .from('brands')
@@ -75,7 +74,10 @@ export async function POST(request: NextRequest) {
 
     if (existingBrand) {
       brandId = existingBrand.id;
+      logger.debug('Using existing brand', { brandId });
     } else {
+      logger.db('Creating new brand', { companyName, domain: brandDomain, orgId });
+
       const { data: newBrand, error: brandError } = await supabase
         .from('brands')
         .insert({
@@ -87,18 +89,18 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (brandError) {
-        console.error('Brand creation error:', brandError);
+        logger.error('Brand creation failed', brandError, { companyName, domain: brandDomain });
         await supabase.storage.from(LOGOS_BUCKET).remove([fileName]);
-        return NextResponse.json(
-          { error: 'Failed to create brand' },
-          { status: 500 }
-        );
+        return handleSupabaseError(brandError);
       }
 
       brandId = newBrand.id;
+      logger.info('Brand created successfully', { brandId, companyName });
     }
 
     // Step 2: Save logo variant to database
+    logger.db('Inserting logo variant', { brandId, orgId });
+
     const { data: logoData, error: dbError } = await supabase
       .from('logo_variants')
       .insert({
@@ -113,15 +115,10 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (dbError) {
-      console.error('Database error:', dbError);
-
+      logger.error('Logo variant insert failed', dbError, { brandId, orgId });
       // Try to delete uploaded file if database insert fails
       await supabase.storage.from(LOGOS_BUCKET).remove([fileName]);
-
-      return NextResponse.json(
-        { error: 'Failed to save logo information' },
-        { status: 500 }
-      );
+      return handleSupabaseError(dbError);
     }
 
     // Step 3: Set as primary logo variant if brand doesn't have one
@@ -136,18 +133,17 @@ export async function POST(request: NextRequest) {
         .from('brands')
         .update({ primary_logo_variant_id: logoData.id })
         .eq('id', brandId);
+      logger.debug('Set as primary logo variant', { brandId, logoVariantId: logoData.id });
     }
 
-    return NextResponse.json({
+    logger.info('Logo uploaded successfully', { logoId: logoData.id, brandId, companyName });
+
+    return successResponse({
       message: 'Logo uploaded successfully',
       data: logoData
-    });
+    }, 201);
   } catch (error) {
-    console.error('Upload API error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return errorResponse(error, 'Failed to upload logo');
   }
 }
 

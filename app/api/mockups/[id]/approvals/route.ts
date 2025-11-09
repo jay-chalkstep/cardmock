@@ -1,6 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getUserContext } from '@/lib/auth-context';
+import { NextRequest } from 'next/server';
+import { getAuthContext } from '@/lib/api/auth';
+import { successResponse, errorResponse, notFoundResponse } from '@/lib/api/response';
+import { handleSupabaseError } from '@/lib/api/error-handler';
 import { supabase } from '@/lib/supabase';
+import { logger } from '@/lib/utils/logger';
 import type {
   MockupStageUserApproval,
   ApprovalProgress,
@@ -23,8 +26,13 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId, orgId } = await getUserContext();
+    const authResult = await getAuthContext();
+    if (authResult instanceof Response) return authResult;
+    const { orgId } = authResult;
+    
     const { id: mockupId } = await context.params;
+
+    logger.api(`/api/mockups/${mockupId}/approvals`, 'GET', { orgId });
 
     // Fetch mockup with project and workflow
     const { data: mockup, error: mockupError } = await supabase
@@ -41,11 +49,11 @@ export async function GET(
       .single();
 
     if (mockupError || !mockup) {
-      return NextResponse.json({ error: 'Mockup not found' }, { status: 404 });
+      return notFoundResponse('Mockup not found');
     }
 
     if (!mockup.project_id) {
-      return NextResponse.json({
+      return successResponse({
         approvals_by_stage: {},
         progress_summary: {},
         final_approval: null
@@ -64,8 +72,7 @@ export async function GET(
       .order('created_at', { ascending: true });
 
     if (approvalsError) {
-      console.error('Error fetching user approvals:', approvalsError);
-      throw approvalsError;
+      return handleSupabaseError(approvalsError);
     }
 
     // Fetch stage progress for all stages
@@ -76,8 +83,7 @@ export async function GET(
       .order('stage_order', { ascending: true });
 
     if (progressError) {
-      console.error('Error fetching stage progress:', progressError);
-      throw progressError;
+      return handleSupabaseError(progressError);
     }
 
     // Group approvals by stage
@@ -125,17 +131,13 @@ export async function GET(
       final_approval: finalApproval as any
     };
 
-    return NextResponse.json(summary);
+    logger.info('Approvals fetched successfully', {
+      mockupId,
+      stagesCount: Object.keys(approvalsByStage).length,
+    });
+
+    return successResponse(summary);
   } catch (error) {
-    console.error('Error fetching approvals:', error);
-
-    if (error instanceof Error && error.message.includes('Unauthorized')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    return NextResponse.json(
-      { error: 'Failed to fetch approvals' },
-      { status: 500 }
-    );
+    return errorResponse(error, 'Failed to fetch approvals');
   }
 }

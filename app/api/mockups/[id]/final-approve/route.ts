@@ -1,7 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getUserContext } from '@/lib/auth-context';
+import { NextRequest } from 'next/server';
+import { getAuthContext, isAdmin } from '@/lib/api/auth';
+import { successResponse, errorResponse, badRequestResponse, notFoundResponse, forbiddenResponse } from '@/lib/api/response';
+import { handleSupabaseError } from '@/lib/api/error-handler';
 import { supabase } from '@/lib/supabase';
 import { clerkClient } from '@clerk/nextjs/server';
+import { logger } from '@/lib/utils/logger';
 
 // Mark as dynamic to prevent build-time evaluation
 export const dynamic = 'force-dynamic';
@@ -17,10 +20,15 @@ export async function POST(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId, orgId } = await getUserContext();
+    const authResult = await getAuthContext();
+    if (authResult instanceof Response) return authResult;
+    const { userId, orgId } = authResult;
+    
     const { id: mockupId } = await context.params;
     const body = await request.json();
     const { notes } = body;
+
+    logger.api(`/api/mockups/${mockupId}/final-approve`, 'POST', { orgId, userId });
 
     // Fetch mockup with project
     const { data: mockup, error: mockupError } = await supabase
@@ -31,38 +39,21 @@ export async function POST(
       .single();
 
     if (mockupError || !mockup) {
-      return NextResponse.json({ error: 'Mockup not found' }, { status: 404 });
+      return notFoundResponse('Mockup not found');
     }
 
     if (!mockup.project_id || !mockup.project) {
-      return NextResponse.json(
-        { error: 'Mockup must be assigned to a project' },
-        { status: 400 }
-      );
+      return badRequestResponse('Mockup must be assigned to a project');
     }
 
     const project = mockup.project as any;
 
     // Verify user is project creator or org admin
     const isProjectCreator = project.created_by === userId;
+    const userIsAdmin = await isAdmin();
 
-    // Check if user is org admin
-    const client = await clerkClient();
-    const memberships = await client.users.getOrganizationMembershipList({
-      userId: userId
-    });
-
-    const membership = memberships.data.find(
-      (m) => m.organization.id === orgId
-    );
-
-    const isOrgAdmin = membership?.role === 'org:admin';
-
-    if (!isProjectCreator && !isOrgAdmin) {
-      return NextResponse.json(
-        { error: 'Only project creator or organization admin can give final approval' },
-        { status: 403 }
-      );
+    if (!isProjectCreator && !userIsAdmin) {
+      return forbiddenResponse('Only project creator or organization admin can give final approval');
     }
 
     // Check that mockup is in pending_final_approval status
@@ -76,23 +67,15 @@ export async function POST(
       .single();
 
     if (progressError || !stageProgress) {
-      return NextResponse.json(
-        { error: 'No stage progress found for this mockup' },
-        { status: 404 }
-      );
+      return notFoundResponse('No stage progress found for this mockup');
     }
 
     if (stageProgress.status !== 'pending_final_approval') {
-      return NextResponse.json(
-        {
-          error: `Cannot give final approval. Current status: ${stageProgress.status}`,
-          current_status: stageProgress.status
-        },
-        { status: 400 }
-      );
+      return badRequestResponse(`Cannot give final approval. Current status: ${stageProgress.status}`);
     }
 
     // Get user's name for display
+    const client = await clerkClient();
     const user = await client.users.getUser(userId);
     const userName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.emailAddresses[0]?.emailAddress || 'Unknown User';
 
@@ -119,8 +102,12 @@ export async function POST(
 
     // TODO: Send "Asset Approved" email to all stakeholders
 
-    return NextResponse.json({
-      success: true,
+    logger.info('Final approval recorded successfully', {
+      mockupId,
+      approvedBy: userId,
+    });
+
+    return successResponse({
       message: 'Final approval recorded successfully',
       mockup: updatedMockup,
       progress: updatedProgress,
@@ -131,15 +118,6 @@ export async function POST(
       }
     });
   } catch (error) {
-    console.error('Error recording final approval:', error);
-
-    if (error instanceof Error && error.message.includes('Unauthorized')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    return NextResponse.json(
-      { error: 'Failed to record final approval' },
-      { status: 500 }
-    );
+    return errorResponse(error, 'Failed to record final approval');
   }
 }

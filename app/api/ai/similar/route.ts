@@ -4,33 +4,31 @@
  * Finds similar mockups using pgvector similarity search
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { NextRequest } from 'next/server';
+import { getAuthContext } from '@/lib/api/auth';
+import { successResponse, errorResponse, badRequestResponse, notFoundResponse, forbiddenResponse } from '@/lib/api/response';
+import { handleSupabaseError, checkRequiredFields } from '@/lib/api/error-handler';
 import { supabaseServer } from '@/lib/supabase-server';
 import { AI_CONFIG } from '@/lib/ai/config';
 import { logAIOperation } from '@/lib/ai/utils';
+import { logger } from '@/lib/utils/logger';
 import type { SimilarMockupResult } from '@/lib/supabase';
 
 export async function POST(req: NextRequest) {
   try {
-    // Authenticate user
-    const { userId, orgId } = await auth();
+    const authResult = await getAuthContext();
+    if (authResult instanceof Response) return authResult;
+    const { orgId } = authResult;
 
-    if (!userId || !orgId) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    const body = await req.json();
+    const { mockupId, limit } = body;
 
-    // Parse request body
-    const { mockupId, limit } = await req.json();
+    logger.api('/api/ai/similar', 'POST', { orgId, mockupId });
 
-    if (!mockupId) {
-      return NextResponse.json(
-        { error: 'mockupId is required' },
-        { status: 400 }
-      );
+    // Validate required fields
+    const missingFieldsCheck = checkRequiredFields(body, ['mockupId']);
+    if (missingFieldsCheck) {
+      return missingFieldsCheck;
     }
 
     const searchLimit = limit || AI_CONFIG.DEFAULT_SIMILAR_COUNT;
@@ -45,34 +43,22 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (mockupError || !mockup) {
-      return NextResponse.json(
-        { error: 'Mockup not found' },
-        { status: 404 }
-      );
+      return notFoundResponse('Mockup not found');
     }
 
     if (mockup.organization_id !== orgId) {
-      return NextResponse.json(
-        { error: 'Forbidden' },
-        { status: 403 }
-      );
+      return forbiddenResponse('Mockup does not belong to your organization');
     }
 
     // Check if mockup has been analyzed (has embedding)
     const { data: aiMetadata, error: metadataError } = await supabaseServer
       .from('mockup_ai_metadata')
       .select('embedding')
-      .eq('mockup_id', mockupId)
+      .eq('asset_id', mockupId)
       .single();
 
     if (metadataError || !aiMetadata || !aiMetadata.embedding) {
-      return NextResponse.json(
-        {
-          error: 'Mockup has not been analyzed yet. Please analyze it first using the AI analysis feature.',
-          analyzed: false,
-        },
-        { status: 400 }
-      );
+      return badRequestResponse('Mockup has not been analyzed yet. Please analyze it first using the AI analysis feature.');
     }
 
     // Call the RPC function to find similar mockups
@@ -85,7 +71,7 @@ export async function POST(req: NextRequest) {
     );
 
     if (rpcError) {
-      throw new Error(`RPC error: ${rpcError.message}`);
+      return handleSupabaseError(rpcError);
     }
 
     const results = (similarMockups || []) as SimilarMockupResult[];
@@ -95,45 +81,33 @@ export async function POST(req: NextRequest) {
       count: results.length,
     });
 
-    return NextResponse.json({
-      success: true,
+    logger.info('Similar mockups found', { mockupId, count: results.length });
+
+    return successResponse({
       mockupId,
       similar: results,
       count: results.length,
     });
   } catch (error) {
-    console.error('[AI Similar API] Error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
-
-    return NextResponse.json(
-      { error: errorMessage },
-      { status: 500 }
-    );
+    return errorResponse(error, 'Failed to find similar mockups');
   }
 }
 
 // GET endpoint for retrieving similar mockups (alternative to POST)
 export async function GET(req: NextRequest) {
   try {
-    // Authenticate user
-    const { userId, orgId } = await auth();
-
-    if (!userId || !orgId) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    const authResult = await getAuthContext();
+    if (authResult instanceof Response) return authResult;
+    const { orgId } = authResult;
 
     const { searchParams } = new URL(req.url);
     const mockupId = searchParams.get('mockupId');
     const limit = parseInt(searchParams.get('limit') || String(AI_CONFIG.DEFAULT_SIMILAR_COUNT), 10);
 
+    logger.api('/api/ai/similar', 'GET', { orgId, mockupId, limit });
+
     if (!mockupId) {
-      return NextResponse.json(
-        { error: 'mockupId query parameter is required' },
-        { status: 400 }
-      );
+      return badRequestResponse('mockupId query parameter is required');
     }
 
     // Verify mockup belongs to user's organization
@@ -144,34 +118,22 @@ export async function GET(req: NextRequest) {
       .single();
 
     if (mockupError || !mockup) {
-      return NextResponse.json(
-        { error: 'Mockup not found' },
-        { status: 404 }
-      );
+      return notFoundResponse('Mockup not found');
     }
 
     if (mockup.organization_id !== orgId) {
-      return NextResponse.json(
-        { error: 'Forbidden' },
-        { status: 403 }
-      );
+      return forbiddenResponse('Mockup does not belong to your organization');
     }
 
     // Check if mockup has been analyzed
     const { data: aiMetadata, error: metadataError } = await supabaseServer
       .from('mockup_ai_metadata')
       .select('embedding')
-      .eq('mockup_id', mockupId)
+      .eq('asset_id', mockupId)
       .single();
 
     if (metadataError || !aiMetadata || !aiMetadata.embedding) {
-      return NextResponse.json(
-        {
-          error: 'Mockup has not been analyzed yet',
-          analyzed: false,
-        },
-        { status: 400 }
-      );
+      return badRequestResponse('Mockup has not been analyzed yet');
     }
 
     // Find similar mockups
@@ -184,20 +146,15 @@ export async function GET(req: NextRequest) {
     );
 
     if (rpcError) {
-      throw new Error(`RPC error: ${rpcError.message}`);
+      return handleSupabaseError(rpcError);
     }
 
-    return NextResponse.json({
-      success: true,
+    return successResponse({
       mockupId,
       similar: similarMockups || [],
       count: (similarMockups || []).length,
     });
   } catch (error) {
-    console.error('[AI Similar API] Error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return errorResponse(error, 'Failed to find similar mockups');
   }
 }

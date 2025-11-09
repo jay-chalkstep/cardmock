@@ -1,6 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getUserContext } from '@/lib/auth-context';
-import { supabase } from '@/lib/supabase';
+import { NextRequest } from 'next/server';
+import { getAuthContext } from '@/lib/api/auth';
+import { successResponse, errorResponse, notFoundResponse } from '@/lib/api/response';
+import { handleSupabaseError } from '@/lib/api/error-handler';
+import { supabaseServer } from '@/lib/supabase-server';
+import { logger } from '@/lib/utils/logger';
 import type { MockupWithProgress, MockupStageProgress, StageStatus } from '@/lib/supabase';
 
 // Mark as dynamic to prevent build-time evaluation
@@ -16,11 +19,16 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId, orgId } = await getUserContext();
+    const authResult = await getAuthContext();
+    if (authResult instanceof Response) return authResult;
+    const { orgId } = authResult;
+
     const { id } = await context.params;
 
+    logger.api(`/api/projects/${id}/mockups`, 'GET', { orgId, projectId: id });
+
     // Verify project exists and belongs to organization
-    const { data: project, error: projectError } = await supabase
+    const { data: project, error: projectError } = await supabaseServer
       .from('projects')
       .select('id, workflow_id')
       .eq('id', id)
@@ -28,11 +36,11 @@ export async function GET(
       .single();
 
     if (projectError || !project) {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+      return notFoundResponse('Project not found');
     }
 
     // Fetch mockups for this project with logo and template data
-    const { data: mockups, error: mockupsError } = await supabase
+    const { data: mockups, error: mockupsError } = await supabaseServer
       .from('assets')
       .select(`
         *,
@@ -51,15 +59,14 @@ export async function GET(
       .order('created_at', { ascending: false });
 
     if (mockupsError) {
-      console.error('Database error fetching project mockups:', mockupsError);
-      throw mockupsError;
+      return handleSupabaseError(mockupsError);
     }
 
     // If project has a workflow, fetch stage progress for all mockups
     if (project.workflow_id && mockups && mockups.length > 0) {
       const mockupIds = mockups.map(m => m.id);
 
-      const { data: allProgress, error: progressError } = await supabase
+      const { data: allProgress, error: progressError } = await supabaseServer
         .from('mockup_stage_progress')
         .select('*')
         .in('asset_id', mockupIds)
@@ -68,7 +75,7 @@ export async function GET(
         .order('stage_order', { ascending: true });
 
       if (progressError) {
-        console.error('Error fetching stage progress:', progressError);
+        logger.warn('Error fetching stage progress, continuing without it', { error: progressError });
         // Continue without progress data rather than failing
       }
 
@@ -121,20 +128,15 @@ export async function GET(
         };
       });
 
-      return NextResponse.json({ mockups: mockupsWithProgress });
+      logger.info('Project mockups fetched successfully', { projectId: id, count: mockupsWithProgress.length });
+
+      return successResponse({ mockups: mockupsWithProgress });
     }
 
-    return NextResponse.json({ mockups: mockups || [] });
+    logger.info('Project mockups fetched successfully', { projectId: id, count: mockups?.length || 0 });
+
+    return successResponse({ mockups: mockups || [] });
   } catch (error) {
-    console.error('Error fetching project mockups:', error);
-
-    if (error instanceof Error && error.message.includes('Unauthorized')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    return NextResponse.json(
-      { error: 'Failed to fetch project mockups' },
-      { status: 500 }
-    );
+    return errorResponse(error, 'Failed to fetch project mockups');
   }
 }

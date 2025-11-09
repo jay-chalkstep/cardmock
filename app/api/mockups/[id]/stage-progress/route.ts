@@ -1,6 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getUserContext } from '@/lib/auth-context';
+import { NextRequest } from 'next/server';
+import { getAuthContext } from '@/lib/api/auth';
+import { successResponse, errorResponse, notFoundResponse } from '@/lib/api/response';
+import { handleSupabaseError } from '@/lib/api/error-handler';
 import { supabase } from '@/lib/supabase';
+import { logger } from '@/lib/utils/logger';
 import type { MockupStageProgressWithDetails, WorkflowStage } from '@/lib/supabase';
 
 // Mark as dynamic to prevent build-time evaluation
@@ -16,8 +19,13 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId, orgId } = await getUserContext();
+    const authResult = await getAuthContext();
+    if (authResult instanceof Response) return authResult;
+    const { orgId } = authResult;
+    
     const { id } = await context.params;
+
+    logger.api(`/api/mockups/${id}/stage-progress`, 'GET', { orgId });
 
     // Verify mockup exists and belongs to organization
     const { data: mockup, error: mockupError } = await supabase
@@ -28,12 +36,12 @@ export async function GET(
       .single();
 
     if (mockupError || !mockup) {
-      return NextResponse.json({ error: 'Mockup not found' }, { status: 404 });
+      return notFoundResponse('Mockup not found');
     }
 
     // If mockup is not in a project, return empty progress
     if (!mockup.project_id) {
-      return NextResponse.json({ progress: [] });
+      return successResponse({ progress: [] });
     }
 
     // Fetch project with workflow
@@ -45,7 +53,7 @@ export async function GET(
       .single();
 
     if (projectError || !project || !project.workflow_id) {
-      return NextResponse.json({ progress: [] });
+      return successResponse({ progress: [] });
     }
 
     // Fetch stage progress for this mockup
@@ -57,8 +65,7 @@ export async function GET(
       .order('stage_order', { ascending: true });
 
     if (progressError) {
-      console.error('Database error fetching stage progress:', progressError);
-      throw progressError;
+      return handleSupabaseError(progressError);
     }
 
     // Combine progress with workflow stage details
@@ -74,7 +81,7 @@ export async function GET(
       };
     });
 
-    return NextResponse.json({
+    return successResponse({
       progress: progressWithDetails,
       workflow: {
         id: workflow?.id,
@@ -83,15 +90,6 @@ export async function GET(
       }
     });
   } catch (error) {
-    console.error('Error fetching stage progress:', error);
-
-    if (error instanceof Error && error.message.includes('Unauthorized')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    return NextResponse.json(
-      { error: 'Failed to fetch stage progress' },
-      { status: 500 }
-    );
+    return errorResponse(error, 'Failed to fetch stage progress');
   }
 }

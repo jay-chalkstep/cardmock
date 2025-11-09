@@ -1,11 +1,14 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getUserContext } from '@/lib/auth-context';
-import { supabase } from '@/lib/supabase';
+import { NextRequest } from 'next/server';
+import { getAuthContext } from '@/lib/api/auth';
+import { successResponse, errorResponse, badRequestResponse, notFoundResponse, forbiddenResponse } from '@/lib/api/response';
+import { handleSupabaseError, checkRequiredFields } from '@/lib/api/error-handler';
+import { supabaseServer } from '@/lib/supabase-server';
 import {
   sendStageReviewNotification,
   sendChangesRequestedNotification,
   sendAllStagesApprovedNotification
 } from '@/lib/email/stage-notifications';
+import { logger } from '@/lib/utils/logger';
 import type { MockupStageProgress, WorkflowStage, ProjectStageReviewer } from '@/lib/supabase';
 
 // Mark as dynamic to prevent build-time evaluation
@@ -26,23 +29,34 @@ export async function POST(
   context: { params: Promise<{ id: string; stage_order: string }> }
 ) {
   try {
-    const { userId, orgId } = await getUserContext();
+    const authResult = await getAuthContext();
+    if (authResult instanceof Response) return authResult;
+    const { userId, orgId } = authResult;
+
     const { id: mockupId, stage_order: stageOrderStr } = await context.params;
     const stageOrder = parseInt(stageOrderStr, 10);
 
+    logger.api(`/api/mockups/${mockupId}/stage-progress/${stageOrder}`, 'POST', { orgId, userId, mockupId, stageOrder });
+
     if (isNaN(stageOrder)) {
-      return NextResponse.json({ error: 'Invalid stage order' }, { status: 400 });
+      return badRequestResponse('Invalid stage order');
     }
 
     const body = await request.json();
     const { action, notes } = body;
 
-    if (!action || !['approve', 'request_changes'].includes(action)) {
-      return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+    // Validate required fields
+    const missingFieldsCheck = checkRequiredFields(body, ['action']);
+    if (missingFieldsCheck) {
+      return missingFieldsCheck;
+    }
+
+    if (!['approve', 'request_changes'].includes(action)) {
+      return badRequestResponse('Invalid action. Must be "approve" or "request_changes"');
     }
 
     // Fetch mockup with project and creator info
-    const { data: mockup, error: mockupError } = await supabase
+    const { data: mockup, error: mockupError } = await supabaseServer
       .from('assets')
       .select('id, mockup_name, project_id, organization_id, created_by')
       .eq('id', mockupId)
@@ -50,15 +64,15 @@ export async function POST(
       .single();
 
     if (mockupError || !mockup) {
-      return NextResponse.json({ error: 'Mockup not found' }, { status: 404 });
+      return notFoundResponse('Mockup not found');
     }
 
     if (!mockup.project_id) {
-      return NextResponse.json({ error: 'Mockup not in a project with workflow' }, { status: 400 });
+      return badRequestResponse('Mockup not in a project with workflow');
     }
 
     // Fetch project with workflow
-    const { data: project, error: projectError } = await supabase
+    const { data: project, error: projectError } = await supabaseServer
       .from('projects')
       .select('id, name, workflow_id, workflows(*)')
       .eq('id', mockup.project_id)
@@ -66,7 +80,7 @@ export async function POST(
       .single();
 
     if (projectError || !project || !project.workflow_id) {
-      return NextResponse.json({ error: 'Project does not have a workflow' }, { status: 400 });
+      return badRequestResponse('Project does not have a workflow');
     }
 
     const workflow = project.workflows as any;
@@ -74,32 +88,28 @@ export async function POST(
     const currentStage = stages.find(s => s.order === stageOrder);
 
     if (!currentStage) {
-      return NextResponse.json({ error: 'Invalid stage' }, { status: 400 });
+      return badRequestResponse('Invalid stage');
     }
 
     // Verify user is assigned as reviewer for this stage
-    const { data: stageReviewers, error: reviewersError } = await supabase
+    const { data: stageReviewers, error: reviewersError } = await supabaseServer
       .from('project_stage_reviewers')
       .select('*')
       .eq('project_id', mockup.project_id)
       .eq('stage_order', stageOrder);
 
     if (reviewersError) {
-      console.error('Error fetching stage reviewers:', reviewersError);
-      throw reviewersError;
+      return handleSupabaseError(reviewersError);
     }
 
     const isReviewer = stageReviewers?.some((r: ProjectStageReviewer) => r.user_id === userId);
 
     if (!isReviewer) {
-      return NextResponse.json(
-        { error: 'You are not assigned as a reviewer for this stage' },
-        { status: 403 }
-      );
+      return forbiddenResponse('You are not assigned as a reviewer for this stage');
     }
 
     // Fetch current stage progress
-    const { data: stageProgress, error: progressError } = await supabase
+    const { data: stageProgress, error: progressError } = await supabaseServer
       .from('mockup_stage_progress')
       .select('*')
       .eq('asset_id', mockupId)
@@ -107,26 +117,24 @@ export async function POST(
       .single();
 
     if (progressError || !stageProgress) {
-      return NextResponse.json({ error: 'Stage progress not found' }, { status: 404 });
+      return notFoundResponse('Stage progress not found');
     }
 
     // Verify stage is in_review
     if (stageProgress.status !== 'in_review') {
-      return NextResponse.json(
-        { error: `Stage is not in review (current status: ${stageProgress.status})` },
-        { status: 400 }
-      );
+      return badRequestResponse(`Stage is not in review (current status: ${stageProgress.status})`);
     }
 
     // Get current user info from Clerk
-    const { data: { users } } = await supabase.auth.admin.listUsers();
-    const currentUser = users?.find(u => u.id === userId);
-    const userName = currentUser?.user_metadata?.name || currentUser?.email || 'Unknown User';
+    const { clerkClient } = await import('@clerk/nextjs/server');
+    const client = await clerkClient();
+    const user = await client.users.getUser(userId);
+    const userName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.emailAddresses[0]?.emailAddress || 'Unknown User';
 
     if (action === 'approve') {
       // APPROVE LOGIC
       // Update current stage to approved
-      const { error: updateError } = await supabase
+      const { error: updateError } = await supabaseServer
         .from('mockup_stage_progress')
         .update({
           status: 'approved',
@@ -139,8 +147,7 @@ export async function POST(
         .eq('id', stageProgress.id);
 
       if (updateError) {
-        console.error('Error updating stage progress:', updateError);
-        throw updateError;
+        return handleSupabaseError(updateError);
       }
 
       // Check if there's a next stage
@@ -148,19 +155,18 @@ export async function POST(
 
       if (nextStage) {
         // Advance to next stage using our database function
-        const { data: hasNext, error: advanceError } = await supabase
+        const { error: advanceError } = await supabaseServer
           .rpc('advance_to_next_stage', {
             p_mockup_id: mockupId,
             p_current_stage_order: stageOrder
           });
 
         if (advanceError) {
-          console.error('Error advancing to next stage:', advanceError);
-          throw advanceError;
+          return handleSupabaseError(advanceError);
         }
 
         // Send email to next stage reviewers
-        const { data: nextStageReviewers } = await supabase
+        const { data: nextStageReviewers } = await supabaseServer
           .from('project_stage_reviewers')
           .select('*')
           .eq('project_id', mockup.project_id)
@@ -180,13 +186,13 @@ export async function POST(
                 stage_order: nextStage.order,
                 submitted_by_name: userName
               }).catch(err => {
-                console.error(`Failed to send email to ${reviewer.user_id}:`, err);
+                logger.error('Failed to send stage review notification', err, { reviewerId: reviewer.user_id });
               })
             )
           );
 
           // Mark notifications as sent
-          await supabase
+          await supabaseServer
             .from('mockup_stage_progress')
             .update({
               notification_sent: true,
@@ -209,25 +215,20 @@ export async function POST(
           project_name: project.name,
           total_stages: stages.length
         }).catch(err => {
-          console.error('Failed to send all approved email:', err);
+          logger.error('Failed to send all approved notification', err);
         });
-
-        // Optionally update project status to completed
-        // await supabase
-        //   .from('projects')
-        //   .update({ status: 'completed' })
-        //   .eq('id', mockup.project_id);
       }
 
       // Fetch updated progress for response
-      const { data: updatedProgress } = await supabase
+      const { data: updatedProgress } = await supabaseServer
         .from('mockup_stage_progress')
         .select('*')
         .eq('asset_id', mockupId)
         .order('stage_order', { ascending: true });
 
-      return NextResponse.json({
-        success: true,
+      logger.info('Stage approved successfully', { mockupId, stageOrder, hasNextStage: !!nextStage });
+
+      return successResponse({
         message: nextStage ? 'Stage approved, advanced to next stage' : 'All stages approved!',
         progress: updatedProgress || []
       });
@@ -235,14 +236,11 @@ export async function POST(
     } else if (action === 'request_changes') {
       // REQUEST CHANGES LOGIC
       if (!notes || notes.trim() === '') {
-        return NextResponse.json(
-          { error: 'Notes are required when requesting changes' },
-          { status: 400 }
-        );
+        return badRequestResponse('Notes are required when requesting changes');
       }
 
       // Update current stage to changes_requested
-      const { error: updateError } = await supabase
+      const { error: updateError } = await supabaseServer
         .from('mockup_stage_progress')
         .update({
           status: 'changes_requested',
@@ -255,19 +253,17 @@ export async function POST(
         .eq('id', stageProgress.id);
 
       if (updateError) {
-        console.error('Error updating stage progress:', updateError);
-        throw updateError;
+        return handleSupabaseError(updateError);
       }
 
       // Reset to first stage using our database function
-      const { error: resetError } = await supabase
+      const { error: resetError } = await supabaseServer
         .rpc('reset_to_first_stage', {
           p_mockup_id: mockupId
         });
 
       if (resetError) {
-        console.error('Error resetting to first stage:', resetError);
-        throw resetError;
+        return handleSupabaseError(resetError);
       }
 
       // Send email to mockup creator
@@ -285,35 +281,27 @@ export async function POST(
         requested_by_name: userName,
         notes
       }).catch(err => {
-        console.error('Failed to send changes requested email:', err);
+        logger.error('Failed to send changes requested notification', err);
       });
 
       // Fetch updated progress for response
-      const { data: updatedProgress } = await supabase
+      const { data: updatedProgress } = await supabaseServer
         .from('mockup_stage_progress')
         .select('*')
         .eq('asset_id', mockupId)
         .order('stage_order', { ascending: true });
 
-      return NextResponse.json({
-        success: true,
+      logger.info('Changes requested successfully', { mockupId, stageOrder });
+
+      return successResponse({
         message: 'Changes requested, mockup reset to Stage 1',
         progress: updatedProgress || []
       });
     }
 
-    return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+    return badRequestResponse('Invalid action');
 
   } catch (error) {
-    console.error('Error processing stage action:', error);
-
-    if (error instanceof Error && error.message.includes('Unauthorized')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    return NextResponse.json(
-      { error: 'Failed to process stage action' },
-      { status: 500 }
-    );
+    return errorResponse(error, 'Failed to process stage action');
   }
 }

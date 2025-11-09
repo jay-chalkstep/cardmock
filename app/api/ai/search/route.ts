@@ -4,33 +4,35 @@
  * Performs semantic and hybrid search using OpenAI embeddings and pgvector
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { NextRequest } from 'next/server';
+import { getAuthContext } from '@/lib/api/auth';
+import { successResponse, errorResponse, badRequestResponse } from '@/lib/api/response';
+import { handleSupabaseError, checkRequiredFields } from '@/lib/api/error-handler';
 import { supabaseServer } from '@/lib/supabase-server';
 import { getOpenAIClient, AI_MODELS, AI_CONFIG } from '@/lib/ai/config';
 import { logAIOperation } from '@/lib/ai/utils';
+import { logger } from '@/lib/utils/logger';
 import type { HybridSearchResult } from '@/lib/supabase';
 
 export async function POST(req: NextRequest) {
   try {
-    // Authenticate user
-    const { userId, orgId } = await auth();
+    const authResult = await getAuthContext();
+    if (authResult instanceof Response) return authResult;
+    const { userId, orgId } = authResult;
 
-    if (!userId || !orgId) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+    const body = await req.json();
+    const { query, searchType = 'hybrid' } = body;
+
+    logger.api('/api/ai/search', 'POST', { orgId, userId, searchType });
+
+    // Validate required fields
+    const missingFieldsCheck = checkRequiredFields(body, ['query']);
+    if (missingFieldsCheck) {
+      return missingFieldsCheck;
     }
 
-    // Parse request body
-    const { query, searchType = 'hybrid' } = await req.json();
-
-    if (!query || typeof query !== 'string') {
-      return NextResponse.json(
-        { error: 'query is required and must be a string' },
-        { status: 400 }
-      );
+    if (typeof query !== 'string') {
+      return badRequestResponse('query must be a string');
     }
 
     logAIOperation('AI Search', { query, searchType, orgId });
@@ -128,40 +130,30 @@ export async function POST(req: NextRequest) {
       .limit(1);
 
     logAIOperation('Search completed', { resultsCount: results.length });
+    logger.info('AI search completed successfully', { query, searchType, resultsCount: results.length });
 
-    return NextResponse.json({
-      success: true,
+    return successResponse({
       results,
       query,
       searchType,
       resultsCount: results.length,
     });
   } catch (error) {
-    console.error('[AI Search API] Error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
-
-    return NextResponse.json(
-      { error: errorMessage },
-      { status: 500 }
-    );
+    return errorResponse(error, 'Failed to perform search');
   }
 }
 
 // GET endpoint to retrieve search history
 export async function GET(req: NextRequest) {
   try {
-    // Authenticate user
-    const { userId, orgId } = await auth();
-
-    if (!userId || !orgId) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    const authResult = await getAuthContext();
+    if (authResult instanceof Response) return authResult;
+    const { userId, orgId } = authResult;
 
     const { searchParams } = new URL(req.url);
     const limit = parseInt(searchParams.get('limit') || '20', 10);
+
+    logger.api('/api/ai/search', 'GET', { orgId, userId, limit });
 
     // Get recent search queries for the user
     const { data: queries, error } = await supabaseServer
@@ -173,18 +165,13 @@ export async function GET(req: NextRequest) {
       .limit(limit);
 
     if (error) {
-      throw new Error(`Failed to fetch search history: ${error.message}`);
+      return handleSupabaseError(error);
     }
 
-    return NextResponse.json({
-      success: true,
+    return successResponse({
       queries: queries || [],
     });
   } catch (error) {
-    console.error('[AI Search API] Error fetching history:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch search history' },
-      { status: 500 }
-    );
+    return errorResponse(error, 'Failed to fetch search history');
   }
 }

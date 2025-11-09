@@ -4,32 +4,30 @@
  * Suggests folders for a mockup based on content similarity
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { NextRequest } from 'next/server';
+import { getAuthContext } from '@/lib/api/auth';
+import { successResponse, errorResponse, badRequestResponse, notFoundResponse, forbiddenResponse } from '@/lib/api/response';
+import { handleSupabaseError, checkRequiredFields } from '@/lib/api/error-handler';
 import { supabaseServer } from '@/lib/supabase-server';
 import { suggestFoldersForMockup, recordSuggestionFeedback } from '@/lib/ai/folder-suggestions';
 import { logAIOperation } from '@/lib/ai/utils';
+import { logger } from '@/lib/utils/logger';
 
 export async function POST(req: NextRequest) {
   try {
-    // Authenticate user
-    const { userId, orgId } = await auth();
+    const authResult = await getAuthContext();
+    if (authResult instanceof Response) return authResult;
+    const { userId, orgId } = authResult;
 
-    if (!userId || !orgId) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    const body = await req.json();
+    const { mockupId } = body;
 
-    // Parse request body
-    const { mockupId } = await req.json();
+    logger.api('/api/ai/suggest-folder', 'POST', { orgId, userId, mockupId });
 
-    if (!mockupId) {
-      return NextResponse.json(
-        { error: 'mockupId is required' },
-        { status: 400 }
-      );
+    // Validate required fields
+    const missingFieldsCheck = checkRequiredFields(body, ['mockupId']);
+    if (missingFieldsCheck) {
+      return missingFieldsCheck;
     }
 
     logAIOperation('Generating folder suggestions', { mockupId, orgId });
@@ -42,77 +40,54 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (mockupError || !mockup) {
-      return NextResponse.json(
-        { error: 'Mockup not found' },
-        { status: 404 }
-      );
+      return notFoundResponse('Mockup not found');
     }
 
     if (mockup.organization_id !== orgId) {
-      return NextResponse.json(
-        { error: 'Forbidden' },
-        { status: 403 }
-      );
+      return forbiddenResponse('Mockup does not belong to your organization');
     }
 
     // Check if mockup has been analyzed
     const { data: aiMetadata, error: metadataError } = await supabaseServer
       .from('mockup_ai_metadata')
       .select('embedding')
-      .eq('mockup_id', mockupId)
+      .eq('asset_id', mockupId)
       .single();
 
     if (metadataError || !aiMetadata || !aiMetadata.embedding) {
-      return NextResponse.json(
-        {
-          error: 'Mockup has not been analyzed yet. Please analyze it first.',
-          analyzed: false,
-        },
-        { status: 400 }
-      );
+      return badRequestResponse('Mockup has not been analyzed yet. Please analyze it first.');
     }
 
     // Get folder suggestions
     const suggestions = await suggestFoldersForMockup(mockupId, orgId, userId);
 
-    return NextResponse.json({
-      success: true,
+    logger.info('Folder suggestions generated', { mockupId, count: suggestions.length });
+
+    return successResponse({
       mockupId,
       suggestions,
       count: suggestions.length,
     });
   } catch (error) {
-    console.error('[AI Suggest Folder API] Error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
-
-    return NextResponse.json(
-      { error: errorMessage },
-      { status: 500 }
-    );
+    return errorResponse(error, 'Failed to generate folder suggestions');
   }
 }
 
 // PATCH endpoint to record user feedback on suggestions
 export async function PATCH(req: NextRequest) {
   try {
-    // Authenticate user
-    const { userId, orgId } = await auth();
+    const authResult = await getAuthContext();
+    if (authResult instanceof Response) return authResult;
+    const { userId, orgId } = authResult;
 
-    if (!userId || !orgId) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    const body = await req.json();
+    const { suggestionId, accepted } = body;
 
-    // Parse request body
-    const { suggestionId, accepted } = await req.json();
+    logger.api('/api/ai/suggest-folder', 'PATCH', { orgId, userId, suggestionId });
 
+    // Validate required fields
     if (!suggestionId || typeof accepted !== 'boolean') {
-      return NextResponse.json(
-        { error: 'suggestionId and accepted (boolean) are required' },
-        { status: 400 }
-      );
+      return badRequestResponse('suggestionId and accepted (boolean) are required');
     }
 
     // Verify suggestion belongs to user
@@ -123,51 +98,38 @@ export async function PATCH(req: NextRequest) {
       .single();
 
     if (suggestionError || !suggestion) {
-      return NextResponse.json(
-        { error: 'Suggestion not found' },
-        { status: 404 }
-      );
+      return notFoundResponse('Suggestion not found');
     }
 
     if (suggestion.user_id !== userId) {
-      return NextResponse.json(
-        { error: 'Forbidden' },
-        { status: 403 }
-      );
+      return forbiddenResponse('You can only provide feedback on your own suggestions');
     }
 
     // Record feedback
     await recordSuggestionFeedback(suggestionId, accepted);
 
-    return NextResponse.json({
-      success: true,
+    logger.info('Suggestion feedback recorded', { suggestionId, accepted });
+
+    return successResponse({
       message: 'Feedback recorded successfully',
     });
   } catch (error) {
-    console.error('[AI Suggest Folder API] Error recording feedback:', error);
-    return NextResponse.json(
-      { error: 'Failed to record feedback' },
-      { status: 500 }
-    );
+    return errorResponse(error, 'Failed to record feedback');
   }
 }
 
 // GET endpoint to retrieve suggestion history
 export async function GET(req: NextRequest) {
   try {
-    // Authenticate user
-    const { userId, orgId } = await auth();
-
-    if (!userId || !orgId) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    const authResult = await getAuthContext();
+    if (authResult instanceof Response) return authResult;
+    const { userId, orgId } = authResult;
 
     const { searchParams } = new URL(req.url);
     const mockupId = searchParams.get('mockupId');
     const limit = parseInt(searchParams.get('limit') || '10', 10);
+
+    logger.api('/api/ai/suggest-folder', 'GET', { orgId, userId, mockupId, limit });
 
     if (mockupId) {
       // Get suggestions for a specific mockup
@@ -177,16 +139,15 @@ export async function GET(req: NextRequest) {
           *,
           folder:folders(id, name)
         `)
-        .eq('mockup_id', mockupId)
+        .eq('asset_id', mockupId)
         .order('created_at', { ascending: false })
         .limit(limit);
 
       if (error) {
-        throw error;
+        return handleSupabaseError(error);
       }
 
-      return NextResponse.json({
-        success: true,
+      return successResponse({
         suggestions: suggestions || [],
       });
     } else {
@@ -196,7 +157,7 @@ export async function GET(req: NextRequest) {
         .select(`
           *,
           folder:folders(id, name),
-          mockup:card_mockups!inner(organization_id)
+          mockup:assets!inner(organization_id)
         `)
         .eq('user_id', userId)
         .eq('mockup.organization_id', orgId)
@@ -204,19 +165,14 @@ export async function GET(req: NextRequest) {
         .limit(limit);
 
       if (error) {
-        throw error;
+        return handleSupabaseError(error);
       }
 
-      return NextResponse.json({
-        success: true,
+      return successResponse({
         suggestions: suggestions || [],
       });
     }
   } catch (error) {
-    console.error('[AI Suggest Folder API] Error:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch suggestions' },
-      { status: 500 }
-    );
+    return errorResponse(error, 'Failed to fetch suggestions');
   }
 }

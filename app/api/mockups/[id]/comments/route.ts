@@ -1,6 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { auth, clerkClient } from '@clerk/nextjs/server';
+import { NextRequest } from 'next/server';
+import { clerkClient } from '@clerk/nextjs/server';
+import { getAuthContext } from '@/lib/api/auth';
+import { successResponse, errorResponse, badRequestResponse, notFoundResponse, forbiddenResponse } from '@/lib/api/response';
+import { handleSupabaseError, checkRequiredFields } from '@/lib/api/error-handler';
 import { supabaseServer } from '@/lib/supabase-server';
+import { logger } from '@/lib/utils/logger';
 
 // Mark as dynamic to prevent build-time evaluation
 export const dynamic = 'force-dynamic';
@@ -25,12 +29,13 @@ export async function POST(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId, orgId } = await auth();
+    const authResult = await getAuthContext();
+    if (authResult instanceof Response) return authResult;
+    const { userId, orgId } = authResult;
+    
     const { id: mockupId } = await context.params;
 
-    if (!userId || !orgId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    logger.api(`/api/mockups/${mockupId}/comments`, 'POST', { orgId, userId });
 
     const body = await request.json();
     const {
@@ -42,11 +47,14 @@ export async function POST(
       annotation_color
     } = body;
 
+    // Validate required fields
+    const missingFieldsCheck = checkRequiredFields(body, ['comment_text']);
+    if (missingFieldsCheck) {
+      return missingFieldsCheck;
+    }
+
     if (!comment_text || comment_text.trim().length === 0) {
-      return NextResponse.json(
-        { error: 'comment_text is required' },
-        { status: 400 }
-      );
+      return badRequestResponse('comment_text is required');
     }
 
     // Verify mockup exists and user has access (creator or reviewer)
@@ -58,10 +66,7 @@ export async function POST(
       .single();
 
     if (mockupError || !mockup) {
-      return NextResponse.json(
-        { error: 'Mockup not found' },
-        { status: 404 }
-      );
+      return notFoundResponse('Mockup not found');
     }
 
     // Check if user is creator or reviewer
@@ -80,10 +85,7 @@ export async function POST(
     }
 
     if (!isCreator && !isReviewer) {
-      return NextResponse.json(
-        { error: 'You do not have permission to comment on this mockup' },
-        { status: 403 }
-      );
+      return forbiddenResponse('You do not have permission to comment on this mockup');
     }
 
     // Get user details from Clerk
@@ -114,7 +116,9 @@ export async function POST(
       .select()
       .single();
 
-    if (createError) throw createError;
+    if (createError) {
+      return handleSupabaseError(createError);
+    }
 
     // Mark reviewer as "viewed" if they haven't viewed yet
     if (isReviewer) {
@@ -129,13 +133,9 @@ export async function POST(
         .eq('status', 'pending'); // Only update if still pending
     }
 
-    return NextResponse.json({ comment });
+    return successResponse({ comment }, 201);
   } catch (error) {
-    console.error('Error creating comment:', error);
-    return NextResponse.json(
-      { error: 'Failed to create comment' },
-      { status: 500 }
-    );
+    return errorResponse(error, 'Failed to create comment');
   }
 }
 
@@ -149,12 +149,13 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId, orgId } = await auth();
+    const authResult = await getAuthContext();
+    if (authResult instanceof Response) return authResult;
+    const { orgId } = authResult;
+    
     const { id: mockupId } = await context.params;
 
-    if (!userId || !orgId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    logger.api(`/api/mockups/${mockupId}/comments`, 'GET', { orgId });
 
     const { data: comments, error } = await supabaseServer
       .from('mockup_comments')
@@ -164,14 +165,12 @@ export async function GET(
       .is('deleted_at', null) // Filter out soft-deleted comments
       .order('created_at', { ascending: true });
 
-    if (error) throw error;
+    if (error) {
+      return handleSupabaseError(error);
+    }
 
-    return NextResponse.json({ comments: comments || [] });
+    return successResponse({ comments: comments || [] });
   } catch (error) {
-    console.error('Error fetching comments:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch comments' },
-      { status: 500 }
-    );
+    return errorResponse(error, 'Failed to fetch comments');
   }
 }

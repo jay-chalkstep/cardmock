@@ -1,7 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getUserContext, isAdmin } from '@/lib/auth-context';
+import { NextRequest } from 'next/server';
+import { getAuthContext, isAdmin } from '@/lib/api/auth';
+import { successResponse, errorResponse, badRequestResponse, notFoundResponse, forbiddenResponse } from '@/lib/api/response';
+import { handleSupabaseError } from '@/lib/api/error-handler';
 import { supabase } from '@/lib/supabase';
 import { validateFolderName } from '@/lib/folders';
+import { logger } from '@/lib/utils/logger';
 
 // Mark as dynamic to prevent build-time evaluation
 export const dynamic = 'force-dynamic';
@@ -22,11 +25,16 @@ export async function PATCH(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId, orgId } = await getUserContext();
+    const authResult = await getAuthContext();
+    if (authResult instanceof Response) return authResult;
+    const { userId, orgId } = authResult;
+    
     const { id } = await context.params;
 
     const body = await request.json();
     const { name, is_org_shared } = body;
+
+    logger.api(`/api/folders/${id}`, 'PATCH', { orgId, userId });
 
     // Get the folder to check ownership
     const { data: folder, error: fetchError } = await supabase
@@ -37,7 +45,7 @@ export async function PATCH(
       .single();
 
     if (fetchError || !folder) {
-      return NextResponse.json({ error: 'Folder not found' }, { status: 404 });
+      return notFoundResponse('Folder not found');
     }
 
     // Check permissions
@@ -45,10 +53,7 @@ export async function PATCH(
     const canEdit = folder.created_by === userId || (userIsAdmin && folder.is_org_shared);
 
     if (!canEdit) {
-      return NextResponse.json(
-        { error: 'You do not have permission to edit this folder' },
-        { status: 403 }
-      );
+      return forbiddenResponse('You do not have permission to edit this folder');
     }
 
     // Prepare update data
@@ -58,7 +63,7 @@ export async function PATCH(
     if (name !== undefined) {
       const nameError = validateFolderName(name);
       if (nameError) {
-        return NextResponse.json({ error: nameError }, { status: 400 });
+        return badRequestResponse(nameError);
       }
 
       // Check for duplicate name
@@ -73,10 +78,7 @@ export async function PATCH(
         .single();
 
       if (existing) {
-        return NextResponse.json(
-          { error: 'A folder with this name already exists in this location' },
-          { status: 400 }
-        );
+        return badRequestResponse('A folder with this name already exists in this location');
       }
 
       updateData.name = name;
@@ -85,10 +87,7 @@ export async function PATCH(
     // Handle org sharing (admin only)
     if (is_org_shared !== undefined) {
       if (!userIsAdmin) {
-        return NextResponse.json(
-          { error: 'Only admins can change folder sharing settings' },
-          { status: 403 }
-        );
+        return forbiddenResponse('Only admins can change folder sharing settings');
       }
 
       updateData.is_org_shared = is_org_shared;
@@ -103,22 +102,14 @@ export async function PATCH(
       .single();
 
     if (updateError) {
-      console.error('Database error updating folder:', updateError);
-      throw updateError;
+      return handleSupabaseError(updateError);
     }
 
-    return NextResponse.json({ folder: updatedFolder });
+    logger.info('Folder updated successfully', { folderId: id });
+
+    return successResponse({ folder: updatedFolder });
   } catch (error) {
-    console.error('Error updating folder:', error);
-
-    if (error instanceof Error && error.message.includes('Unauthorized')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    return NextResponse.json(
-      { error: 'Failed to update folder' },
-      { status: 500 }
-    );
+    return errorResponse(error, 'Failed to update folder');
   }
 }
 
@@ -135,8 +126,13 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId, orgId } = await getUserContext();
+    const authResult = await getAuthContext();
+    if (authResult instanceof Response) return authResult;
+    const { userId, orgId } = authResult;
+    
     const { id } = await context.params;
+
+    logger.api(`/api/folders/${id}`, 'DELETE', { orgId, userId });
 
     // Get the folder to check ownership
     const { data: folder, error: fetchError } = await supabase
@@ -147,7 +143,7 @@ export async function DELETE(
       .single();
 
     if (fetchError || !folder) {
-      return NextResponse.json({ error: 'Folder not found' }, { status: 404 });
+      return notFoundResponse('Folder not found');
     }
 
     // Check permissions
@@ -155,10 +151,7 @@ export async function DELETE(
     const canDelete = folder.created_by === userId || (userIsAdmin && folder.is_org_shared);
 
     if (!canDelete) {
-      return NextResponse.json(
-        { error: 'You do not have permission to delete this folder' },
-        { status: 403 }
-      );
+      return forbiddenResponse('You do not have permission to delete this folder');
     }
 
     // Delete the folder (cascades to subfolders, mockups set to NULL)
@@ -168,21 +161,13 @@ export async function DELETE(
       .eq('id', id);
 
     if (deleteError) {
-      console.error('Database error deleting folder:', deleteError);
-      throw deleteError;
+      return handleSupabaseError(deleteError);
     }
 
-    return NextResponse.json({ success: true });
+    logger.info('Folder deleted successfully', { folderId: id });
+
+    return successResponse({ success: true });
   } catch (error) {
-    console.error('Error deleting folder:', error);
-
-    if (error instanceof Error && error.message.includes('Unauthorized')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    return NextResponse.json(
-      { error: 'Failed to delete folder' },
-      { status: 500 }
-    );
+    return errorResponse(error, 'Failed to delete folder');
   }
 }

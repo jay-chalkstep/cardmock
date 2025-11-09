@@ -1,6 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getUserContext } from '@/lib/auth-context';
+import { NextRequest } from 'next/server';
+import { getAuthContext } from '@/lib/api/auth';
+import { successResponse, errorResponse, badRequestResponse } from '@/lib/api/response';
+import { handleSupabaseError, checkRequiredFields } from '@/lib/api/error-handler';
 import { createServerAdminClient } from '@/lib/supabase/server';
+import { logger } from '@/lib/utils/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,8 +13,13 @@ export const dynamic = 'force-dynamic';
  */
 export async function POST(request: NextRequest) {
   try {
-    const { userId, orgId } = await getUserContext();
+    const authResult = await getAuthContext();
+    if (authResult instanceof Response) return authResult;
+    const { userId, orgId } = authResult;
+    
     const supabase = createServerAdminClient();
+
+    logger.api('/api/mockups', 'POST', { orgId, userId });
 
     const formData = await request.formData();
     const imageBlob = formData.get('image') as Blob;
@@ -25,10 +33,7 @@ export async function POST(request: NextRequest) {
     const logoScale = parseFloat(formData.get('logoScale') as string);
 
     if (!mockupName || !logoId || !templateId || !imageBlob) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      );
+      return badRequestResponse('Missing required fields: mockupName, logoId, templateId, or image');
     }
 
     // Upload image to storage
@@ -42,17 +47,12 @@ export async function POST(request: NextRequest) {
       });
 
     if (uploadError) {
-      console.error('[mockups] Storage upload error:', uploadError);
-      return NextResponse.json(
-        { error: 'Failed to upload image', details: uploadError.message },
-        { status: 500 }
-      );
+      logger.error('Storage upload error', uploadError, { fileName, bucket: 'card-mockups' });
+      return errorResponse(uploadError, 'Failed to upload image');
     }
 
     // Get public URL
-    console.log('\n=== MOCKUP SAVE: Getting Public URL ===');
-    console.log('Bucket: card-mockups');
-    console.log('Filename:', fileName);
+    logger.debug('Getting public URL', { fileName, bucket: 'card-mockups' });
 
     const { data: urlData } = supabase.storage
       .from('card-mockups')
@@ -60,9 +60,7 @@ export async function POST(request: NextRequest) {
 
     const publicUrl = urlData.publicUrl;
 
-    console.log('Generated URL:', publicUrl);
-    console.log('URL length:', publicUrl?.length);
-    console.log('URL preview:', publicUrl?.substring(0, 120) + (publicUrl?.length > 120 ? '...' : ''));
+    logger.debug('Generated public URL', { url: publicUrl, length: publicUrl?.length });
 
     // Save to database
     const mockupData = {
@@ -79,10 +77,7 @@ export async function POST(request: NextRequest) {
       mockup_image_url: publicUrl
     };
 
-    console.log('Mockup data to insert:');
-    console.log('- mockup_name:', mockupName);
-    console.log('- mockup_image_url length:', mockupData.mockup_image_url?.length);
-    console.log('- mockup_image_url:', mockupData.mockup_image_url);
+    logger.db('Inserting mockup', { mockupName, orgId, userId });
 
     const { data: dbData, error: dbError } = await supabase
       .from('assets')
@@ -91,44 +86,13 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (dbError) {
-      console.error('[mockups] Database error:', {
-        code: dbError.code,
-        message: dbError.message,
-        details: dbError.details,
-        hint: dbError.hint,
-        mockupData
-      });
-      return NextResponse.json(
-        {
-          error: 'Database error',
-          details: dbError.message,
-          code: dbError.code
-        },
-        { status: 500 }
-      );
+      return handleSupabaseError(dbError);
     }
 
-    console.log('✅ Mockup saved successfully');
-    console.log('Returned from DB:');
-    console.log('- ID:', dbData.id);
-    console.log('- mockup_image_url length:', dbData.mockup_image_url?.length);
-    console.log('- mockup_image_url:', dbData.mockup_image_url);
-    console.log('=== END MOCKUP SAVE ===\n');
+    logger.info('Mockup saved successfully', { id: dbData.id, mockupName });
 
-    return NextResponse.json({ mockup: dbData });
+    return successResponse({ mockup: dbData }, 201);
   } catch (error) {
-    console.error('[mockups] Error:', error);
-
-    if (error instanceof Error && error.message.includes('Unauthorized')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    return NextResponse.json(
-      {
-        error: 'Failed to save mockup',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    );
+    return errorResponse(error, 'Failed to save mockup');
   }
 }

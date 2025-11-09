@@ -1,6 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { auth, clerkClient } from '@clerk/nextjs/server';
-import { supabase } from '@/lib/supabase';
+import { NextRequest } from 'next/server';
+import { getAuthContext, isAdmin } from '@/lib/api/auth';
+import { successResponse, errorResponse, forbiddenResponse } from '@/lib/api/response';
+import { handleSupabaseError } from '@/lib/api/error-handler';
+import { supabaseServer } from '@/lib/supabase-server';
+import { clerkClient } from '@clerk/nextjs/server';
+import { logger } from '@/lib/utils/logger';
 
 // Mark as dynamic to prevent build-time evaluation
 export const dynamic = 'force-dynamic';
@@ -12,31 +16,24 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(request: NextRequest) {
   try {
-    const { userId, orgId } = await auth();
-
-    if (!userId || !orgId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const authResult = await getAuthContext();
+    if (authResult instanceof Response) return authResult;
+    const { userId, orgId } = authResult;
 
     // Check admin permissions
-    const client = await clerkClient();
-    const { data: memberships } = await client.organizations.getOrganizationMembershipList({
-      organizationId: orgId,
-    });
-
-    // Find current user's membership
-    const currentUserMembership = memberships.find(m => m.publicUserData?.userId === userId);
-
-    if (!currentUserMembership || currentUserMembership.role !== 'org:admin') {
-      return NextResponse.json({ error: 'Unauthorized - Admin access required' }, { status: 403 });
+    const adminCheck = await isAdmin();
+    if (!adminCheck) {
+      return forbiddenResponse('Admin access required');
     }
 
     // Get status filter from query params
     const { searchParams } = new URL(request.url);
     const statusFilter = searchParams.get('status') || 'all';
 
+    logger.api('/api/admin/reports/projects', 'GET', { orgId, userId, statusFilter });
+
     // Build query
-    let query = supabase
+    let query = supabaseServer
       .from('projects')
       .select(`
         id,
@@ -67,12 +64,12 @@ export async function GET(request: NextRequest) {
     const { data: projects, error: projectsError } = await query;
 
     if (projectsError) {
-      console.error('Error fetching projects:', projectsError);
-      throw projectsError;
+      return handleSupabaseError(projectsError);
     }
 
     if (!projects || projects.length === 0) {
-      return NextResponse.json({
+      logger.info('No projects found for report', { orgId, statusFilter });
+      return successResponse({
         reportData: [],
         summary: {
           totalProjects: 0,
@@ -84,7 +81,7 @@ export async function GET(request: NextRequest) {
 
     // Fetch mockup counts for each project
     const projectIds = projects.map(p => p.id);
-    const { data: mockupCounts } = await supabase
+    const { data: mockupCounts } = await supabaseServer
       .from('assets')
       .select('id, project_id')
       .in('project_id', projectIds)
@@ -108,7 +105,7 @@ export async function GET(request: NextRequest) {
         .map(m => m.id);
 
       if (workflowMockupIds.length > 0) {
-        const { data: stageProgress } = await supabase
+        const { data: stageProgress } = await supabaseServer
           .from('mockup_stage_progress')
           .select('asset_id, stage_order, status')
           .in('asset_id', workflowMockupIds);
@@ -134,7 +131,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch stage reviewers count
-    const { data: reviewerCounts } = await supabase
+    const { data: reviewerCounts } = await supabaseServer
       .from('project_stage_reviewers')
       .select('project_id')
       .in('project_id', projectIds);
@@ -227,7 +224,14 @@ export async function GET(request: NextRequest) {
     const totalAssets = Object.values(mockupCountMap).reduce((sum, count) => sum + count, 0);
     const activeUsers = Object.keys(projectsByUser).length;
 
-    return NextResponse.json({
+    logger.info('Project report generated successfully', {
+      orgId,
+      totalProjects,
+      totalAssets,
+      activeUsers,
+    });
+
+    return successResponse({
       reportData,
       summary: {
         totalProjects,
@@ -237,15 +241,6 @@ export async function GET(request: NextRequest) {
       generatedAt: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('Error generating project report:', error);
-
-    if (error instanceof Error && error.message.includes('Unauthorized')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    return NextResponse.json(
-      { error: 'Failed to generate project report' },
-      { status: 500 }
-    );
+    return errorResponse(error, 'Failed to generate project report');
   }
 }

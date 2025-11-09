@@ -1,6 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getUserContext } from '@/lib/auth-context';
-import { supabase } from '@/lib/supabase';
+import { NextRequest } from 'next/server';
+import { getAuthContext } from '@/lib/api/auth';
+import { successResponse, errorResponse, badRequestResponse, notFoundResponse, forbiddenResponse } from '@/lib/api/response';
+import { handleSupabaseError, checkRequiredFields } from '@/lib/api/error-handler';
+import { supabaseServer } from '@/lib/supabase-server';
+import { logger } from '@/lib/utils/logger';
 import type { ProjectStageReviewer } from '@/lib/supabase';
 
 // Mark as dynamic to prevent build-time evaluation
@@ -18,11 +21,16 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId, orgId } = await getUserContext();
+    const authResult = await getAuthContext();
+    if (authResult instanceof Response) return authResult;
+    const { orgId } = authResult;
+
     const { id: projectId } = await context.params;
 
+    logger.api(`/api/projects/${projectId}/reviewers`, 'GET', { orgId, projectId });
+
     // Verify project exists and user has access
-    const { data: project, error: projectError } = await supabase
+    const { data: project, error: projectError } = await supabaseServer
       .from('projects')
       .select('*')
       .eq('id', projectId)
@@ -30,11 +38,11 @@ export async function GET(
       .single();
 
     if (projectError || !project) {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+      return notFoundResponse('Project not found');
     }
 
     // Fetch all reviewers for this project
-    const { data: reviewers, error } = await supabase
+    const { data: reviewers, error } = await supabaseServer
       .from('project_stage_reviewers')
       .select('*')
       .eq('project_id', projectId)
@@ -42,8 +50,7 @@ export async function GET(
       .order('created_at', { ascending: true });
 
     if (error) {
-      console.error('Database error fetching reviewers:', error);
-      throw error;
+      return handleSupabaseError(error);
     }
 
     // Group reviewers by stage_order
@@ -61,18 +68,11 @@ export async function GET(
       reviewers,
     }));
 
-    return NextResponse.json({ reviewers: groupedReviewers });
+    logger.info('Project reviewers fetched successfully', { projectId, count: reviewers?.length || 0 });
+
+    return successResponse({ reviewers: groupedReviewers });
   } catch (error) {
-    console.error('Error fetching reviewers:', error);
-
-    if (error instanceof Error && error.message.includes('Unauthorized')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    return NextResponse.json(
-      { error: 'Failed to fetch reviewers' },
-      { status: 500 }
-    );
+    return errorResponse(error, 'Failed to fetch reviewers');
   }
 }
 
@@ -94,11 +94,16 @@ export async function POST(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId, orgId } = await getUserContext();
+    const authResult = await getAuthContext();
+    if (authResult instanceof Response) return authResult;
+    const { userId, orgId } = authResult;
+
     const { id: projectId } = await context.params;
 
+    logger.api(`/api/projects/${projectId}/reviewers`, 'POST', { orgId, userId, projectId });
+
     // Verify project exists and has a workflow
-    const { data: project, error: projectError } = await supabase
+    const { data: project, error: projectError } = await supabaseServer
       .from('projects')
       .select('*, workflows(*)')
       .eq('id', projectId)
@@ -106,39 +111,24 @@ export async function POST(
       .single();
 
     if (projectError || !project) {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+      return notFoundResponse('Project not found');
     }
 
     if (!project.workflow_id) {
-      return NextResponse.json(
-        { error: 'Project does not have a workflow assigned' },
-        { status: 400 }
-      );
+      return badRequestResponse('Project does not have a workflow assigned');
     }
 
     const body = await request.json();
     const { stage_order, user_id, user_name, user_image_url } = body;
 
     // Validate required fields
+    const missingFieldsCheck = checkRequiredFields(body, ['stage_order', 'user_id', 'user_name']);
+    if (missingFieldsCheck) {
+      return missingFieldsCheck;
+    }
+
     if (typeof stage_order !== 'number' || stage_order < 1) {
-      return NextResponse.json(
-        { error: 'stage_order must be a positive number' },
-        { status: 400 }
-      );
-    }
-
-    if (!user_id || typeof user_id !== 'string') {
-      return NextResponse.json(
-        { error: 'user_id is required' },
-        { status: 400 }
-      );
-    }
-
-    if (!user_name || typeof user_name !== 'string') {
-      return NextResponse.json(
-        { error: 'user_name is required' },
-        { status: 400 }
-      );
+      return badRequestResponse('stage_order must be a positive number');
     }
 
     // Validate that stage_order exists in the workflow
@@ -149,14 +139,11 @@ export async function POST(
     const stageExists = stages.some((stage: any) => stage.order === stage_order);
 
     if (!stageExists) {
-      return NextResponse.json(
-        { error: `Stage ${stage_order} does not exist in this project's workflow` },
-        { status: 400 }
-      );
+      return badRequestResponse(`Stage ${stage_order} does not exist in this project's workflow`);
     }
 
     // Check for duplicate reviewer in same stage (unique constraint will catch this too)
-    const { data: existingReviewer } = await supabase
+    const { data: existingReviewer } = await supabaseServer
       .from('project_stage_reviewers')
       .select('*')
       .eq('project_id', projectId)
@@ -165,14 +152,11 @@ export async function POST(
       .maybeSingle();
 
     if (existingReviewer) {
-      return NextResponse.json(
-        { error: 'User is already a reviewer for this stage' },
-        { status: 400 }
-      );
+      return badRequestResponse('User is already a reviewer for this stage');
     }
 
     // Add reviewer
-    const { data: reviewer, error } = await supabase
+    const { data: reviewer, error } = await supabaseServer
       .from('project_stage_reviewers')
       .insert({
         project_id: projectId,
@@ -186,22 +170,14 @@ export async function POST(
       .single();
 
     if (error) {
-      console.error('Database error adding reviewer:', error);
-      throw error;
+      return handleSupabaseError(error);
     }
 
-    return NextResponse.json({ reviewer }, { status: 201 });
+    logger.info('Reviewer added successfully', { projectId, stage_order, user_id });
+
+    return successResponse({ reviewer }, 201);
   } catch (error) {
-    console.error('Error adding reviewer:', error);
-
-    if (error instanceof Error && error.message.includes('Unauthorized')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    return NextResponse.json(
-      { error: 'Failed to add reviewer' },
-      { status: 500 }
-    );
+    return errorResponse(error, 'Failed to add reviewer');
   }
 }
 
@@ -218,20 +194,22 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId, orgId } = await getUserContext();
+    const authResult = await getAuthContext();
+    if (authResult instanceof Response) return authResult;
+    const { orgId } = authResult;
+
     const { id: projectId } = await context.params;
     const { searchParams } = new URL(request.url);
     const reviewerId = searchParams.get('reviewer_id');
 
+    logger.api(`/api/projects/${projectId}/reviewers`, 'DELETE', { orgId, projectId, reviewerId });
+
     if (!reviewerId) {
-      return NextResponse.json(
-        { error: 'reviewer_id query parameter is required' },
-        { status: 400 }
-      );
+      return badRequestResponse('reviewer_id query parameter is required');
     }
 
     // Verify project exists
-    const { data: project, error: projectError } = await supabase
+    const { data: project, error: projectError } = await supabaseServer
       .from('projects')
       .select('*')
       .eq('id', projectId)
@@ -239,11 +217,11 @@ export async function DELETE(
       .single();
 
     if (projectError || !project) {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+      return notFoundResponse('Project not found');
     }
 
     // Verify reviewer exists and belongs to this project
-    const { data: reviewer, error: reviewerError } = await supabase
+    const { data: reviewer, error: reviewerError } = await supabaseServer
       .from('project_stage_reviewers')
       .select('*')
       .eq('id', reviewerId)
@@ -251,31 +229,23 @@ export async function DELETE(
       .single();
 
     if (reviewerError || !reviewer) {
-      return NextResponse.json({ error: 'Reviewer not found' }, { status: 404 });
+      return notFoundResponse('Reviewer not found');
     }
 
     // Delete the reviewer
-    const { error: deleteError } = await supabase
+    const { error: deleteError } = await supabaseServer
       .from('project_stage_reviewers')
       .delete()
       .eq('id', reviewerId);
 
     if (deleteError) {
-      console.error('Database error deleting reviewer:', deleteError);
-      throw deleteError;
+      return handleSupabaseError(deleteError);
     }
 
-    return NextResponse.json({ success: true });
+    logger.info('Reviewer removed successfully', { projectId, reviewerId });
+
+    return successResponse({ success: true });
   } catch (error) {
-    console.error('Error removing reviewer:', error);
-
-    if (error instanceof Error && error.message.includes('Unauthorized')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    return NextResponse.json(
-      { error: 'Failed to remove reviewer' },
-      { status: 500 }
-    );
+    return errorResponse(error, 'Failed to remove reviewer');
   }
 }

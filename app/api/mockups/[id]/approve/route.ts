@@ -1,6 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getUserContext } from '@/lib/auth-context';
+import { NextRequest } from 'next/server';
+import { getAuthContext } from '@/lib/api/auth';
+import { successResponse, errorResponse, badRequestResponse, notFoundResponse, forbiddenResponse } from '@/lib/api/response';
+import { handleSupabaseError, checkRequiredFields } from '@/lib/api/error-handler';
 import { supabase } from '@/lib/supabase';
+import { logger } from '@/lib/utils/logger';
 
 // Mark as dynamic to prevent build-time evaluation
 export const dynamic = 'force-dynamic';
@@ -16,10 +19,15 @@ export async function POST(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId, orgId } = await getUserContext();
+    const authResult = await getAuthContext();
+    if (authResult instanceof Response) return authResult;
+    const { userId, orgId } = authResult;
+    
     const { id: mockupId } = await context.params;
     const body = await request.json();
     const { notes } = body;
+
+    logger.api(`/api/mockups/${mockupId}/approve`, 'POST', { orgId, userId });
 
     // Fetch mockup with project
     const { data: mockup, error: mockupError } = await supabase
@@ -30,23 +38,17 @@ export async function POST(
       .single();
 
     if (mockupError || !mockup) {
-      return NextResponse.json({ error: 'Mockup not found' }, { status: 404 });
+      return notFoundResponse('Mockup not found');
     }
 
     if (!mockup.project_id || !mockup.project) {
-      return NextResponse.json(
-        { error: 'Mockup must be assigned to a project with a workflow' },
-        { status: 400 }
-      );
+      return badRequestResponse('Mockup must be assigned to a project with a workflow');
     }
 
     const project = mockup.project as any;
 
     if (!project.workflow_id) {
-      return NextResponse.json(
-        { error: 'Project must have a workflow assigned' },
-        { status: 400 }
-      );
+      return badRequestResponse('Project must have a workflow assigned');
     }
 
     // Find current stage that is in_review
@@ -59,10 +61,7 @@ export async function POST(
       .single();
 
     if (progressError || !currentStageProgress) {
-      return NextResponse.json(
-        { error: 'No stage currently in review for this mockup' },
-        { status: 400 }
-      );
+      return badRequestResponse('No stage currently in review for this mockup');
     }
 
     const stageOrder = currentStageProgress.stage_order;
@@ -77,10 +76,7 @@ export async function POST(
       .single();
 
     if (reviewerError || !reviewerAssignment) {
-      return NextResponse.json(
-        { error: 'You are not assigned as a reviewer for this stage' },
-        { status: 403 }
-      );
+      return forbiddenResponse('You are not assigned as a reviewer for this stage');
     }
 
     // Check if user has already approved
@@ -93,13 +89,7 @@ export async function POST(
       .single();
 
     if (existingApproval) {
-      return NextResponse.json(
-        {
-          error: 'You have already submitted your review for this stage',
-          existing_approval: existingApproval
-        },
-        { status: 400 }
-      );
+      return badRequestResponse('You have already submitted your review for this stage');
     }
 
     // Get user details from Clerk
@@ -125,8 +115,7 @@ export async function POST(
       .single();
 
     if (approvalError) {
-      console.error('Error recording approval:', approvalError);
-      throw approvalError;
+      return handleSupabaseError(approvalError);
     }
 
     // Increment approval count using database function
@@ -191,29 +180,28 @@ export async function POST(
       .eq('stage_order', stageOrder)
       .single();
 
-    return NextResponse.json({
-      success: true,
+    const message = isComplete
+      ? (advancedToNextStage
+        ? `Stage complete! Advanced to ${nextStageName}`
+        : 'All stages complete! Pending final approval from project owner')
+      : `Approval recorded. ${updatedProgress?.approvals_received} of ${updatedProgress?.approvals_required} reviewers approved`;
+
+    logger.info('Approval recorded successfully', {
+      mockupId,
+      stageOrder,
+      stageComplete: isComplete,
+      advancedToNextStage,
+    });
+
+    return successResponse({
       approval,
       stage_complete: isComplete,
       advanced_to_next_stage: advancedToNextStage,
       next_stage_name: nextStageName,
       updated_progress: updatedProgress,
-      message: isComplete
-        ? (advancedToNextStage
-          ? `Stage complete! Advanced to ${nextStageName}`
-          : 'All stages complete! Pending final approval from project owner')
-        : `Approval recorded. ${updatedProgress?.approvals_received} of ${updatedProgress?.approvals_required} reviewers approved`
+      message,
     });
   } catch (error) {
-    console.error('Error recording approval:', error);
-
-    if (error instanceof Error && error.message.includes('Unauthorized')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    return NextResponse.json(
-      { error: 'Failed to record approval' },
-      { status: 500 }
-    );
+    return errorResponse(error, 'Failed to record approval');
   }
 }

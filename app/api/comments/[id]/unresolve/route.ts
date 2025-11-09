@@ -1,6 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { NextRequest } from 'next/server';
+import { getAuthContext } from '@/lib/api/auth';
+import { successResponse, errorResponse, badRequestResponse, notFoundResponse } from '@/lib/api/response';
+import { handleSupabaseError } from '@/lib/api/error-handler';
 import { supabaseServer } from '@/lib/supabase-server';
+import { logger } from '@/lib/utils/logger';
 
 // Mark as dynamic to prevent build-time evaluation
 export const dynamic = 'force-dynamic';
@@ -15,12 +18,13 @@ export async function POST(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId, orgId } = await auth();
+    const authResult = await getAuthContext();
+    if (authResult instanceof Response) return authResult;
+    const { orgId } = authResult;
+    
     const { id: commentId } = await context.params;
 
-    if (!userId || !orgId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    logger.api(`/api/comments/${commentId}/unresolve`, 'POST', { orgId });
 
     // Get the comment to verify it exists and user has permission
     const { data: comment, error: fetchError } = await supabaseServer
@@ -31,18 +35,12 @@ export async function POST(
       .single();
 
     if (fetchError || !comment) {
-      return NextResponse.json(
-        { error: 'Comment not found' },
-        { status: 404 }
-      );
+      return notFoundResponse('Comment not found');
     }
 
     // Check if not resolved
     if (!comment.is_resolved) {
-      return NextResponse.json(
-        { error: 'Comment is not resolved' },
-        { status: 400 }
-      );
+      return badRequestResponse('Comment is not resolved');
     }
 
     // Unresolve the comment (clear resolution fields)
@@ -60,14 +58,14 @@ export async function POST(
       .select()
       .single();
 
-    if (updateError) throw updateError;
+    if (updateError) {
+      return handleSupabaseError(updateError);
+    }
 
-    return NextResponse.json({ comment: unresolvedComment });
+    logger.info('Comment unresolved successfully', { commentId });
+
+    return successResponse({ comment: unresolvedComment });
   } catch (error) {
-    console.error('Error unresolving comment:', error);
-    return NextResponse.json(
-      { error: 'Failed to unresolve comment' },
-      { status: 500 }
-    );
+    return errorResponse(error, 'Failed to unresolve comment');
   }
 }

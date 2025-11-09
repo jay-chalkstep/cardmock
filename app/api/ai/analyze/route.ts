@@ -4,31 +4,29 @@
  * Analyzes a mockup using Google Vision and OpenAI to extract tags, colors, text, and embeddings
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { NextRequest } from 'next/server';
+import { getAuthContext } from '@/lib/api/auth';
+import { successResponse, errorResponse, badRequestResponse, notFoundResponse, forbiddenResponse } from '@/lib/api/response';
+import { handleSupabaseError, checkRequiredFields } from '@/lib/api/error-handler';
 import { supabaseServer } from '@/lib/supabase-server';
 import { analyzeAndTagMockup, getMockupAIMetadata } from '@/lib/ai/vision-tagging';
+import { logger } from '@/lib/utils/logger';
 
 export async function POST(req: NextRequest) {
   try {
-    // Authenticate user
-    const { userId, orgId } = await auth();
+    const authResult = await getAuthContext();
+    if (authResult instanceof Response) return authResult;
+    const { orgId } = authResult;
 
-    if (!userId || !orgId) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    const body = await req.json();
+    const { mockupId } = body;
 
-    // Parse request body
-    const { mockupId } = await req.json();
+    logger.api('/api/ai/analyze', 'POST', { orgId, mockupId });
 
-    if (!mockupId) {
-      return NextResponse.json(
-        { error: 'mockupId is required' },
-        { status: 400 }
-      );
+    // Validate required fields
+    const missingFieldsCheck = checkRequiredFields(body, ['mockupId']);
+    if (missingFieldsCheck) {
+      return missingFieldsCheck;
     }
 
     // Fetch mockup from database
@@ -39,26 +37,17 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (mockupError || !mockup) {
-      return NextResponse.json(
-        { error: 'Mockup not found' },
-        { status: 404 }
-      );
+      return notFoundResponse('Mockup not found');
     }
 
     // Verify mockup belongs to user's organization
     if (mockup.organization_id !== orgId) {
-      return NextResponse.json(
-        { error: 'Forbidden' },
-        { status: 403 }
-      );
+      return forbiddenResponse('Mockup does not belong to your organization');
     }
 
     // Check if mockup has an image URL
     if (!mockup.mockup_image_url) {
-      return NextResponse.json(
-        { error: 'Mockup has no image to analyze' },
-        { status: 400 }
-      );
+      return badRequestResponse('Mockup has no image to analyze');
     }
 
     // Analyze the mockup
@@ -70,48 +59,35 @@ export async function POST(req: NextRequest) {
     );
 
     if (!result.success) {
-      return NextResponse.json(
-        { error: result.error || 'Analysis failed' },
-        { status: 500 }
-      );
+      return errorResponse(new Error(result.error || 'Analysis failed'), 'Analysis failed');
     }
 
+    logger.info('AI analysis completed successfully', { mockupId });
+
     // Return the AI metadata
-    return NextResponse.json({
-      success: true,
+    return successResponse({
       metadata: result.metadata,
       message: 'Analysis completed successfully',
     });
   } catch (error) {
-    console.error('[AI Analyze API] Error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return errorResponse(error, 'Failed to analyze mockup');
   }
 }
 
 export async function GET(req: NextRequest) {
   try {
-    // Authenticate user
-    const { userId, orgId } = await auth();
-
-    if (!userId || !orgId) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    const authResult = await getAuthContext();
+    if (authResult instanceof Response) return authResult;
+    const { orgId } = authResult;
 
     // Get mockupId from query params
     const { searchParams } = new URL(req.url);
     const mockupId = searchParams.get('mockupId');
 
+    logger.api('/api/ai/analyze', 'GET', { orgId, mockupId });
+
     if (!mockupId) {
-      return NextResponse.json(
-        { error: 'mockupId is required' },
-        { status: 400 }
-      );
+      return badRequestResponse('mockupId query parameter is required');
     }
 
     // Verify mockup belongs to user's organization
@@ -122,38 +98,28 @@ export async function GET(req: NextRequest) {
       .single();
 
     if (mockupError || !mockup) {
-      return NextResponse.json(
-        { error: 'Mockup not found' },
-        { status: 404 }
-      );
+      return notFoundResponse('Mockup not found');
     }
 
     if (mockup.organization_id !== orgId) {
-      return NextResponse.json(
-        { error: 'Forbidden' },
-        { status: 403 }
-      );
+      return forbiddenResponse('Mockup does not belong to your organization');
     }
 
     // Get AI metadata
     const metadata = await getMockupAIMetadata(mockupId);
 
     if (!metadata) {
-      return NextResponse.json({
+      return successResponse({
         analyzed: false,
         metadata: null,
       });
     }
 
-    return NextResponse.json({
+    return successResponse({
       analyzed: true,
       metadata,
     });
   } catch (error) {
-    console.error('[AI Analyze API] Error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return errorResponse(error, 'Failed to fetch AI metadata');
   }
 }

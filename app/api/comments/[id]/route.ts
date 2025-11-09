@@ -1,6 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { auth, clerkClient } from '@clerk/nextjs/server';
+import { NextRequest } from 'next/server';
+import { getAuthContext } from '@/lib/api/auth';
+import { successResponse, errorResponse, badRequestResponse, notFoundResponse, forbiddenResponse } from '@/lib/api/response';
+import { handleSupabaseError, checkRequiredFields } from '@/lib/api/error-handler';
 import { supabaseServer } from '@/lib/supabase-server';
+import { clerkClient } from '@clerk/nextjs/server';
+import { logger } from '@/lib/utils/logger';
 
 // Mark as dynamic to prevent build-time evaluation
 export const dynamic = 'force-dynamic';
@@ -20,22 +24,20 @@ export async function PATCH(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId, orgId } = await auth();
+    const authResult = await getAuthContext();
+    if (authResult instanceof Response) return authResult;
+    const { userId, orgId } = authResult;
+    
     const { id: commentId } = await context.params;
-
-    if (!userId || !orgId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
 
     const body = await request.json();
     const { comment_text, annotation_data, position_x, position_y } = body;
 
+    logger.api(`/api/comments/${commentId}`, 'PATCH', { orgId, userId });
+
     // Require at least one field to update
     if (!comment_text && !annotation_data && position_x === undefined && position_y === undefined) {
-      return NextResponse.json(
-        { error: 'At least one field to update is required' },
-        { status: 400 }
-      );
+      return badRequestResponse('At least one field to update is required');
     }
 
     // Get the comment to verify ownership
@@ -47,18 +49,12 @@ export async function PATCH(
       .single();
 
     if (fetchError || !comment) {
-      return NextResponse.json(
-        { error: 'Comment not found' },
-        { status: 404 }
-      );
+      return notFoundResponse('Comment not found');
     }
 
     // Verify user owns this comment
     if (comment.user_id !== userId) {
-      return NextResponse.json(
-        { error: 'You can only edit your own comments' },
-        { status: 403 }
-      );
+      return forbiddenResponse('You can only edit your own comments');
     }
 
     // Build update object
@@ -80,10 +76,7 @@ export async function PATCH(
     // Handle comment text updates (with edit history)
     if (comment_text) {
       if (comment_text.trim().length === 0) {
-        return NextResponse.json(
-          { error: 'comment_text cannot be empty' },
-          { status: 400 }
-        );
+        return badRequestResponse('comment_text cannot be empty');
       }
 
       // Get user details from Clerk
@@ -115,15 +108,15 @@ export async function PATCH(
       .select()
       .single();
 
-    if (updateError) throw updateError;
+    if (updateError) {
+      return handleSupabaseError(updateError);
+    }
 
-    return NextResponse.json({ comment: updatedComment });
+    logger.info('Comment updated successfully', { commentId });
+
+    return successResponse({ comment: updatedComment });
   } catch (error) {
-    console.error('Error updating comment:', error);
-    return NextResponse.json(
-      { error: 'Failed to update comment' },
-      { status: 500 }
-    );
+    return errorResponse(error, 'Failed to update comment');
   }
 }
 
@@ -137,12 +130,13 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId, orgId } = await auth();
+    const authResult = await getAuthContext();
+    if (authResult instanceof Response) return authResult;
+    const { userId, orgId } = authResult;
+    
     const { id: commentId } = await context.params;
 
-    if (!userId || !orgId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    logger.api(`/api/comments/${commentId}`, 'DELETE', { orgId, userId });
 
     // Get the comment to verify ownership
     const { data: comment, error: fetchError } = await supabaseServer
@@ -153,18 +147,12 @@ export async function DELETE(
       .single();
 
     if (fetchError || !comment) {
-      return NextResponse.json(
-        { error: 'Comment not found' },
-        { status: 404 }
-      );
+      return notFoundResponse('Comment not found');
     }
 
     // Verify user owns this comment
     if (comment.user_id !== userId) {
-      return NextResponse.json(
-        { error: 'You can only delete your own comments' },
-        { status: 403 }
-      );
+      return forbiddenResponse('You can only delete your own comments');
     }
 
     // Get user details from Clerk
@@ -184,14 +172,14 @@ export async function DELETE(
       })
       .eq('id', commentId);
 
-    if (deleteError) throw deleteError;
+    if (deleteError) {
+      return handleSupabaseError(deleteError);
+    }
 
-    return NextResponse.json({ success: true });
+    logger.info('Comment deleted successfully', { commentId });
+
+    return successResponse({ success: true });
   } catch (error) {
-    console.error('Error deleting comment:', error);
-    return NextResponse.json(
-      { error: 'Failed to delete comment' },
-      { status: 500 }
-    );
+    return errorResponse(error, 'Failed to delete comment');
   }
 }

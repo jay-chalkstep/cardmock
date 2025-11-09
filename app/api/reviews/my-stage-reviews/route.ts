@@ -1,6 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getUserContext } from '@/lib/auth-context';
-import { supabase } from '@/lib/supabase';
+import { NextRequest } from 'next/server';
+import { getAuthContext } from '@/lib/api/auth';
+import { successResponse, errorResponse } from '@/lib/api/response';
+import { handleSupabaseError } from '@/lib/api/error-handler';
+import { supabaseServer } from '@/lib/supabase-server';
+import { logger } from '@/lib/utils/logger';
 import type { Project, CardMockup, WorkflowStage, MockupStageProgress } from '@/lib/supabase';
 
 // Mark as dynamic to prevent build-time evaluation
@@ -26,36 +29,39 @@ interface ProjectWithPendingMockups {
  */
 export async function GET(request: NextRequest) {
   try {
-    const { userId, orgId } = await getUserContext();
+    const authResult = await getAuthContext();
+    if (authResult instanceof Response) return authResult;
+    const { userId, orgId } = authResult;
+
+    logger.api('/api/reviews/my-stage-reviews', 'GET', { orgId, userId });
 
     // Find all project stages where current user is a reviewer
-    const { data: myReviewerAssignments, error: reviewerError } = await supabase
+    const { data: myReviewerAssignments, error: reviewerError } = await supabaseServer
       .from('project_stage_reviewers')
       .select('*, projects!inner(*)')
       .eq('user_id', userId);
 
     if (reviewerError) {
-      console.error('Error fetching reviewer assignments:', reviewerError);
-      throw reviewerError;
+      return handleSupabaseError(reviewerError);
     }
 
     if (!myReviewerAssignments || myReviewerAssignments.length === 0) {
-      return NextResponse.json({ projects: [] });
+      logger.info('No reviewer assignments found', { userId });
+      return successResponse({ projects: [] });
     }
 
     // Group assignments by project
     const projectIds = [...new Set(myReviewerAssignments.map(r => r.project_id))];
 
     // Fetch all projects with workflows
-    const { data: projects, error: projectsError } = await supabase
+    const { data: projects, error: projectsError } = await supabaseServer
       .from('projects')
       .select('*, workflows(*)')
       .in('id', projectIds)
       .eq('organization_id', orgId);
 
     if (projectsError) {
-      console.error('Error fetching projects:', projectsError);
-      throw projectsError;
+      return handleSupabaseError(projectsError);
     }
 
     // For each project, find mockups in stages where user is reviewer AND status is in_review
@@ -73,7 +79,7 @@ export async function GET(request: NextRequest) {
       if (userStages.length === 0) continue;
 
       // Find stage progress records that are in_review for this user's stages
-      const { data: pendingStageProgress, error: progressError } = await supabase
+      const { data: pendingStageProgress, error: progressError } = await supabaseServer
         .from('mockup_stage_progress')
         .select('*')
         .eq('project_id', project.id)
@@ -81,7 +87,7 @@ export async function GET(request: NextRequest) {
         .in('stage_order', userStages);
 
       if (progressError) {
-        console.error('Error fetching pending stage progress:', progressError);
+        logger.warn('Error fetching pending stage progress, continuing', { error: progressError, projectId: project.id });
         continue;
       }
 
@@ -89,7 +95,7 @@ export async function GET(request: NextRequest) {
 
       // Fetch the mockups
       const mockupIds = pendingStageProgress.map(p => p.asset_id);
-      const { data: mockups, error: mockupsError } = await supabase
+      const { data: mockups, error: mockupsError } = await supabaseServer
         .from('assets')
         .select(`
           *,
@@ -107,7 +113,7 @@ export async function GET(request: NextRequest) {
         .eq('organization_id', orgId);
 
       if (mockupsError) {
-        console.error('Error fetching mockups:', mockupsError);
+        logger.warn('Error fetching mockups, continuing', { error: mockupsError, projectId: project.id });
         continue;
       }
 
@@ -133,17 +139,10 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ projects: projectsWithPendingMockups });
+    logger.info('Stage reviews fetched successfully', { userId, projectCount: projectsWithPendingMockups.length });
+
+    return successResponse({ projects: projectsWithPendingMockups });
   } catch (error) {
-    console.error('Error fetching my stage reviews:', error);
-
-    if (error instanceof Error && error.message.includes('Unauthorized')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    return NextResponse.json(
-      { error: 'Failed to fetch stage reviews' },
-      { status: 500 }
-    );
+    return errorResponse(error, 'Failed to fetch stage reviews');
   }
 }

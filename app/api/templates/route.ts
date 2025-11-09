@@ -1,6 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getUserContext } from '@/lib/auth-context';
+import { NextRequest } from 'next/server';
+import { getAuthContext } from '@/lib/api/auth';
+import { successResponse, errorResponse } from '@/lib/api/response';
+import { handleSupabaseError } from '@/lib/api/error-handler';
 import { createServerAdminClient } from '@/lib/supabase/server';
+import { logger } from '@/lib/utils/logger';
 
 // Mark as dynamic to prevent build-time evaluation
 export const dynamic = 'force-dynamic';
@@ -12,10 +15,13 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(request: NextRequest) {
   try {
-    const { userId, orgId } = await getUserContext();
+    const authResult = await getAuthContext();
+    if (authResult instanceof Response) return authResult;
+    const { orgId } = authResult;
+
     const supabase = createServerAdminClient();
 
-    console.log('[templates] Fetching for org:', orgId);
+    logger.api('/api/templates', 'GET', { orgId });
 
     const { data: templates, error } = await supabase
       .from('templates')
@@ -24,37 +30,13 @@ export async function GET(request: NextRequest) {
       .order('template_name');
 
     if (error) {
-      console.error('[templates] Database error:', {
-        code: error.code,
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-      });
-      return NextResponse.json(
-        {
-          error: 'Database error',
-          details: error.message,
-          code: error.code
-        },
-        { status: 500 }
-      );
+      return handleSupabaseError(error);
     }
 
-    console.log('[templates] Found', templates?.length || 0, 'templates');
-    return NextResponse.json({ templates: templates || [] });
+    logger.info('Templates fetched successfully', { orgId, count: templates?.length || 0 });
+
+    return successResponse({ templates: templates || [] });
   } catch (error) {
-    console.error('[templates] Error:', error);
-
-    if (error instanceof Error && error.message.includes('Unauthorized')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    return NextResponse.json(
-      {
-        error: 'Failed to fetch templates',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    );
+    return errorResponse(error, 'Failed to fetch templates');
   }
 }

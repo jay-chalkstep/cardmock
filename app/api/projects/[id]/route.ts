@@ -1,6 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getUserContext, isAdmin } from '@/lib/auth-context';
+import { NextRequest } from 'next/server';
+import { getAuthContext, isAdmin } from '@/lib/api/auth';
+import { successResponse, errorResponse, badRequestResponse, notFoundResponse, forbiddenResponse } from '@/lib/api/response';
+import { handleSupabaseError } from '@/lib/api/error-handler';
 import { supabase } from '@/lib/supabase';
+import { logger } from '@/lib/utils/logger';
 import type { ProjectStatus } from '@/lib/supabase';
 
 // Mark as dynamic to prevent build-time evaluation
@@ -16,8 +19,13 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId, orgId } = await getUserContext();
+    const authResult = await getAuthContext();
+    if (authResult instanceof Response) return authResult;
+    const { orgId } = authResult;
+    
     const { id } = await context.params;
+
+    logger.api(`/api/projects/${id}`, 'GET', { orgId });
 
     // Fetch project with workflow JOIN
     const { data: project, error } = await supabase
@@ -28,7 +36,7 @@ export async function GET(
       .single();
 
     if (error || !project) {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+      return notFoundResponse('Project not found');
     }
 
     // Fetch mockup count
@@ -52,7 +60,7 @@ export async function GET(
     const { workflows, ...projectData } = project;
     const workflowData = Array.isArray(workflows) ? workflows[0] : workflows;
 
-    return NextResponse.json({
+    return successResponse({
       project: {
         ...projectData,
         workflow: workflowData || null, // Rename to match Project interface
@@ -61,16 +69,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error('Error fetching project:', error);
-
-    if (error instanceof Error && error.message.includes('Unauthorized')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    return NextResponse.json(
-      { error: 'Failed to fetch project' },
-      { status: 500 }
-    );
+    return errorResponse(error, 'Failed to fetch project');
   }
 }
 
@@ -93,8 +92,13 @@ export async function PATCH(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId, orgId } = await getUserContext();
+    const authResult = await getAuthContext();
+    if (authResult instanceof Response) return authResult;
+    const { userId, orgId } = authResult;
+    
     const { id } = await context.params;
+
+    logger.api(`/api/projects/${id}`, 'PATCH', { orgId, userId });
 
     // Fetch project to check ownership
     const { data: project, error: fetchError } = await supabase
@@ -105,7 +109,7 @@ export async function PATCH(
       .single();
 
     if (fetchError || !project) {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+      return notFoundResponse('Project not found');
     }
 
     // Check permissions - only creator or admin can edit
@@ -113,10 +117,7 @@ export async function PATCH(
     const canEdit = project.created_by === userId || userIsAdmin;
 
     if (!canEdit) {
-      return NextResponse.json(
-        { error: 'You do not have permission to edit this project' },
-        { status: 403 }
-      );
+      return forbiddenResponse('You do not have permission to edit this project');
     }
 
     const body = await request.json();
@@ -128,16 +129,10 @@ export async function PATCH(
     // Validate and add name
     if (name !== undefined) {
       if (typeof name !== 'string' || name.trim().length === 0) {
-        return NextResponse.json(
-          { error: 'Project name cannot be empty' },
-          { status: 400 }
-        );
+        return badRequestResponse('Project name cannot be empty');
       }
       if (name.trim().length > 100) {
-        return NextResponse.json(
-          { error: 'Project name must be less than 100 characters' },
-          { status: 400 }
-        );
+        return badRequestResponse('Project name must be less than 100 characters');
       }
       updateData.name = name.trim();
     }
@@ -156,10 +151,7 @@ export async function PATCH(
     if (status !== undefined) {
       const validStatuses: ProjectStatus[] = ['active', 'completed', 'archived'];
       if (!validStatuses.includes(status)) {
-        return NextResponse.json(
-          { error: 'Invalid status. Must be: active, completed, or archived' },
-          { status: 400 }
-        );
+        return badRequestResponse('Invalid status. Must be: active, completed, or archived');
       }
       updateData.status = status;
     }
@@ -167,10 +159,7 @@ export async function PATCH(
     // Validate and add color
     if (color !== undefined) {
       if (!/^#[0-9A-F]{6}$/i.test(color)) {
-        return NextResponse.json(
-          { error: 'Invalid color format. Must be a hex color (e.g., #3B82F6)' },
-          { status: 400 }
-        );
+        return badRequestResponse('Invalid color format. Must be a hex color (e.g., #3B82F6)');
       }
       updateData.color = color;
     }
@@ -196,10 +185,7 @@ export async function PATCH(
           .single();
 
         if (workflowError || !workflow) {
-          return NextResponse.json(
-            { error: 'Workflow not found' },
-            { status: 404 }
-          );
+          return notFoundResponse('Workflow not found');
         }
       }
 
@@ -215,22 +201,14 @@ export async function PATCH(
       .single();
 
     if (updateError) {
-      console.error('Database error updating project:', updateError);
-      throw updateError;
+      return handleSupabaseError(updateError);
     }
 
-    return NextResponse.json({ project: updatedProject });
+    logger.info('Project updated successfully', { projectId: id });
+
+    return successResponse({ project: updatedProject });
   } catch (error) {
-    console.error('Error updating project:', error);
-
-    if (error instanceof Error && error.message.includes('Unauthorized')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    return NextResponse.json(
-      { error: 'Failed to update project' },
-      { status: 500 }
-    );
+    return errorResponse(error, 'Failed to update project');
   }
 }
 
@@ -247,8 +225,13 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId, orgId } = await getUserContext();
+    const authResult = await getAuthContext();
+    if (authResult instanceof Response) return authResult;
+    const { userId, orgId } = authResult;
+    
     const { id } = await context.params;
+
+    logger.api(`/api/projects/${id}`, 'DELETE', { orgId, userId });
 
     // Fetch project to check ownership
     const { data: project, error: fetchError } = await supabase
@@ -259,7 +242,7 @@ export async function DELETE(
       .single();
 
     if (fetchError || !project) {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+      return notFoundResponse('Project not found');
     }
 
     // Check permissions - only creator or admin can delete
@@ -267,10 +250,7 @@ export async function DELETE(
     const canDelete = project.created_by === userId || userIsAdmin;
 
     if (!canDelete) {
-      return NextResponse.json(
-        { error: 'You do not have permission to delete this project' },
-        { status: 403 }
-      );
+      return forbiddenResponse('You do not have permission to delete this project');
     }
 
     // Delete the project (mockups will have project_id set to NULL automatically)
@@ -280,21 +260,13 @@ export async function DELETE(
       .eq('id', id);
 
     if (deleteError) {
-      console.error('Database error deleting project:', deleteError);
-      throw deleteError;
+      return handleSupabaseError(deleteError);
     }
 
-    return NextResponse.json({ success: true });
+    logger.info('Project deleted successfully', { projectId: id });
+
+    return successResponse({ success: true });
   } catch (error) {
-    console.error('Error deleting project:', error);
-
-    if (error instanceof Error && error.message.includes('Unauthorized')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    return NextResponse.json(
-      { error: 'Failed to delete project' },
-      { status: 500 }
-    );
+    return errorResponse(error, 'Failed to delete project');
   }
 }

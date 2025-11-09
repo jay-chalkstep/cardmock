@@ -1,5 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { auth, clerkClient } from '@clerk/nextjs/server';
+import { NextRequest } from 'next/server';
+import { getAuthContext } from '@/lib/api/auth';
+import { successResponse, errorResponse } from '@/lib/api/response';
+import { clerkClient } from '@clerk/nextjs/server';
+import { logger } from '@/lib/utils/logger';
 
 // Mark as dynamic to prevent build-time evaluation
 export const dynamic = 'force-dynamic';
@@ -24,14 +27,11 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(request: NextRequest) {
   try {
-    const { userId, orgId } = await auth();
+    const authResult = await getAuthContext();
+    if (authResult instanceof Response) return authResult;
+    const { userId, orgId } = authResult;
 
-    if (!userId || !orgId) {
-      return NextResponse.json(
-        { error: 'Unauthorized: No user or organization found' },
-        { status: 401 }
-      );
-    }
+    logger.api('/api/org/members', 'GET', { orgId, userId });
 
     // Fetch organization membership list from Clerk
     const client = await clerkClient();
@@ -60,12 +60,10 @@ export async function GET(request: NextRequest) {
       .filter(member => member !== null)
       .filter(member => member!.id !== userId); // Exclude current user
 
-    return NextResponse.json({ members });
+    logger.info('Organization members fetched successfully', { orgId, count: members.length });
+
+    return successResponse({ members });
   } catch (error) {
-    console.error('Error fetching org members:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch organization members' },
-      { status: 500 }
-    );
+    return errorResponse(error, 'Failed to fetch organization members');
   }
 }

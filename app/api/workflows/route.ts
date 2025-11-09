@@ -1,6 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getUserContext, isAdmin } from '@/lib/auth-context';
+import { NextRequest } from 'next/server';
+import { getAuthContext, isAdmin } from '@/lib/api/auth';
+import { successResponse, errorResponse, badRequestResponse, forbiddenResponse } from '@/lib/api/response';
+import { handleSupabaseError, checkRequiredFields } from '@/lib/api/error-handler';
 import { supabase } from '@/lib/supabase';
+import { logger } from '@/lib/utils/logger';
 import type { WorkflowStage } from '@/lib/supabase';
 
 // Mark as dynamic to prevent build-time evaluation
@@ -16,9 +19,14 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(request: NextRequest) {
   try {
-    const { userId, orgId } = await getUserContext();
+    const authResult = await getAuthContext();
+    if (authResult instanceof Response) return authResult;
+    const { orgId } = authResult;
+    
     const { searchParams } = new URL(request.url);
     const includeArchived = searchParams.get('is_archived') === 'true';
+
+    logger.api('/api/workflows', 'GET', { orgId, includeArchived });
 
     // Build query
     let query = supabase
@@ -36,8 +44,7 @@ export async function GET(request: NextRequest) {
     const { data: workflows, error } = await query;
 
     if (error) {
-      console.error('Database error fetching workflows:', error);
-      throw error;
+      return handleSupabaseError(error);
     }
 
     // Calculate stage count for each workflow
@@ -62,18 +69,9 @@ export async function GET(request: NextRequest) {
       })
     );
 
-    return NextResponse.json({ workflows: workflowsWithProjectCounts });
+    return successResponse({ workflows: workflowsWithProjectCounts });
   } catch (error) {
-    console.error('Error fetching workflows:', error);
-
-    if (error instanceof Error && error.message.includes('Unauthorized')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    return NextResponse.json(
-      { error: 'Failed to fetch workflows' },
-      { status: 500 }
-    );
+    return errorResponse(error, 'Failed to fetch workflows');
   }
 }
 
@@ -92,32 +90,33 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const { userId, orgId } = await getUserContext();
+    const authResult = await getAuthContext();
+    if (authResult instanceof Response) return authResult;
+    const { userId, orgId } = authResult;
 
     // Check admin permission
-    if (!(await isAdmin())) {
-      return NextResponse.json(
-        { error: 'Forbidden: Admin access required' },
-        { status: 403 }
-      );
+    const adminCheck = await isAdmin();
+    if (!adminCheck) {
+      return forbiddenResponse('Admin access required');
     }
 
     const body = await request.json();
     const { name, description, stages, is_default } = body;
 
+    logger.api('/api/workflows', 'POST', { orgId, userId });
+
     // Validate required fields
-    if (!name || typeof name !== 'string' || name.trim().length === 0) {
-      return NextResponse.json(
-        { error: 'Workflow name is required' },
-        { status: 400 }
-      );
+    const missingFieldsCheck = checkRequiredFields(body, ['name', 'stages']);
+    if (missingFieldsCheck) {
+      return missingFieldsCheck;
     }
 
-    if (!stages || !Array.isArray(stages) || stages.length === 0) {
-      return NextResponse.json(
-        { error: 'Workflow must have at least one stage' },
-        { status: 400 }
-      );
+    if (typeof name !== 'string' || name.trim().length === 0) {
+      return badRequestResponse('Workflow name is required');
+    }
+
+    if (!Array.isArray(stages) || stages.length === 0) {
+      return badRequestResponse('Workflow must have at least one stage');
     }
 
     // Validate each stage
@@ -125,25 +124,16 @@ export async function POST(request: NextRequest) {
       const stage = stages[i] as WorkflowStage;
 
       if (!stage.name || typeof stage.name !== 'string' || stage.name.trim().length === 0) {
-        return NextResponse.json(
-          { error: `Stage ${i + 1} must have a name` },
-          { status: 400 }
-        );
+        return badRequestResponse(`Stage ${i + 1} must have a name`);
       }
 
       if (typeof stage.order !== 'number' || stage.order !== i + 1) {
-        return NextResponse.json(
-          { error: 'Stage orders must be sequential starting from 1' },
-          { status: 400 }
-        );
+        return badRequestResponse('Stage orders must be sequential starting from 1');
       }
 
       const validColors = ['yellow', 'green', 'blue', 'purple', 'red', 'orange', 'gray'];
       if (!stage.color || !validColors.includes(stage.color)) {
-        return NextResponse.json(
-          { error: `Stage ${i + 1} has invalid color. Must be one of: ${validColors.join(', ')}` },
-          { status: 400 }
-        );
+        return badRequestResponse(`Stage ${i + 1} has invalid color. Must be one of: ${validColors.join(', ')}`);
       }
     }
 
@@ -172,11 +162,16 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error('Database error creating workflow:', error);
-      throw error;
+      return handleSupabaseError(error);
     }
 
-    return NextResponse.json(
+    logger.info('Workflow created successfully', {
+      workflowId: workflow.id,
+      name: workflow.name,
+      stageCount: stages.length,
+    });
+
+    return successResponse(
       {
         workflow: {
           ...workflow,
@@ -184,22 +179,9 @@ export async function POST(request: NextRequest) {
           project_count: 0,
         },
       },
-      { status: 201 }
+      201
     );
   } catch (error) {
-    console.error('Error creating workflow:', error);
-
-    if (error instanceof Error && error.message.includes('Unauthorized')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    if (error instanceof Error && error.message.includes('Forbidden')) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
-    return NextResponse.json(
-      { error: 'Failed to create workflow' },
-      { status: 500 }
-    );
+    return errorResponse(error, 'Failed to create workflow');
   }
 }
