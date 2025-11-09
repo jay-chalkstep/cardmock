@@ -97,29 +97,49 @@ export async function POST(
     const fullName = `${firstName} ${lastName}`.trim() || 'Unknown User';
     const userEmail = user.emailAddresses[0]?.emailAddress || '';
 
-    // Create comment record
-    const { data: comment, error: createError } = await supabaseServer
+    // Create comment record - try asset_id first, fallback to mockup_id if needed
+    let insertData: any = {
+      user_id: userId,
+      user_name: fullName,
+      user_email: userEmail,
+      user_avatar: user.imageUrl,
+      comment_text: comment_text.trim(),
+      annotation_data: annotation_data || null,
+      position_x: position_x || null,
+      position_y: position_y || null,
+      annotation_type: annotation_type || 'none',
+      annotation_color: annotation_color || '#FF6B6B',
+      organization_id: orgId
+    };
+
+    // Try asset_id first (post-migration 13)
+    insertData.asset_id = mockupId;
+    let { data: comment, error: createError } = await supabaseServer
       .from('mockup_comments')
-      .insert({
-        asset_id: mockupId,
-        user_id: userId,
-        user_name: fullName,
-        user_email: userEmail,
-        user_avatar: user.imageUrl,
-        comment_text: comment_text.trim(),
-        annotation_data: annotation_data || null,
-        position_x: position_x || null,
-        position_y: position_y || null,
-        annotation_type: annotation_type || 'none',
-        annotation_color: annotation_color || '#FF6B6B',
-        organization_id: orgId
-      })
+      .insert(insertData)
       .select()
       .single();
 
+    // If error suggests column doesn't exist, try mockup_id (pre-migration 13)
+    if (createError && createError.message?.includes('column') && createError.message?.includes('asset_id')) {
+      logger.warn('asset_id column not found, trying mockup_id (pre-migration 13)', { mockupId, orgId });
+      delete insertData.asset_id;
+      insertData.mockup_id = mockupId;
+      const result = await supabaseServer
+        .from('mockup_comments')
+        .insert(insertData)
+        .select()
+        .single();
+      comment = result.data;
+      createError = result.error;
+    }
+
     if (createError) {
+      logger.error('Error creating comment', { error: createError, mockupId, orgId, userId });
       return handleSupabaseError(createError);
     }
+
+    logger.info('Comment created successfully', { commentId: comment?.id, mockupId, hasAnnotation: !!annotation_data });
 
     // Note: Reviewer viewing status is now tracked via project_stage_reviewers
     // No need to update a separate table for viewed status
@@ -148,7 +168,8 @@ export async function GET(
 
     logger.api(`/api/mockups/${mockupId}/comments`, 'GET', { orgId });
 
-    const { data: comments, error } = await supabaseServer
+    // Try asset_id first (post-migration 13), fallback to mockup_id if needed
+    let { data: comments, error } = await supabaseServer
       .from('mockup_comments')
       .select('*')
       .eq('asset_id', mockupId)
@@ -156,10 +177,26 @@ export async function GET(
       .is('deleted_at', null) // Filter out soft-deleted comments
       .order('created_at', { ascending: true });
 
+    // If error suggests column doesn't exist, try mockup_id (pre-migration 13)
+    if (error && error.message?.includes('column') && error.message?.includes('asset_id')) {
+      logger.warn('asset_id column not found, trying mockup_id (pre-migration 13)', { mockupId, orgId });
+      const result = await supabaseServer
+        .from('mockup_comments')
+        .select('*')
+        .eq('mockup_id', mockupId)
+        .eq('organization_id', orgId)
+        .is('deleted_at', null)
+        .order('created_at', { ascending: true });
+      comments = result.data;
+      error = result.error;
+    }
+
     if (error) {
+      logger.error('Error fetching comments', { error, mockupId, orgId });
       return handleSupabaseError(error);
     }
 
+    logger.info('Comments fetched successfully', { mockupId, count: comments?.length || 0 });
     return successResponse({ comments: comments || [] });
   } catch (error) {
     return errorResponse(error, 'Failed to fetch comments');
