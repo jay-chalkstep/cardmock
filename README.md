@@ -684,6 +684,7 @@ See [CHANGELOG.md](./documentation/CHANGELOG.md) for detailed version history.
 
 ### Recent Versions
 
+- **v3.7.1** (2025-01-XX) - 🐛 **Critical Bugfixes** - Fixed project loading and metrics display issues by using correct Supabase client in API routes and proper response format handling
 - **v3.7.0** (2025-11-09) - 🧹 **Code Quality** - Removed AI features for simplification and stability, updated documentation, component extraction and organization improvements
 - **v3.6.0** (2025-10-28) - 🎉 **MAJOR FEATURE** - User-Level Approval Tracking & Final Approval System - Individual reviewer tracking, all-must-approve logic, project owner final approval, approval timeline, quick approve, 4 new email templates, comprehensive documentation
 - **v3.5.1** (2025-10-28) - 🐛 **Critical Bugfixes** - Column name mismatches after migration 13, stage progress trigger fixes, templates API fix, server-side mockup save

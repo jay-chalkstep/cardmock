@@ -7,6 +7,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.7.1] - 2025-01-XX
+
+### 🐛 **Critical Bugfixes - Project Loading & Metrics Display**
+
+Fixed critical bugs that prevented projects from loading when clicked and metrics from displaying in the metrics pane.
+
+### Fixed
+
+#### Project Not Found Issue
+- **API Route Supabase Client** - Fixed `/api/projects/[id]/route.ts` using client-side `supabase` instead of server-side `supabaseServer`
+  - Error: Projects returned "not found" when clicking on active projects
+  - Root cause: Client-side Supabase client doesn't have proper authentication context in server-side API routes
+  - Fix: Replaced all instances of `supabase` with `supabaseServer` in the API route
+  - Impact: Projects now load correctly when clicked from the projects list
+
+#### Metrics Not Loading
+- **Response Format Handling** - Fixed frontend components not properly extracting data from API responses
+  - Error: Metrics pane showed "No metrics available" even when data existed
+  - Root cause: API routes use `successResponse()` which wraps data in `{ success: true, data: {...} }` format
+  - Fix: Updated all frontend components to extract data from `result.data?.property` instead of `result.property`
+  - Components fixed:
+    - `app/(dashboard)/projects/[id]/page.tsx` - Project detail page
+    - `components/projects/ProjectMetrics.tsx` - Individual project metrics
+    - `components/projects/ActiveProjectsOverview.tsx` - Aggregated metrics overview
+  - Impact: Metrics now display correctly in the metrics pane
+
+### Technical Details
+
+#### Files Modified
+- `app/api/projects/[id]/route.ts` - Changed all `supabase` imports and calls to `supabaseServer`
+- `app/(dashboard)/projects/[id]/page.tsx` - Fixed response data extraction for project, mockups, and reviewers
+- `components/projects/ProjectMetrics.tsx` - Fixed metrics response data extraction
+- `components/projects/ActiveProjectsOverview.tsx` - Fixed aggregated metrics response data extraction
+
+#### Root Causes
+1. **Server-side API routes must use `supabaseServer`** - Client-side `supabase` uses anon key and relies on RLS, which doesn't work correctly in server-side API routes where we manually verify permissions
+2. **Consistent response format** - All API routes use `successResponse()` helper which wraps data in `{ success: true, data: {...} }`, but frontend components weren't consistently extracting from the `data` property
+
+### Impact
+- ✅ **Projects Load Correctly** - Clicking on active projects now successfully loads project details
+- ✅ **Metrics Display** - Metrics pane now shows project metrics and aggregated overview correctly
+- ✅ **Consistent API Pattern** - All project API routes now use `supabaseServer` consistently
+- ✅ **Proper Response Handling** - Frontend components now correctly handle the standardized API response format
+
+---
+
 ## [3.7.0] - 2025-11-09
 
 ### Removed

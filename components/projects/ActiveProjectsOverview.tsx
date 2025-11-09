@@ -88,8 +88,10 @@ export default function ActiveProjectsOverview({ statusFilter = 'active' }: Acti
     try {
       const response = await fetch(`/api/projects/metrics?status=${statusFilter}`);
       if (!response.ok) throw new Error('Failed to fetch metrics');
-      const data = await response.json();
-      setMetrics(data.metrics);
+      const result = await response.json();
+      const metricsData = result.data?.metrics || result.metrics;
+      if (!metricsData) throw new Error('Metrics not found in response');
+      setMetrics(metricsData);
     } catch (err) {
       console.error('Error fetching aggregated metrics:', err);
       setError('Failed to load metrics');

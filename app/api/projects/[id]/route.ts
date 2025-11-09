@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { getAuthContext, isAdmin } from '@/lib/api/auth';
 import { successResponse, errorResponse, badRequestResponse, notFoundResponse, forbiddenResponse } from '@/lib/api/response';
 import { handleSupabaseError } from '@/lib/api/error-handler';
-import { supabase } from '@/lib/supabase';
+import { supabaseServer } from '@/lib/supabase-server';
 import { logger } from '@/lib/utils/logger';
 import type { ProjectStatus } from '@/lib/supabase';
 
@@ -28,7 +28,7 @@ export async function GET(
     logger.api(`/api/projects/${id}`, 'GET', { orgId });
 
     // Fetch project with workflow JOIN
-    const { data: project, error } = await supabase
+    const { data: project, error } = await supabaseServer
       .from('projects')
       .select('*, workflows(*)')
       .eq('id', id)
@@ -40,14 +40,14 @@ export async function GET(
     }
 
     // Fetch mockup count
-    const { count } = await supabase
+    const { count } = await supabaseServer
       .from('assets')
       .select('*', { count: 'exact', head: true })
       .eq('project_id', id)
       .eq('organization_id', orgId);
 
     // Fetch up to 4 mockup previews
-    const { data: mockupPreviews } = await supabase
+    const { data: mockupPreviews } = await supabaseServer
       .from('assets')
       .select('id, mockup_name, mockup_image_url')
       .eq('project_id', id)
@@ -101,7 +101,7 @@ export async function PATCH(
     logger.api(`/api/projects/${id}`, 'PATCH', { orgId, userId });
 
     // Fetch project to check ownership
-    const { data: project, error: fetchError } = await supabase
+    const { data: project, error: fetchError } = await supabaseServer
       .from('projects')
       .select('*')
       .eq('id', id)
@@ -169,7 +169,7 @@ export async function PATCH(
       // If changing workflow (including to null), clear all stage reviewers
       if (workflow_id !== project.workflow_id) {
         // Delete all existing stage reviewers for this project
-        await supabase
+        await supabaseServer
           .from('project_stage_reviewers')
           .delete()
           .eq('project_id', id);
@@ -177,7 +177,7 @@ export async function PATCH(
 
       // Validate workflow exists if not null
       if (workflow_id !== null) {
-        const { data: workflow, error: workflowError } = await supabase
+        const { data: workflow, error: workflowError } = await supabaseServer
           .from('workflows')
           .select('id')
           .eq('id', workflow_id)
@@ -193,7 +193,7 @@ export async function PATCH(
     }
 
     // Perform update
-    const { data: updatedProject, error: updateError } = await supabase
+    const { data: updatedProject, error: updateError } = await supabaseServer
       .from('projects')
       .update(updateData)
       .eq('id', id)
@@ -234,7 +234,7 @@ export async function DELETE(
     logger.api(`/api/projects/${id}`, 'DELETE', { orgId, userId });
 
     // Fetch project to check ownership
-    const { data: project, error: fetchError } = await supabase
+    const { data: project, error: fetchError } = await supabaseServer
       .from('projects')
       .select('*')
       .eq('id', id)
@@ -254,7 +254,7 @@ export async function DELETE(
     }
 
     // Delete the project (mockups will have project_id set to NULL automatically)
-    const { error: deleteError } = await supabase
+    const { error: deleteError } = await supabaseServer
       .from('projects')
       .delete()
       .eq('id', id);

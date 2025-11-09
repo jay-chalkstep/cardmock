@@ -74,8 +74,10 @@ export default function ProjectMetrics({ projectId }: ProjectMetricsProps) {
     try {
       const response = await fetch(`/api/projects/${projectId}/metrics`);
       if (!response.ok) throw new Error('Failed to fetch metrics');
-      const data = await response.json();
-      setMetrics(data.metrics);
+      const result = await response.json();
+      const metricsData = result.data?.metrics || result.metrics;
+      if (!metricsData) throw new Error('Metrics not found in response');
+      setMetrics(metricsData);
     } catch (err) {
       console.error('Error fetching project metrics:', err);
       setError('Failed to load project metrics');

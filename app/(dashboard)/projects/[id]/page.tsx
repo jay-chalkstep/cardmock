@@ -90,20 +90,24 @@ export default function ProjectDetailPage() {
       // Fetch project details
       const projectResponse = await fetch(`/api/projects/${projectId}`);
       if (!projectResponse.ok) throw new Error('Failed to fetch project');
-      const { project: fetchedProject } = await projectResponse.json();
+      const result = await projectResponse.json();
+      const fetchedProject = result.data?.project || result.project;
+      if (!fetchedProject) throw new Error('Project not found in response');
       setProject(fetchedProject);
 
       // Fetch project mockups
       const mockupsResponse = await fetch(`/api/projects/${projectId}/mockups`);
       if (!mockupsResponse.ok) throw new Error('Failed to fetch mockups');
-      const { mockups: fetchedMockups } = await mockupsResponse.json();
-      setMockups(fetchedMockups || []);
+      const mockupsResult = await mockupsResponse.json();
+      const fetchedMockups = mockupsResult.data?.mockups || mockupsResult.mockups || [];
+      setMockups(fetchedMockups);
 
       // Fetch stage reviewers
       const reviewersResponse = await fetch(`/api/projects/${projectId}/reviewers`);
       if (reviewersResponse.ok) {
-        const { reviewers } = await reviewersResponse.json();
-        setStageReviewers(reviewers || []);
+        const reviewersResult = await reviewersResponse.json();
+        const fetchedReviewers = reviewersResult.data?.reviewers || reviewersResult.reviewers || [];
+        setStageReviewers(fetchedReviewers);
       }
     } catch (error) {
       console.error('Error fetching project data:', error);
