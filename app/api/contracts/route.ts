@@ -31,10 +31,10 @@ export async function GET(request: NextRequest) {
 
     logger.api('/api/contracts', 'GET', { orgId, clientId, statusFilter, typeFilter });
 
-    // Build query
+    // Build query - use separate selects to avoid join issues if tables don't exist
     let query = supabaseServer
       .from('contracts')
-      .select('*, clients(*), projects(id, name)')
+      .select('*')
       .eq('organization_id', orgId)
       .order('created_at', { ascending: false });
 
@@ -52,10 +52,60 @@ export async function GET(request: NextRequest) {
     const { data: contracts, error } = await query;
 
     if (error) {
+      logger.error('Error fetching contracts:', error);
       return handleSupabaseError(error);
     }
 
-    return successResponse({ contracts: contracts || [] });
+    // If no contracts, return empty array
+    if (!contracts || contracts.length === 0) {
+      return successResponse({ contracts: [] });
+    }
+
+    // Fetch related clients and projects separately
+    const clientIds = [...new Set(contracts.map(c => c.client_id).filter(Boolean))];
+    const projectIds = [...new Set(contracts.map(c => c.project_id).filter(Boolean))];
+
+    const clientsMap: Record<string, any> = {};
+    const projectsMap: Record<string, any> = {};
+
+    // Fetch clients if any
+    if (clientIds.length > 0) {
+      const { data: clients } = await supabaseServer
+        .from('clients')
+        .select('id, name, email, phone')
+        .in('id', clientIds)
+        .eq('organization_id', orgId);
+
+      if (clients) {
+        clients.forEach(client => {
+          clientsMap[client.id] = client;
+        });
+      }
+    }
+
+    // Fetch projects if any
+    if (projectIds.length > 0) {
+      const { data: projects } = await supabaseServer
+        .from('projects')
+        .select('id, name')
+        .in('id', projectIds)
+        .eq('organization_id', orgId);
+
+      if (projects) {
+        projects.forEach(project => {
+          projectsMap[project.id] = project;
+        });
+      }
+    }
+
+    // Enrich contracts with related data
+    const enrichedContracts = contracts.map(contract => ({
+      ...contract,
+      clients: contract.client_id ? clientsMap[contract.client_id] : null,
+      projects: contract.project_id ? projectsMap[contract.project_id] : null,
+    }));
+
+    return successResponse({ contracts: enrichedContracts });
   } catch (error) {
     return errorResponse(error, 'Failed to fetch contracts');
   }
