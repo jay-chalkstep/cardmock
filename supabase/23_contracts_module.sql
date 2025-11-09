@@ -11,45 +11,65 @@
 -- ============================================================================
 
 -- Contract status enum
-CREATE TYPE contract_status AS ENUM (
-  'draft',
-  'pending_signature',
-  'signed',
-  'amended',
-  'expired',
-  'voided'
-);
+DO $$ BEGIN
+  CREATE TYPE contract_status AS ENUM (
+    'draft',
+    'pending_signature',
+    'signed',
+    'amended',
+    'expired',
+    'voided'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
 
 -- Contract type enum
-CREATE TYPE contract_type AS ENUM (
-  'new',
-  'amendment'
-);
+DO $$ BEGIN
+  CREATE TYPE contract_type AS ENUM (
+    'new',
+    'amendment'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
 
 -- DocuSign status enum
-CREATE TYPE docusign_status AS ENUM (
-  'sent',
-  'delivered',
-  'signed',
-  'declined',
-  'voided',
-  'completed'
-);
+DO $$ BEGIN
+  CREATE TYPE docusign_status AS ENUM (
+    'sent',
+    'delivered',
+    'signed',
+    'declined',
+    'voided',
+    'completed'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
 
 -- Email mockup status enum
-CREATE TYPE email_mockup_status AS ENUM (
-  'draft',
-  'pending_approval',
-  'approved',
-  'rejected'
-);
+DO $$ BEGIN
+  CREATE TYPE email_mockup_status AS ENUM (
+    'draft',
+    'pending_approval',
+    'approved',
+    'rejected'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
 
 -- Payment method status enum
-CREATE TYPE payment_method_status AS ENUM (
-  'pending_approval',
-  'approved',
-  'rejected'
-);
+DO $$ BEGIN
+  CREATE TYPE payment_method_status AS ENUM (
+    'pending_approval',
+    'approved',
+    'rejected'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
 
 -- ============================================================================
 -- CLIENTS TABLE
@@ -167,69 +187,74 @@ CREATE TABLE IF NOT EXISTS payment_methods (
 -- ============================================================================
 
 -- Clients indexes
-CREATE INDEX idx_clients_org ON clients(organization_id);
-CREATE INDEX idx_clients_created_by ON clients(created_by);
-CREATE INDEX idx_clients_created_at ON clients(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_clients_org ON clients(organization_id);
+CREATE INDEX IF NOT EXISTS idx_clients_created_by ON clients(created_by);
+CREATE INDEX IF NOT EXISTS idx_clients_created_at ON clients(created_at DESC);
 
 -- Contracts indexes
-CREATE INDEX idx_contracts_client ON contracts(client_id);
-CREATE INDEX idx_contracts_project ON contracts(project_id) WHERE project_id IS NOT NULL;
-CREATE INDEX idx_contracts_org ON contracts(organization_id);
-CREATE INDEX idx_contracts_org_status ON contracts(organization_id, status);
-CREATE INDEX idx_contracts_contract_number ON contracts(organization_id, contract_number);
-CREATE INDEX idx_contracts_parent ON contracts(parent_contract_id) WHERE parent_contract_id IS NOT NULL;
-CREATE INDEX idx_contracts_created_by ON contracts(created_by);
-CREATE INDEX idx_contracts_created_at ON contracts(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_contracts_client ON contracts(client_id);
+CREATE INDEX IF NOT EXISTS idx_contracts_project ON contracts(project_id) WHERE project_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_contracts_org ON contracts(organization_id);
+CREATE INDEX IF NOT EXISTS idx_contracts_org_status ON contracts(organization_id, status);
+CREATE INDEX IF NOT EXISTS idx_contracts_contract_number ON contracts(organization_id, contract_number);
+CREATE INDEX IF NOT EXISTS idx_contracts_parent ON contracts(parent_contract_id) WHERE parent_contract_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_contracts_created_by ON contracts(created_by);
+CREATE INDEX IF NOT EXISTS idx_contracts_created_at ON contracts(created_at DESC);
 
 -- Contract documents indexes
-CREATE INDEX idx_contract_documents_contract ON contract_documents(contract_id);
-CREATE INDEX idx_contract_documents_current ON contract_documents(contract_id, is_current) WHERE is_current = true;
-CREATE INDEX idx_contract_documents_envelope ON contract_documents(docu_sign_envelope_id) WHERE docu_sign_envelope_id IS NOT NULL;
-CREATE INDEX idx_contract_documents_uploaded_by ON contract_documents(uploaded_by);
+CREATE INDEX IF NOT EXISTS idx_contract_documents_contract ON contract_documents(contract_id);
+CREATE INDEX IF NOT EXISTS idx_contract_documents_current ON contract_documents(contract_id, is_current) WHERE is_current = true;
+CREATE INDEX IF NOT EXISTS idx_contract_documents_envelope ON contract_documents(docu_sign_envelope_id) WHERE docu_sign_envelope_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_contract_documents_uploaded_by ON contract_documents(uploaded_by);
 
 -- Contract document versions indexes
-CREATE INDEX idx_contract_doc_versions_document ON contract_document_versions(document_id);
-CREATE INDEX idx_contract_doc_versions_version ON contract_document_versions(document_id, version_number);
-CREATE INDEX idx_contract_doc_versions_created_at ON contract_document_versions(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_contract_doc_versions_document ON contract_document_versions(document_id);
+CREATE INDEX IF NOT EXISTS idx_contract_doc_versions_version ON contract_document_versions(document_id, version_number);
+CREATE INDEX IF NOT EXISTS idx_contract_doc_versions_created_at ON contract_document_versions(created_at DESC);
 
 -- Email mockups indexes
-CREATE INDEX idx_email_mockups_contract ON email_mockups(contract_id) WHERE contract_id IS NOT NULL;
-CREATE INDEX idx_email_mockups_project ON email_mockups(project_id) WHERE project_id IS NOT NULL;
-CREATE INDEX idx_email_mockups_org ON email_mockups(organization_id);
-CREATE INDEX idx_email_mockups_status ON email_mockups(status);
-CREATE INDEX idx_email_mockups_created_at ON email_mockups(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_email_mockups_contract ON email_mockups(contract_id) WHERE contract_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_email_mockups_project ON email_mockups(project_id) WHERE project_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_email_mockups_org ON email_mockups(organization_id);
+CREATE INDEX IF NOT EXISTS idx_email_mockups_status ON email_mockups(status);
+CREATE INDEX IF NOT EXISTS idx_email_mockups_created_at ON email_mockups(created_at DESC);
 
 -- Payment methods indexes
-CREATE INDEX idx_payment_methods_contract ON payment_methods(contract_id);
-CREATE INDEX idx_payment_methods_org ON payment_methods(organization_id);
-CREATE INDEX idx_payment_methods_status ON payment_methods(status);
-CREATE INDEX idx_payment_methods_type ON payment_methods(type);
-CREATE INDEX idx_payment_methods_created_at ON payment_methods(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_payment_methods_contract ON payment_methods(contract_id);
+CREATE INDEX IF NOT EXISTS idx_payment_methods_org ON payment_methods(organization_id);
+CREATE INDEX IF NOT EXISTS idx_payment_methods_status ON payment_methods(status);
+CREATE INDEX IF NOT EXISTS idx_payment_methods_type ON payment_methods(type);
+CREATE INDEX IF NOT EXISTS idx_payment_methods_created_at ON payment_methods(created_at DESC);
 
 -- ============================================================================
 -- UPDATED_AT TRIGGERS
 -- ============================================================================
 
+DROP TRIGGER IF EXISTS update_clients_updated_at ON clients;
 CREATE TRIGGER update_clients_updated_at
   BEFORE UPDATE ON clients
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_contracts_updated_at ON contracts;
 CREATE TRIGGER update_contracts_updated_at
   BEFORE UPDATE ON contracts
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_contract_documents_updated_at ON contract_documents;
 CREATE TRIGGER update_contract_documents_updated_at
   BEFORE UPDATE ON contract_documents
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_email_mockups_updated_at ON email_mockups;
 CREATE TRIGGER update_email_mockups_updated_at
   BEFORE UPDATE ON email_mockups
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_payment_methods_updated_at ON payment_methods;
 CREATE TRIGGER update_payment_methods_updated_at
   BEFORE UPDATE ON payment_methods
   FOR EACH ROW
@@ -257,36 +282,42 @@ CREATE INDEX IF NOT EXISTS idx_assets_contract ON assets(contract_id) WHERE cont
 
 -- Clients RLS
 ALTER TABLE clients ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow all for authenticated users in org" ON clients;
 CREATE POLICY "Allow all for authenticated users in org"
   ON clients FOR ALL
   USING (true);
 
 -- Contracts RLS
 ALTER TABLE contracts ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow all for authenticated users in org" ON contracts;
 CREATE POLICY "Allow all for authenticated users in org"
   ON contracts FOR ALL
   USING (true);
 
 -- Contract documents RLS
 ALTER TABLE contract_documents ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow all for authenticated users in org" ON contract_documents;
 CREATE POLICY "Allow all for authenticated users in org"
   ON contract_documents FOR ALL
   USING (true);
 
 -- Contract document versions RLS
 ALTER TABLE contract_document_versions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow all for authenticated users in org" ON contract_document_versions;
 CREATE POLICY "Allow all for authenticated users in org"
   ON contract_document_versions FOR ALL
   USING (true);
 
 -- Email mockups RLS
 ALTER TABLE email_mockups ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow all for authenticated users in org" ON email_mockups;
 CREATE POLICY "Allow all for authenticated users in org"
   ON email_mockups FOR ALL
   USING (true);
 
 -- Payment methods RLS
 ALTER TABLE payment_methods ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow all for authenticated users in org" ON payment_methods;
 CREATE POLICY "Allow all for authenticated users in org"
   ON payment_methods FOR ALL
   USING (true);
