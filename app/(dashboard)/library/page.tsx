@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useOrganization, useUser } from '@clerk/nextjs';
 import { supabase, CardMockup, Folder, Project, Brand, CardTemplate } from '@/lib/supabase';
@@ -36,7 +36,7 @@ interface ToastMessage {
 
 type LibraryTab = 'assets' | 'brands' | 'templates';
 
-export default function LibraryPage() {
+function LibraryPageContent() {
   const { organization, isLoaded, membership } = useOrganization();
   const { user } = useUser();
   const router = useRouter();
@@ -1012,6 +1012,22 @@ export default function LibraryPage() {
         ))}
       </div>
     </>
+  );
+}
+
+export default function LibraryPage() {
+  return (
+    <Suspense
+      fallback={
+        <GmailLayout>
+          <div className="flex h-screen items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-[var(--accent-blue)]" />
+          </div>
+        </GmailLayout>
+      }
+    >
+      <LibraryPageContent />
+    </Suspense>
   );
 }
 
