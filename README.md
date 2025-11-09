@@ -260,6 +260,11 @@ Built for teams who need more than basic file storage—Aiproval provides contex
 - **Email**: SendGrid 8.1.0 (review notifications)
 - **External APIs**:
   - Brandfetch (logo search)
+  - Figma API (plugin integration)
+  - Gmail API (add-on integration)
+  - Slack API (notifications and commands)
+  - Google Drive API (import integration)
+  - Dropbox API (import integration)
 
 ### Infrastructure
 - **Build Tool**: Turbopack (Next.js 15)
