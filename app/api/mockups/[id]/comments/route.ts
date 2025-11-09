@@ -72,7 +72,7 @@ export async function POST(
       const { data: reviewerAccess } = await supabaseServer
         .from('mockup_reviewers')
         .select('id')
-        .eq('mockup_id', mockupId)
+        .eq('asset_id', mockupId)
         .eq('reviewer_id', userId)
         .single();
 
@@ -98,7 +98,7 @@ export async function POST(
     const { data: comment, error: createError } = await supabaseServer
       .from('mockup_comments')
       .insert({
-        mockup_id: mockupId,
+        asset_id: mockupId,
         user_id: userId,
         user_name: fullName,
         user_email: userEmail,
@@ -124,7 +124,7 @@ export async function POST(
           status: 'viewed',
           viewed_at: new Date().toISOString()
         })
-        .eq('mockup_id', mockupId)
+        .eq('asset_id', mockupId)
         .eq('reviewer_id', userId)
         .eq('status', 'pending'); // Only update if still pending
     }
@@ -159,7 +159,7 @@ export async function GET(
     const { data: comments, error } = await supabaseServer
       .from('mockup_comments')
       .select('*')
-      .eq('mockup_id', mockupId)
+      .eq('asset_id', mockupId)
       .eq('organization_id', orgId)
       .is('deleted_at', null) // Filter out soft-deleted comments
       .order('created_at', { ascending: true });
