@@ -28,10 +28,19 @@ interface ToastMessage {
 }
 
 export default function ClientsPage() {
-  const { organization, isLoaded } = useOrganization();
+  const { organization, isLoaded, membership } = useOrganization();
   const { user } = useUser();
   const router = useRouter();
   const { selectedIds, setSelectedIds, setActiveNav } = usePanelContext();
+
+  const isAdmin = membership?.role === 'org:admin';
+
+  // Redirect non-admins
+  useEffect(() => {
+    if (isLoaded && !isAdmin) {
+      router.push('/');
+    }
+  }, [isLoaded, isAdmin, router]);
 
   const [clients, setClients] = useState<Client[]>([]);
   const [filteredClients, setFilteredClients] = useState<Client[]>([]);
@@ -51,15 +60,15 @@ export default function ClientsPage() {
   };
 
   useEffect(() => {
-    setActiveNav('contracts'); // Clients are part of contracts module
+    setActiveNav('clients');
     setSelectedIds([]);
   }, [setActiveNav, setSelectedIds]);
 
   useEffect(() => {
-    if (organization?.id && user?.id) {
+    if (organization?.id && user?.id && isAdmin) {
       fetchClients();
     }
-  }, [organization?.id, user?.id]);
+  }, [organization?.id, user?.id, isAdmin]);
 
   useEffect(() => {
     let filtered = clients;
@@ -176,6 +185,15 @@ export default function ClientsPage() {
       showToast(error.message || 'Failed to delete client', 'error');
     }
   };
+
+  // Don't render if not admin
+  if (!isLoaded || !isAdmin) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-gray-500">Loading...</div>
+      </div>
+    );
+  }
 
   // Context Panel
   const contextPanelContent = (

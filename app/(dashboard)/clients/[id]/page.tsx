@@ -40,11 +40,20 @@ interface ToastMessage {
 }
 
 export default function ClientDetailPage() {
-  const { organization } = useOrganization();
+  const { organization, isLoaded, membership } = useOrganization();
   const { user } = useUser();
   const router = useRouter();
   const params = useParams();
   const { setActiveNav } = usePanelContext();
+
+  const isAdmin = membership?.role === 'org:admin';
+
+  // Redirect non-admins
+  useEffect(() => {
+    if (isLoaded && !isAdmin) {
+      router.push('/');
+    }
+  }, [isLoaded, isAdmin, router]);
 
   const clientId = params?.id as string;
 
@@ -65,16 +74,16 @@ export default function ClientDetailPage() {
   };
 
   useEffect(() => {
-    setActiveNav('contracts');
+    setActiveNav('clients');
   }, [setActiveNav]);
 
   useEffect(() => {
-    if (clientId && organization?.id) {
+    if (clientId && organization?.id && isAdmin) {
       fetchClient();
       fetchContracts();
       fetchProjects();
     }
-  }, [clientId, organization?.id]);
+  }, [clientId, organization?.id, isAdmin]);
 
   const fetchClient = async () => {
     if (!clientId) return;
@@ -121,6 +130,15 @@ export default function ClientDetailPage() {
       console.error('Error fetching projects:', error);
     }
   };
+
+  // Don't render if not admin
+  if (!isLoaded || !isAdmin) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-gray-500">Loading...</div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

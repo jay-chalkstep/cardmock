@@ -39,6 +39,7 @@ const navItems: NavItem[] = [
 ];
 
 const adminNavItems: NavItem[] = [
+  { id: 'clients', name: 'Clients', href: '/clients', icon: Users },
   { id: 'workflows', name: 'Workflows', href: '/admin/workflows', icon: Workflow },
   { id: 'reports', name: 'Reports', href: '/admin/reports', icon: BarChart3 },
   { id: 'templates', name: 'Templates', href: '/admin/templates', icon: LayoutTemplate },
@@ -71,6 +72,12 @@ export default function NavRail() {
       return;
     }
     
+    // Handle clients route (admin only)
+    if (pathname?.startsWith('/clients')) {
+      setActiveNav('clients');
+      return;
+    }
+    
     const activeItem = navItems.find(item => {
       if (item.id === 'home') return false; // Skip home for other routes
       return pathname?.startsWith(item.href);
@@ -78,6 +85,12 @@ export default function NavRail() {
     
     if (activeItem) {
       setActiveNav(activeItem.id);
+    }
+    
+    // Check admin nav items
+    const activeAdminItem = adminNavItems.find(item => pathname?.startsWith(item.href));
+    if (activeAdminItem) {
+      setActiveNav(activeAdminItem.id);
     }
   }, [pathname, setActiveNav]);
 
