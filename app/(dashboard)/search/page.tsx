@@ -379,13 +379,13 @@ function SearchPageContent() {
 
                 {/* Logos Grid */}
                 <div className="space-y-8">
-                  {brandData.logos.map((logoGroup, groupIdx) => (
+                  {(brandData.logos || []).map((logoGroup, groupIdx) => (
                     <div key={groupIdx} className="space-y-4">
                       <h3 className="text-lg font-semibold text-gray-800 capitalize">
                         {logoGroup.type} Brands {logoGroup.theme && `- ${logoGroup.theme} theme`}
                       </h3>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                        {logoGroup.formats.map((format, formatIdx) => (
+                        {(logoGroup.formats || []).map((format, formatIdx) => (
                           <BrandCard
                             key={`${groupIdx}-${formatIdx}`}
                             logoUrl={format.src}
@@ -418,7 +418,7 @@ function SearchPageContent() {
                       Brand Colors
                     </h3>
                     <div className="flex flex-wrap gap-4">
-                      {brandData.colors.map((color, idx) => (
+                      {(brandData.colors || []).map((color, idx) => (
                         <div key={idx} className="group">
                           <div
                             className="w-20 h-20 rounded-lg shadow-md mb-2 cursor-pointer transition-transform hover:scale-105"

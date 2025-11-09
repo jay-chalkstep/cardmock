@@ -15,6 +15,14 @@ Fixed critical bugs that prevented annotations from being visible when drawing a
 
 ### Fixed
 
+#### Search Page Map Error
+- **Undefined Array Access** - Fixed "Cannot read properties of undefined (reading 'map')" error in search page
+  - Error: TypeError when rendering brand search results
+  - Root cause: `brandData.logos`, `logoGroup.formats`, and `brandData.colors` could be undefined when API response structure differs
+  - Fix: Added fallback empty arrays (`|| []`) for all `.map()` calls on potentially undefined arrays
+  - Impact: Search page now handles edge cases gracefully without crashing
+  - Files modified: `app/(dashboard)/search/page.tsx`
+
 #### Annotation Visibility Issue
 - **Coordinate Transformation** - Fixed annotations not appearing when using annotation tools
   - Error: Annotations were drawn but not visible on canvas
