@@ -638,8 +638,8 @@ function LibraryPageContent() {
       }
 
       return (
-        <div className="p-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div className="p-6 overflow-y-auto h-full w-full">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 max-w-full">
             {filteredBrands.map((brand) => {
               const primaryLogo = brand.primary_logo_variant;
               const colorPreview = brand.brand_colors?.slice(0, 3) || [];
@@ -650,6 +650,7 @@ function LibraryPageContent() {
                   key={brand.id}
                   className="relative text-left bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg hover:border-gray-300 transition-all group"
                 >
+                  {/* Delete Button */}
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -666,6 +667,7 @@ function LibraryPageContent() {
                     )}
                   </button>
 
+                  {/* Card Content */}
                   <button
                     onClick={() => {
                       setSelectedBrand(brand);
@@ -674,6 +676,7 @@ function LibraryPageContent() {
                     disabled={isDeleting}
                     className="w-full text-left disabled:opacity-50"
                   >
+                    {/* Logo preview */}
                     <div className="h-40 bg-gray-50 flex items-center justify-center p-4 group-hover:bg-gray-100 transition-colors">
                       {primaryLogo ? (
                         <img
@@ -688,20 +691,22 @@ function LibraryPageContent() {
                       )}
                     </div>
 
+                    {/* Brand info */}
                     <div className="p-4 space-y-3">
                       <div>
-                        <h3 className="font-semibold text-gray-900 text-lg">
+                        <h3 className="font-semibold text-gray-900 text-lg truncate" title={brand.company_name}>
                           {brand.company_name}
                         </h3>
-                        <p className="text-sm text-gray-600">{brand.domain}</p>
+                        <p className="text-sm text-gray-600 truncate" title={brand.domain}>{brand.domain}</p>
                       </div>
 
                       {brand.description && (
-                        <p className="text-sm text-gray-600 line-clamp-2">
+                        <p className="text-sm text-gray-600 line-clamp-2" title={brand.description}>
                           {brand.description}
                         </p>
                       )}
 
+                      {/* Color preview */}
                       {colorPreview.length > 0 && (
                         <div className="flex gap-2 pt-2">
                           {colorPreview.map((color, idx) => (
@@ -720,6 +725,7 @@ function LibraryPageContent() {
                         </div>
                       )}
 
+                      {/* Brand variant count */}
                       <p className="text-xs text-gray-500 pt-2">
                         {brand.logo_variants?.length || 0} brand variant{brand.logo_variants?.length !== 1 ? 's' : ''}
                       </p>
@@ -867,7 +873,7 @@ function LibraryPageContent() {
         listView={
           <div className="flex flex-col h-full">
             {/* Tabs */}
-            <div className="border-b border-[var(--border-main)] bg-white">
+            <div className="border-b border-[var(--border-main)] bg-white flex-shrink-0">
               <div className="flex gap-1 px-4">
                 <button
                   onClick={() => handleTabChange('assets')}
@@ -917,7 +923,8 @@ function LibraryPageContent() {
             </div>
           </div>
         }
-        previewArea={<PreviewArea>{previewContent}</PreviewArea>}
+        listViewWidth={activeTab === 'brands' || activeTab === 'templates' ? 'flex' : 'fixed'}
+        previewArea={activeTab === 'assets' ? <PreviewArea>{previewContent}</PreviewArea> : null}
       />
 
       {/* Modals */}
