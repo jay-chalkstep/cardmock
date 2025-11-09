@@ -175,10 +175,16 @@ export default function GalleryPage() {
 
     try {
       const response = await fetch('/api/projects');
-      if (!response.ok) throw new Error('Failed to fetch projects');
+      const result = await response.json();
 
-      const { projects: fetchedProjects } = await response.json();
-      setProjects(fetchedProjects || []);
+      if (!response.ok || !result.success) {
+        // Don't show toast - projects are optional
+        return;
+      }
+
+      // Extract data from the response structure { success: true, data: { projects: [...] } }
+      const fetchedProjects = result.data?.projects || [];
+      setProjects(fetchedProjects);
     } catch (error) {
       console.error('Error fetching projects:', error);
       // Don't show toast - projects are optional

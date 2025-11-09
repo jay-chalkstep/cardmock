@@ -39,6 +39,22 @@ Fixed critical bugs that prevented annotations from being visible when drawing a
   - Impact: Workflows now correctly display in admin page, new project modal, and edit project modal
   - Files modified: `app/(dashboard)/admin/workflows/page.tsx`, `components/projects/NewProjectModal.tsx`, `components/projects/EditProjectModal.tsx`
 
+#### Template API Response Parsing
+- **Incorrect Response Structure Handling** - Fixed templates not displaying in designer and admin pages
+  - Error: Templates not appearing after successful API call
+  - Root cause: API returns `{ success: true, data: { templates: [...] } }` but frontend was using entire response object
+  - Fix: Extract `result.data.templates` from API response structure and properly handle error responses
+  - Impact: Templates now correctly display in designer page and admin templates page
+  - Files modified: `app/(dashboard)/designer/page.tsx`, `app/(dashboard)/admin/templates/page.tsx`
+
+#### Project API Response Parsing
+- **Incorrect Response Structure Handling** - Fixed projects not displaying in gallery and designer pages
+  - Error: Projects not appearing after successful API call
+  - Root cause: API returns `{ success: true, data: { projects: [...] } }` but frontend was using entire response object
+  - Fix: Extract `result.data.projects` from API response structure and properly handle error responses
+  - Impact: Projects now correctly display in gallery page and designer page
+  - Files modified: `app/(dashboard)/gallery/page.tsx`, `app/(dashboard)/designer/page.tsx`
+
 #### Annotation Visibility Issue
 - **Coordinate Transformation** - Fixed annotations not appearing when using annotation tools
   - Error: Annotations were drawn but not visible on canvas

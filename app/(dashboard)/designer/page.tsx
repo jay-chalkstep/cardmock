@@ -245,10 +245,16 @@ export default function DesignerPage() {
 
     try {
       const response = await fetch('/api/templates');
-      if (!response.ok) throw new Error('Failed to fetch templates');
+      const result = await response.json();
 
-      const { templates: fetchedTemplates } = await response.json();
-      setTemplates(fetchedTemplates || []);
+      if (!response.ok || !result.success) {
+        const errorMessage = result.error || 'Failed to fetch templates';
+        throw new Error(errorMessage);
+      }
+
+      // Extract data from the response structure { success: true, data: { templates: [...] } }
+      const fetchedTemplates = result.data?.templates || [];
+      setTemplates(fetchedTemplates);
     } catch (error) {
       console.error('Error fetching templates:', error);
       showToast('Failed to load card templates', 'error');
@@ -278,10 +284,16 @@ export default function DesignerPage() {
 
     try {
       const response = await fetch('/api/projects');
-      if (!response.ok) throw new Error('Failed to fetch projects');
+      const result = await response.json();
 
-      const { projects: fetchedProjects } = await response.json();
-      setProjects(fetchedProjects || []);
+      if (!response.ok || !result.success) {
+        // Don't show error - projects are optional
+        return;
+      }
+
+      // Extract data from the response structure { success: true, data: { projects: [...] } }
+      const fetchedProjects = result.data?.projects || [];
+      setProjects(fetchedProjects);
     } catch (error) {
       console.error('Error fetching projects:', error);
       // Don't show error toast for projects - it's optional functionality

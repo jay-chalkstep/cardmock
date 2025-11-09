@@ -89,14 +89,20 @@ export default function AdminTemplatesPage() {
     setLoading(true);
     try {
       const response = await fetch('/api/templates');
-      if (!response.ok) throw new Error('Failed to fetch templates');
+      const result = await response.json();
 
-      const { templates: fetchedTemplates } = await response.json();
-      setTemplates(fetchedTemplates || []);
-      setFilteredTemplates(fetchedTemplates || []);
+      if (!response.ok || !result.success) {
+        const errorMessage = result.error || 'Failed to fetch templates';
+        throw new Error(errorMessage);
+      }
+
+      // Extract data from the response structure { success: true, data: { templates: [...] } }
+      const fetchedTemplates = result.data?.templates || [];
+      setTemplates(fetchedTemplates);
+      setFilteredTemplates(fetchedTemplates);
 
       // Select first template if available
-      if (fetchedTemplates && fetchedTemplates.length > 0 && !selectedTemplate) {
+      if (fetchedTemplates.length > 0 && !selectedTemplate) {
         setSelectedTemplate(fetchedTemplates[0]);
       }
     } catch (error) {
