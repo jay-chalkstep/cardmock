@@ -239,10 +239,9 @@ export default function ContractsPage() {
   const listViewContent = (
     <ListView
       items={filteredContracts}
+      itemHeight={80}
       loading={loading}
-      onItemClick={handleContractClick}
-      selectedIds={selectedIds}
-      onSelectionChange={setSelectedIds}
+      emptyMessage="No contracts found. Create your first contract to get started."
       toolbar={
         <ListToolbar
           totalCount={filteredContracts.length}
@@ -258,41 +257,43 @@ export default function ContractsPage() {
           }
         />
       }
-      renderItem={(contract) => (
-          <div className="p-4 border-b border-gray-200 hover:bg-gray-50 cursor-pointer">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="font-semibold text-gray-900">
-                    {contract.contract_number}
-                  </h3>
-                  <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(contract.status)}`}>
-                    {contract.status.replace('_', ' ')}
+      renderItem={(contract, index, isSelected) => (
+        <div 
+          className={`p-4 border-b border-gray-200 hover:bg-gray-50 ${isSelected ? 'bg-blue-50' : ''}`}
+          onClick={() => handleContractClick(contract.id)}
+        >
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="font-semibold text-gray-900">
+                  {contract.contract_number}
+                </h3>
+                <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(contract.status)}`}>
+                  {contract.status.replace('_', ' ')}
+                </span>
+                {contract.type === 'amendment' && (
+                  <span className="px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-800">
+                    Amendment
                   </span>
-                  {contract.type === 'amendment' && (
-                    <span className="px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-800">
-                      Amendment
-                    </span>
-                  )}
-                </div>
-                {contract.title && (
-                  <p className="text-sm text-gray-600 mb-1">{contract.title}</p>
-                )}
-                {contract.clients && (
-                  <p className="text-sm text-gray-500">Client: {contract.clients.name}</p>
-                )}
-                {contract.projects && (
-                  <p className="text-sm text-gray-500">Project: {contract.projects.name}</p>
                 )}
               </div>
-              <div className="text-xs text-gray-400">
-                {new Date(contract.created_at).toLocaleDateString()}
-              </div>
+              {contract.title && (
+                <p className="text-sm text-gray-600 mb-1">{contract.title}</p>
+              )}
+              {contract.clients && (
+                <p className="text-sm text-gray-500">Client: {contract.clients.name}</p>
+              )}
+              {contract.projects && (
+                <p className="text-sm text-gray-500">Project: {contract.projects.name}</p>
+              )}
+            </div>
+            <div className="text-xs text-gray-400">
+              {new Date(contract.created_at).toLocaleDateString()}
             </div>
           </div>
-        )}
-        emptyMessage="No contracts found. Create your first contract to get started."
-      />
+        </div>
+      )}
+    />
   );
 
   return (
