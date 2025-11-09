@@ -1,27 +1,32 @@
-# Aiproval v3.9.0
+# Aiproval v4.0.0
 
-> Multi-tenant SaaS for brand asset management and collaborative mockup review with user-level approval tracking
+> Multi-tenant SaaS for brand asset management, collaborative mockup review, and comprehensive contract management with customer onboarding workflows
 
-A comprehensive platform for design teams, marketing departments, and agencies to search, organize, and collaborate on brand assets with real-time visual annotation, multi-stage approval workflows, and project-based review management.
+A comprehensive platform for design teams, marketing departments, and agencies to search, organize, and collaborate on brand assets with real-time visual annotation, multi-stage approval workflows, project-based review management, and full contract lifecycle management.
 
 ---
 
 ## 🎯 Overview
 
-**Aiproval** is a full-featured brand asset management and collaboration platform that enables teams to:
+**Aiproval** is a full-featured brand asset management, collaboration, and contract management platform that enables teams to:
 
 - 🔍 **Search & Save** company logos via Brandfetch API with automatic metadata extraction
 - 📁 **Organize** brand assets in personal and shared folder hierarchies
 - 📋 **Manage Projects** with client-based organization and workflow assignments
+- 📄 **Manage Contracts** - Complete contract lifecycle management with document versioning ⭐️ NEW
+- 👥 **Manage Clients** - Client database with full CRUD operations ⭐️ NEW
+- 📝 **Document Versioning** - Word document upload and version control with AI diff summaries ⭐️ NEW
+- ✉️ **Email Mockups** - Visual email template creation with client branding ⭐️ NEW
+- 💳 **Payment Methods** - Flexible payment method approval workflows ⭐️ NEW
 - 🔄 **Standardize Workflows** with reusable multi-stage approval templates
 - 🎨 **Design** professional mockups using an interactive canvas editor
 - 👥 **Collaborate** with visual annotations, comments, and structured review workflows
 - ✅ **Review & Approve** mockups with approval tracking and email notifications
-- 🔔 **Notifications** - In-app notification system for approvals, comments, and workflow updates ⭐️ NEW
-- ⚙️ **Settings** - Comprehensive settings modal with preferences, account, and organization management ⭐️ NEW
+- 🔔 **Notifications** - In-app notification system for approvals, comments, and workflow updates
+- ⚙️ **Settings** - Comprehensive settings modal with preferences, account, and organization management
 - 📊 **Track** complete audit trail of edits, resolutions, and feedback history
 
-Built for teams who need more than basic file storage—Aiproval provides context-aware collaboration with visual feedback directly on mockup designs, organized by client projects with customizable approval workflows.
+Built for teams who need more than basic file storage—Aiproval provides context-aware collaboration with visual feedback directly on mockup designs, organized by client projects with customizable approval workflows, and comprehensive contract management for customer onboarding.
 
 ---
 
@@ -69,11 +74,25 @@ Built for teams who need more than basic file storage—Aiproval provides contex
 - **Font Information** captured and stored
 - **Organization Scoping** for secure multi-tenant data isolation
 
+### Contract Management ⭐️ NEW in v4.0.0
+- **Client Management** - Full client database with contact information
+- **Contract Creation** - Create new contracts and amendments
+- **Contract Status Tracking** - Draft, pending signature, signed, amended, expired, voided
+- **Document Versioning** - Upload Word documents with automatic version control
+- **Version History** - Complete document version history with timestamps
+- **AI Diff Summaries** - AI-powered document comparison (placeholder for future implementation)
+- **DocuSign Integration** - E-signature workflow (placeholder for future implementation)
+- **Email Mockups** - Create and approve email templates with client branding
+- **Payment Methods** - Flexible payment method approval workflows
+- **Contract-Project Linking** - Link contracts to projects for organization
+- **Contract Detail View** - Comprehensive contract view with tabs for all related content
+
 ### Project Management
 - **Client Projects** - Organize mockups by client, campaign, or initiative
 - **Project Status** - Active, Completed, or Archived status tracking
 - **Color Coding** - Custom color labels for visual organization (8 preset colors)
 - **Mockup Assignment** - Link mockups to projects for easy grouping
+- **Contract Linking** - Link projects to contracts for customer onboarding ⭐️ NEW
 - **Project Detail Pages** - Dedicated views with mockup galleries and search
 - **Thumbnail Previews** - Up to 4 mockup thumbnails on project cards
 - **Permission Controls** - Only creator or admin can edit/delete projects

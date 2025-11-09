@@ -172,6 +172,7 @@ export interface Asset {
   created_by: string;
   folder_id?: string; // Folder organization
   project_id?: string; // Project organization
+  contract_id?: string; // Contract reference
   // Final approval (Migration 18)
   final_approved_by?: string; // Clerk user ID of project owner
   final_approved_at?: string;
@@ -240,6 +241,103 @@ export interface Folder {
 
 export type ProjectStatus = 'active' | 'completed' | 'archived';
 
+// Contract types
+export type ContractStatus = 'draft' | 'pending_signature' | 'signed' | 'amended' | 'expired' | 'voided';
+export type ContractType = 'new' | 'amendment';
+export type DocuSignStatus = 'sent' | 'delivered' | 'signed' | 'declined' | 'voided' | 'completed';
+export type EmailMockupStatus = 'draft' | 'pending_approval' | 'approved' | 'rejected';
+export type PaymentMethodStatus = 'pending_approval' | 'approved' | 'rejected';
+
+export interface Client {
+  id: string;
+  organization_id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  notes?: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Contract {
+  id: string;
+  client_id: string;
+  project_id?: string;
+  contract_number: string;
+  status: ContractStatus;
+  type: ContractType;
+  parent_contract_id?: string;
+  title?: string;
+  description?: string;
+  start_date?: string;
+  end_date?: string;
+  organization_id: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  // Joined data
+  clients?: Client;
+  projects?: { id: string; name: string };
+}
+
+export interface ContractDocument {
+  id: string;
+  contract_id: string;
+  version_number: number;
+  file_url: string;
+  file_name: string;
+  file_size?: number;
+  mime_type?: string;
+  docu_sign_envelope_id?: string;
+  docu_sign_status?: DocuSignStatus;
+  is_current: boolean;
+  uploaded_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ContractDocumentVersion {
+  id: string;
+  document_id: string;
+  version_number: number;
+  file_url: string;
+  diff_summary?: string;
+  diff_summary_generated_at?: string;
+  created_by: string;
+  created_at: string;
+}
+
+export interface EmailMockup {
+  id: string;
+  contract_id?: string;
+  project_id?: string;
+  name: string;
+  html_content: string;
+  preview_url?: string;
+  branding_data?: any; // JSONB
+  status: EmailMockupStatus;
+  organization_id: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PaymentMethod {
+  id: string;
+  contract_id: string;
+  type: string;
+  details: any; // JSONB
+  status: PaymentMethodStatus;
+  approved_by?: string;
+  approved_at?: string;
+  organization_id: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Project {
   id: string;
   organization_id: string;
@@ -249,6 +347,7 @@ export interface Project {
   status: ProjectStatus;
   color: string; // Hex color for UI customization
   workflow_id?: string; // Optional workflow template assignment
+  contract_id?: string; // Optional contract reference
   created_by: string; // Clerk user ID
   created_at: string;
   updated_at: string;

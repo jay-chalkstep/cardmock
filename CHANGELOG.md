@@ -7,6 +7,144 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.0.0] - 2025-01-XX
+
+### 🚀 **MAJOR RELEASE - Contracts Module**
+
+Complete transformation of the platform into a comprehensive customer onboarding, collaboration, and approval record system with full contract management capabilities.
+
+### Added
+
+#### Contracts Module ⭐️ NEW
+- **Contracts Tab** - New navigation item for contract management
+- **Client Management** - Full CRUD operations for clients
+  - Create, edit, and delete clients
+  - Client details (name, email, phone, address, notes)
+  - Client-contract relationship tracking
+- **Contract Management** - Complete contract lifecycle management
+  - Create new contracts and amendments
+  - Contract status tracking (draft, pending_signature, signed, amended, expired, voided)
+  - Contract types (new contract, amendment)
+  - Contract linking to projects
+  - Auto-generated contract numbers
+- **Document Versioning** - Word document upload and version control
+  - Upload Word documents (.docx, .doc)
+  - Automatic version tracking
+  - Version history with timestamps
+  - Current version marking
+  - Document metadata (file name, size, mime type)
+- **Email Mockups** - Visual email template creation and approval
+  - Create email mockups with HTML content
+  - Client branding integration
+  - Email mockup approval workflow
+  - Link to contracts and projects
+- **Payment Methods** - Flexible payment method approvals
+  - Support for multiple payment types (prepaid cards, checks, Amazon cards, custom)
+  - Flexible JSONB schema for payment details
+  - Payment method approval workflow
+  - Link to contracts
+- **Contract Detail Page** - Comprehensive contract view
+  - Tabbed interface (Overview, Documents, Email Mockups, Payment Methods, Assets, Comments)
+  - Contract information display
+  - Status tracking
+  - Related entities view
+
+#### Database Schema
+- **Migration 23** - Complete contracts module schema
+  - `clients` table - Core client entity
+  - `contracts` table - Contract management
+  - `contract_documents` table - Document storage and versioning
+  - `contract_document_versions` table - Version history with AI diff summaries
+  - `email_mockups` table - Email template storage
+  - `payment_methods` table - Payment method approvals
+  - Foreign key relationships to projects and assets
+  - Comprehensive indexes for performance
+
+#### API Routes
+- **Client API** (`/api/clients`) - Full CRUD operations
+- **Contract API** (`/api/contracts`) - Full CRUD operations with filtering
+- **Document API** (`/api/contracts/[id]/documents`) - Upload and version management
+- **Email Mockup API** (`/api/email-mockups`) - Full CRUD operations
+- **Payment Methods API** (`/api/contracts/[id]/payment-methods`) - Payment method management
+- **AI Diff API** (`/api/contracts/documents/[docId]/diff`) - Document comparison (placeholder)
+- **DocuSign API** (`/api/contracts/[id]/documents/[docId]/send-for-signature`) - E-signature integration (placeholder)
+- **DocuSign Webhook** (`/api/webhooks/docusign`) - Webhook handler (placeholder)
+
+#### Components
+- **Client Components** - NewClientModal for client creation
+- **Contract Components** - NewContractModal for contract creation
+- **Contracts List Page** - Full list view with search and filters
+- **Contract Detail Page** - Comprehensive contract view with tabs
+
+#### TypeScript Types
+- **Contract Types** - Complete type definitions in `lib/supabase.ts`
+  - `ContractStatus`, `ContractType`, `DocuSignStatus`
+  - `EmailMockupStatus`, `PaymentMethodStatus`
+  - `Client`, `Contract`, `ContractDocument`, `ContractDocumentVersion`
+  - `EmailMockup`, `PaymentMethod` interfaces
+
+### Technical
+
+#### New Files
+- `supabase/23_contracts_module.sql` - Database migration
+- `app/(dashboard)/contracts/page.tsx` - Contracts list page
+- `app/(dashboard)/contracts/[id]/page.tsx` - Contract detail page
+- `app/api/clients/route.ts` - Client API routes
+- `app/api/clients/[id]/route.ts` - Client detail API routes
+- `app/api/contracts/route.ts` - Contract API routes
+- `app/api/contracts/[id]/route.ts` - Contract detail API routes
+- `app/api/contracts/[id]/documents/route.ts` - Document upload API
+- `app/api/contracts/[id]/documents/[docId]/route.ts` - Document management API
+- `app/api/contracts/[id]/documents/[docId]/versions/route.ts` - Version management API
+- `app/api/contracts/documents/[docId]/diff/route.ts` - AI diff API
+- `app/api/contracts/[id]/documents/[docId]/send-for-signature/route.ts` - DocuSign API
+- `app/api/contracts/[id]/payment-methods/route.ts` - Payment methods API
+- `app/api/email-mockups/route.ts` - Email mockup API routes
+- `app/api/email-mockups/[id]/route.ts` - Email mockup detail API routes
+- `app/api/webhooks/docusign/route.ts` - DocuSign webhook handler
+- `components/clients/NewClientModal.tsx` - Client creation modal
+- `components/clients/index.ts` - Client component exports
+- `components/contracts/NewContractModal.tsx` - Contract creation modal
+- `components/contracts/index.ts` - Contract component exports
+
+#### Updated Files
+- `components/navigation/NavRail.tsx` - Added Contracts tab with FileText icon
+- `lib/supabase.ts` - Added contract-related types and interfaces
+- `app/(dashboard)/contracts/page.tsx` - Contracts list with search and filters
+
+### Future Enhancements (Placeholders)
+
+#### AI Document Diff
+- AI-powered document comparison (OpenAI/Anthropic integration needed)
+- Human-readable diff summaries
+- Automatic change detection
+
+#### DocuSign Integration
+- Full DocuSign API integration (SDK installation needed)
+- Envelope creation and management
+- Signature status tracking
+- Webhook verification and processing
+
+#### Email Mockup Editor
+- Rich text editor for email content
+- Image upload and management
+- Client branding selector
+- Email preview (desktop/mobile)
+
+#### Document Viewer
+- Word document preview
+- Version comparison UI
+- Diff visualization
+
+### Migration Notes
+
+- **Database Migration Required**: Run `supabase/23_contracts_module.sql` before using contracts module
+- **Storage Bucket Required**: Create `contract-documents` bucket in Supabase Storage
+- **Clerk Role Setup**: Configure "Client" role in Clerk organization settings for external stakeholder access
+- **Environment Variables**: DocuSign and AI service API keys needed for full functionality
+
+---
+
 ## [3.9.0] - 2025-01-XX
 
 ### 🎨 **MAJOR UI/UX REDESIGN - Navigation & Library Reorganization**
