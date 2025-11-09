@@ -35,6 +35,7 @@ interface MockupDetailSidebarProps {
   onToggleExportMenu: () => void;
   onExport: (includeAnnotations: boolean) => void;
   isCreator: boolean;
+  canAnnotate: boolean;
   onDelete: () => void;
   onApprove: () => void;
   onRequestChanges: () => void;
@@ -65,6 +66,7 @@ export default function MockupDetailSidebar({
   onToggleExportMenu,
   onExport,
   isCreator,
+  canAnnotate,
   onDelete,
   onApprove,
   onRequestChanges,
@@ -145,6 +147,11 @@ export default function MockupDetailSidebar({
           <h3 className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-3">
             Annotation Tools
           </h3>
+          {!canAnnotate && (
+            <div className="mb-3 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800">
+              Only the creator or assigned reviewers can add annotations and comments.
+            </div>
+          )}
           <AnnotationToolbar
             activeTool={activeTool}
             onToolChange={onToolChange}
@@ -156,6 +163,7 @@ export default function MockupDetailSidebar({
             onZoomIn={onZoomIn}
             onZoomOut={onZoomOut}
             onZoomReset={onZoomReset}
+            disabled={!canAnnotate}
           />
         </div>
       </div>

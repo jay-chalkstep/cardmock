@@ -7,6 +7,85 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.7.2] - 2025-01-XX
+
+### 🐛 **Critical Bugfixes - Annotation Visibility & Permission Enforcement**
+
+Fixed critical bugs that prevented annotations from being visible when drawing and improved permission enforcement for annotations and comments.
+
+### Fixed
+
+#### Annotation Visibility Issue
+- **Coordinate Transformation** - Fixed annotations not appearing when using annotation tools
+  - Error: Annotations were drawn but not visible on canvas
+  - Root cause: Pointer coordinates from `getPointerPosition()` were not transformed to account for stage scale and position
+  - Fix: Added coordinate transformation in `handleMouseDown` and `handleMouseMove` to convert container coordinates to stage coordinates
+  - Uses `getRelativePointerPosition()` if available, otherwise manually transforms: `(pointerPos - stagePosition) / scale`
+  - Impact: Annotations now appear correctly at the clicked location, even when canvas is zoomed or panned
+
+#### Permission Enforcement Improvements
+- **API Route Permission Checks** - Enhanced permission enforcement in comment creation endpoint
+  - Improved reviewer status checking with proper error handling
+  - Added logging for permission denials
+  - Better error messages explaining why permission was denied
+  - Handles edge cases (mockups without projects, errors during reviewer checks)
+  - Impact: Only creators and assigned reviewers can create comments/annotations
+
+- **Frontend Permission Checking** - Improved reviewer status detection
+  - Added try-catch error handling for reviewer queries
+  - Better handling of cases where mockup has no project
+  - More robust error recovery
+  - Impact: Frontend correctly identifies who can annotate
+
+- **UI Permission Feedback** - Added visual feedback for users without annotation permissions
+  - Added warning message in sidebar when user can't annotate
+  - Disabled annotation tools (except select) when user lacks permission
+  - Disabled color picker and stroke width controls when disabled
+  - Added tooltips explaining why tools are disabled
+  - Impact: Users get clear feedback about their annotation permissions
+
+### Changed
+
+#### Annotation Toolbar
+- **Added `disabled` prop** - AnnotationToolbar now accepts `disabled` prop to disable tools
+- **Select tool always enabled** - Select tool remains enabled for panning even when annotations are disabled
+- **Visual feedback** - Disabled tools show reduced opacity and cursor-not-allowed
+
+#### MockupDetailSidebar
+- **Added `canAnnotate` prop** - Component now receives and displays permission status
+- **Warning message** - Shows yellow warning banner when user can't annotate
+
+### Technical Details
+
+#### Files Modified
+- `components/collaboration/MockupCanvas.tsx` - Fixed coordinate transformation for annotations
+- `app/api/mockups/[id]/comments/route.ts` - Enhanced permission checks and error handling
+- `app/(dashboard)/mockups/[id]/page.tsx` - Improved reviewer status checking
+- `components/mockups/MockupDetailSidebar.tsx` - Added permission feedback UI
+- `components/collaboration/AnnotationToolbar.tsx` - Added disabled state support
+
+#### Coordinate Transformation Formula
+```typescript
+// Transform container coordinates to stage coordinates
+const stagePos = {
+  x: (pointerPos.x - stagePosition.x) / scale,
+  y: (pointerPos.y - stagePosition.y) / scale
+};
+```
+
+#### Permission Rules
+- **Creators**: Can always annotate and comment on their own assets
+- **Reviewers**: Can annotate and comment if assigned as reviewer for the project (any stage)
+- **Others**: Cannot annotate or comment; tools are disabled with clear messaging
+
+### Impact
+- ✅ **Annotations Now Visible** - Annotations appear correctly when drawing, regardless of zoom/pan state
+- ✅ **Proper Permission Enforcement** - Only creators and reviewers can create annotations/comments
+- ✅ **Clear User Feedback** - Users see why they can't annotate and which tools are disabled
+- ✅ **Better Error Handling** - More robust permission checks with proper error recovery
+
+---
+
 ## [3.7.1] - 2025-01-XX
 
 ### 🐛 **Critical Bugfixes - Project Loading & Metrics Display**

@@ -213,20 +213,29 @@ export default function MockupDetailPage({ params }: { params: { id: string } })
       
       // Check if user is a reviewer for this mockup's project
       // Reviewers are assigned at the project level via project_stage_reviewers
+      // Only check if user is not the creator and mockup has a project
       if (user?.id && data.created_by !== user.id && data.project_id) {
-        const { data: reviewerData, error: reviewerError } = await supabase
-          .from('project_stage_reviewers')
-          .select('id')
-          .eq('project_id', data.project_id)
-          .eq('user_id', user.id)
-          .maybeSingle();
-        
-        if (reviewerError) {
-          console.error('Error checking reviewer status:', reviewerError);
+        try {
+          const { data: reviewerData, error: reviewerError } = await supabase
+            .from('project_stage_reviewers')
+            .select('id')
+            .eq('project_id', data.project_id)
+            .eq('user_id', user.id)
+            .limit(1)
+            .maybeSingle();
+          
+          if (reviewerError) {
+            console.error('Error checking reviewer status:', reviewerError);
+            setIsReviewer(false);
+          } else {
+            setIsReviewer(!!reviewerData);
+          }
+        } catch (error) {
+          console.error('Error checking reviewer status:', error);
+          setIsReviewer(false);
         }
-        
-        setIsReviewer(!!reviewerData);
       } else {
+        // If user is creator or mockup has no project, they're not a reviewer
         setIsReviewer(false);
       }
       
@@ -510,6 +519,7 @@ export default function MockupDetailPage({ params }: { params: { id: string } })
       onToggleExportMenu={() => setShowExportMenu(!showExportMenu)}
       onExport={handleExport}
       isCreator={isCreator}
+      canAnnotate={canAnnotate}
       onDelete={handleDeleteMockup}
       onApprove={handleApprove}
       onRequestChanges={handleRequestChanges}

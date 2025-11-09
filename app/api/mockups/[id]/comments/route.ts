@@ -73,20 +73,37 @@ export async function POST(
     const isCreator = mockup.created_by === userId;
     let isReviewer = false;
 
-    if (!isCreator && mockup.project_id) {
-      // Check if user is a reviewer for this project
-      const { data: reviewerAccess } = await supabaseServer
-        .from('project_stage_reviewers')
-        .select('id')
-        .eq('project_id', mockup.project_id)
-        .eq('user_id', userId)
-        .maybeSingle();
+    // If user is not the creator, check if they're a reviewer for this project
+    if (!isCreator) {
+      if (mockup.project_id) {
+        // Check if user is a reviewer for this project (any stage)
+        const { data: reviewerAccess, error: reviewerError } = await supabaseServer
+          .from('project_stage_reviewers')
+          .select('id')
+          .eq('project_id', mockup.project_id)
+          .eq('user_id', userId)
+          .limit(1)
+          .maybeSingle();
 
-      isReviewer = !!reviewerAccess;
+        if (reviewerError) {
+          logger.warn('Error checking reviewer status', { error: reviewerError, mockupId, userId });
+        }
+
+        isReviewer = !!reviewerAccess;
+      }
+      // If mockup has no project, only creator can comment
     }
 
+    // Only creators and reviewers can create comments/annotations
     if (!isCreator && !isReviewer) {
-      return forbiddenResponse('You do not have permission to comment on this mockup');
+      logger.warn('Permission denied for comment creation', { 
+        mockupId, 
+        userId, 
+        isCreator, 
+        isReviewer, 
+        hasProject: !!mockup.project_id 
+      });
+      return forbiddenResponse('You do not have permission to comment on this mockup. Only the creator or assigned reviewers can add comments and annotations.');
     }
 
     // Get user details from Clerk

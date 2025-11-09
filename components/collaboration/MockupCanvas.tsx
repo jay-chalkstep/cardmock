@@ -234,11 +234,26 @@ export default function MockupCanvas({
 
   const handleMouseDown = (e: any) => {
     const stage = e.target.getStage();
-    const pointerPos = stage.getPointerPosition();
-    if (!pointerPos) return;
+    // Use getRelativePointerPosition if available, otherwise transform manually
+    let stagePos;
+    let pointerPos;
+    if (typeof stage.getRelativePointerPosition === 'function') {
+      const pos = stage.getRelativePointerPosition();
+      stagePos = pos || { x: 0, y: 0 };
+      pointerPos = stage.getPointerPosition(); // Still need for panning
+    } else {
+      pointerPos = stage.getPointerPosition();
+      if (!pointerPos) return;
+      // Transform pointer position to stage coordinates (accounting for scale and position)
+      stagePos = {
+        x: (pointerPos.x - stagePosition.x) / scale,
+        y: (pointerPos.y - stagePosition.y) / scale
+      };
+    }
 
     // Handle panning with select tool
     if (activeTool === 'select') {
+      if (!pointerPos) return;
       setIsPanning(true);
       setLastPanPosition({ x: pointerPos.x, y: pointerPos.y });
       return;
@@ -253,11 +268,11 @@ export default function MockupCanvas({
     switch (activeTool) {
       case 'pin':
         // Place pin and immediately show comment dialog
-        setCommentPosition({ x: pointerPos.x, y: pointerPos.y });
+        setCommentPosition({ x: stagePos.x, y: stagePos.y });
         setPendingAnnotationData({
           type: 'pin',
-          position_x: (pointerPos.x / canvasDimensions.width) * 100,
-          position_y: (pointerPos.y / canvasDimensions.height) * 100,
+          position_x: (stagePos.x / canvasDimensions.width) * 100,
+          position_y: (stagePos.y / canvasDimensions.height) * 100,
           annotation_color: strokeColor
         });
         setShowCommentDialog(true);
@@ -267,7 +282,7 @@ export default function MockupCanvas({
       case 'arrow':
         setCurrentShape({
           type: 'arrow',
-          points: [pointerPos.x, pointerPos.y, pointerPos.x, pointerPos.y],
+          points: [stagePos.x, stagePos.y, stagePos.x, stagePos.y],
           stroke: strokeColor,
           strokeWidth,
           pointerLength: 10,
@@ -278,8 +293,8 @@ export default function MockupCanvas({
       case 'circle':
         setCurrentShape({
           type: 'circle',
-          x: pointerPos.x,
-          y: pointerPos.y,
+          x: stagePos.x,
+          y: stagePos.y,
           radius: 0,
           stroke: strokeColor,
           strokeWidth
@@ -289,8 +304,8 @@ export default function MockupCanvas({
       case 'rect':
         setCurrentShape({
           type: 'rect',
-          x: pointerPos.x,
-          y: pointerPos.y,
+          x: stagePos.x,
+          y: stagePos.y,
           width: 0,
           height: 0,
           stroke: strokeColor,
@@ -301,18 +316,18 @@ export default function MockupCanvas({
       case 'freehand':
         setCurrentShape({
           type: 'freehand',
-          points: [pointerPos.x, pointerPos.y],
+          points: [stagePos.x, stagePos.y],
           stroke: strokeColor,
           strokeWidth
         });
         break;
 
       case 'text':
-        setCommentPosition({ x: pointerPos.x, y: pointerPos.y });
+        setCommentPosition({ x: stagePos.x, y: stagePos.y });
         setPendingAnnotationData({
           type: 'text',
-          x: pointerPos.x,
-          y: pointerPos.y,
+          x: stagePos.x,
+          y: stagePos.y,
           text: '',
           fontSize: 16,
           fill: strokeColor
@@ -325,8 +340,22 @@ export default function MockupCanvas({
 
   const handleMouseMove = (e: any) => {
     const stage = e.target.getStage();
-    const pointerPos = stage.getPointerPosition();
-    if (!pointerPos) return;
+    // Use getRelativePointerPosition if available, otherwise transform manually
+    let stagePos;
+    let pointerPos;
+    if (typeof stage.getRelativePointerPosition === 'function') {
+      const pos = stage.getRelativePointerPosition();
+      stagePos = pos || { x: 0, y: 0 };
+      pointerPos = stage.getPointerPosition(); // Still need for panning
+    } else {
+      pointerPos = stage.getPointerPosition();
+      if (!pointerPos) return;
+      // Transform pointer position to stage coordinates (accounting for scale and position)
+      stagePos = {
+        x: (pointerPos.x - stagePosition.x) / scale,
+        y: (pointerPos.y - stagePosition.y) / scale
+      };
+    }
 
     // Handle panning
     if (isPanning && activeTool === 'select') {
@@ -352,15 +381,15 @@ export default function MockupCanvas({
           points: [
             currentShape.points[0],
             currentShape.points[1],
-            pointerPos.x,
-            pointerPos.y
+            stagePos.x,
+            stagePos.y
           ]
         });
         break;
 
       case 'circle':
-        const radiusX = Math.abs(pointerPos.x - currentShape.x);
-        const radiusY = Math.abs(pointerPos.y - currentShape.y);
+        const radiusX = Math.abs(stagePos.x - currentShape.x);
+        const radiusY = Math.abs(stagePos.y - currentShape.y);
         const radius = Math.sqrt(radiusX * radiusX + radiusY * radiusY);
         setCurrentShape({
           ...currentShape,
@@ -371,15 +400,15 @@ export default function MockupCanvas({
       case 'rect':
         setCurrentShape({
           ...currentShape,
-          width: pointerPos.x - currentShape.x,
-          height: pointerPos.y - currentShape.y
+          width: stagePos.x - currentShape.x,
+          height: stagePos.y - currentShape.y
         });
         break;
 
       case 'freehand':
         setCurrentShape({
           ...currentShape,
-          points: [...currentShape.points, pointerPos.x, pointerPos.y]
+          points: [...currentShape.points, stagePos.x, stagePos.y]
         });
         break;
     }

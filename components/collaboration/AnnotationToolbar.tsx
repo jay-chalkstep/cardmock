@@ -28,6 +28,7 @@ interface AnnotationToolbarProps {
   onZoomIn: () => void;
   onZoomOut: () => void;
   onZoomReset: () => void;
+  disabled?: boolean;
 }
 
 const PRESET_COLORS = [
@@ -53,7 +54,8 @@ export default function AnnotationToolbar({
   scale,
   onZoomIn,
   onZoomOut,
-  onZoomReset
+  onZoomReset,
+  disabled = false
 }: AnnotationToolbarProps) {
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showStrokePicker, setShowStrokePicker] = useState(false);
@@ -83,15 +85,18 @@ export default function AnnotationToolbar({
           return (
             <button
               key={tool.id}
-              onClick={() => onToolChange(tool.id)}
+              onClick={() => !disabled && onToolChange(tool.id)}
+              disabled={disabled && tool.id !== 'select'}
               className={`
                 p-3 rounded-lg transition-all relative group
-                ${isActive
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'text-gray-600 hover:bg-gray-100'
+                ${disabled && tool.id !== 'select'
+                  ? 'opacity-50 cursor-not-allowed'
+                  : isActive
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'text-gray-600 hover:bg-gray-100'
                 }
               `}
-              title={tool.label}
+              title={disabled && tool.id !== 'select' ? 'Only creators and reviewers can annotate' : tool.label}
             >
               <Icon className="h-5 w-5" />
 
@@ -110,9 +115,16 @@ export default function AnnotationToolbar({
       {/* Color Picker */}
       <div className="relative">
         <button
-          onClick={() => setShowColorPicker(!showColorPicker)}
-          className="p-3 rounded-lg hover:bg-gray-100 transition-colors relative group"
-          title="Color"
+          onClick={() => !disabled && setShowColorPicker(!showColorPicker)}
+          disabled={disabled}
+          className={`
+            p-3 rounded-lg transition-colors relative group
+            ${disabled 
+              ? 'opacity-50 cursor-not-allowed' 
+              : 'hover:bg-gray-100'
+            }
+          `}
+          title={disabled ? 'Only creators and reviewers can annotate' : 'Color'}
         >
           <div className="relative">
             <Palette className="h-5 w-5 text-gray-600" />
@@ -129,7 +141,7 @@ export default function AnnotationToolbar({
         </button>
 
         {/* Color Picker Dropdown */}
-        {showColorPicker && (
+        {showColorPicker && !disabled && (
           <>
             <div
               className="fixed inset-0 z-10"
@@ -141,8 +153,10 @@ export default function AnnotationToolbar({
                   <button
                     key={color}
                     onClick={() => {
-                      onColorChange(color);
-                      setShowColorPicker(false);
+                      if (!disabled) {
+                        onColorChange(color);
+                        setShowColorPicker(false);
+                      }
                     }}
                     className={`
                       w-8 h-8 rounded-full border-2 transition-all
@@ -165,8 +179,9 @@ export default function AnnotationToolbar({
                 <input
                   type="color"
                   value={strokeColor}
-                  onChange={(e) => onColorChange(e.target.value)}
-                  className="w-full h-8 rounded cursor-pointer"
+                  onChange={(e) => !disabled && onColorChange(e.target.value)}
+                  disabled={disabled}
+                  className="w-full h-8 rounded cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 />
               </div>
             </div>
@@ -177,9 +192,16 @@ export default function AnnotationToolbar({
       {/* Stroke Width */}
       <div className="relative">
         <button
-          onClick={() => setShowStrokePicker(!showStrokePicker)}
-          className="p-3 rounded-lg hover:bg-gray-100 transition-colors relative group"
-          title="Stroke Width"
+          onClick={() => !disabled && setShowStrokePicker(!showStrokePicker)}
+          disabled={disabled}
+          className={`
+            p-3 rounded-lg transition-colors relative group
+            ${disabled 
+              ? 'opacity-50 cursor-not-allowed' 
+              : 'hover:bg-gray-100'
+            }
+          `}
+          title={disabled ? 'Only creators and reviewers can annotate' : 'Stroke Width'}
         >
           <div className="relative">
             <Minus className="h-5 w-5 text-gray-600" />
@@ -195,7 +217,7 @@ export default function AnnotationToolbar({
         </button>
 
         {/* Stroke Width Picker */}
-        {showStrokePicker && (
+        {showStrokePicker && !disabled && (
           <>
             <div
               className="fixed inset-0 z-10"
@@ -207,11 +229,12 @@ export default function AnnotationToolbar({
               </label>
               <input
                 type="range"
+                disabled={disabled}
                 min="1"
                 max="20"
                 value={strokeWidth}
-                onChange={(e) => onStrokeWidthChange(parseInt(e.target.value))}
-                className="w-full"
+                onChange={(e) => !disabled && onStrokeWidthChange(parseInt(e.target.value))}
+                className="w-full disabled:opacity-50 disabled:cursor-not-allowed"
               />
 
               {/* Preset Widths */}
@@ -220,14 +243,19 @@ export default function AnnotationToolbar({
                   <button
                     key={width}
                     onClick={() => {
-                      onStrokeWidthChange(width);
-                      setShowStrokePicker(false);
+                      if (!disabled) {
+                        onStrokeWidthChange(width);
+                        setShowStrokePicker(false);
+                      }
                     }}
+                    disabled={disabled}
                     className={`
                       px-2 py-1 text-xs rounded border
-                      ${strokeWidth === width
-                        ? 'bg-blue-100 border-blue-500 text-blue-700'
-                        : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                      ${disabled
+                        ? 'opacity-50 cursor-not-allowed'
+                        : strokeWidth === width
+                          ? 'bg-blue-100 border-blue-500 text-blue-700'
+                          : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
                       }
                     `}
                   >
