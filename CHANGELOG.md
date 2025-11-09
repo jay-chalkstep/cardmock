@@ -55,6 +55,14 @@ Fixed critical bugs that prevented annotations from being visible when drawing a
   - Impact: Projects now correctly display in gallery page and designer page
   - Files modified: `app/(dashboard)/gallery/page.tsx`, `app/(dashboard)/designer/page.tsx`
 
+#### Reports API Response Parsing
+- **Incorrect Response Structure Handling** - Fixed reports not displaying in admin reports page
+  - Error: Report data not appearing after successful API call
+  - Root cause: API returns `{ success: true, data: { reportData: [...], summary: {...} } }` but frontend was using entire response object
+  - Fix: Extract `result.data.reportData` and `result.data.summary` from API response structure and properly handle error responses
+  - Impact: Reports now correctly display with summary statistics and project data
+  - Files modified: `app/(dashboard)/admin/reports/page.tsx`
+
 #### Annotation Visibility Issue
 - **Coordinate Transformation** - Fixed annotations not appearing when using annotation tools
   - Error: Annotations were drawn but not visible on canvas

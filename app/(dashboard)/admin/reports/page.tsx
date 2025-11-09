@@ -83,11 +83,19 @@ export default function AdminReportsPage() {
     setLoading(true);
     try {
       const response = await fetch(`/api/admin/reports/projects?status=${statusFilter}`);
-      if (!response.ok) throw new Error('Failed to fetch report data');
+      const result = await response.json();
 
-      const data = await response.json();
-      setReportData(data.reportData || []);
-      setSummary(data.summary || { totalProjects: 0, totalAssets: 0, activeUsers: 0 });
+      if (!response.ok || !result.success) {
+        const errorMessage = result.error || 'Failed to fetch report data';
+        throw new Error(errorMessage);
+      }
+
+      // Extract data from the response structure { success: true, data: { reportData: [...], summary: {...} } }
+      const fetchedReportData = result.data?.reportData || [];
+      const fetchedSummary = result.data?.summary || { totalProjects: 0, totalAssets: 0, activeUsers: 0 };
+      
+      setReportData(fetchedReportData);
+      setSummary(fetchedSummary);
     } catch (error) {
       console.error('Error fetching report data:', error);
       showToast('Failed to load report data', 'error');
