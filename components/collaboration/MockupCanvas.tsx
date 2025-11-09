@@ -24,6 +24,7 @@ interface MockupCanvasProps {
   onCommentHover: (commentId: string | null) => void;
   hoveredCommentId: string | null;
   isCreator: boolean;
+  canAnnotate: boolean;
 }
 
 export default function MockupCanvas({
@@ -37,7 +38,8 @@ export default function MockupCanvas({
   onCommentCreate,
   onCommentHover,
   hoveredCommentId,
-  isCreator
+  isCreator,
+  canAnnotate
 }: MockupCanvasProps) {
   const { user } = useUser();
   const { organization } = useOrganization();
@@ -242,8 +244,8 @@ export default function MockupCanvas({
       return;
     }
 
-    // Only allow drawing if user is creator
-    if (!isCreator) return;
+    // Only allow drawing if user can annotate (creator OR reviewer)
+    if (!canAnnotate) return;
 
     setIsDrawing(true);
 

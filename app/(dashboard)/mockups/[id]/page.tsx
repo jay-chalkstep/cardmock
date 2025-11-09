@@ -118,6 +118,9 @@ export default function MockupDetailPage({ params }: { params: { id: string } })
   const [isCurrentUserReviewer, setIsCurrentUserReviewer] = useState(false);
   const [hasCurrentUserApproved, setHasCurrentUserApproved] = useState(false);
   const [isProcessingApproval, setIsProcessingApproval] = useState(false);
+  
+  // Reviewer status for annotation permissions
+  const [isReviewer, setIsReviewer] = useState(false);
 
   const showToast = (message: string, type: 'success' | 'error') => {
     const id = Date.now();
@@ -147,6 +150,9 @@ export default function MockupDetailPage({ params }: { params: { id: string } })
 
   // Check if current user is the creator
   const isCreator = mockup?.created_by === user?.id;
+  
+  // User can annotate if they're creator OR reviewer
+  const canAnnotate = isCreator || isReviewer;
 
   // Stage workflow computed values
   const currentStageProgress = stageProgress.find(p => p.status === 'in_review');
@@ -220,6 +226,25 @@ export default function MockupDetailPage({ params }: { params: { id: string } })
       });
 
       setMockup(data);
+      
+      // Check if user is a reviewer for this mockup
+      if (user?.id && data.created_by !== user.id) {
+        const { data: reviewerData, error: reviewerError } = await supabase
+          .from('mockup_reviewers')
+          .select('id')
+          .eq('asset_id', params.id)
+          .eq('reviewer_id', user.id)
+          .maybeSingle();
+        
+        if (reviewerError) {
+          console.error('Error checking reviewer status:', reviewerError);
+        }
+        
+        setIsReviewer(!!reviewerData);
+      } else {
+        setIsReviewer(false);
+      }
+      
       console.log('=== END FETCH MOCKUP DATA ===\n');
     } catch (error) {
       console.error('❌ Error fetching mockup:', error);
@@ -750,6 +775,7 @@ export default function MockupDetailPage({ params }: { params: { id: string } })
         onCommentHover={setHoveredCommentId}
         hoveredCommentId={hoveredCommentId}
         isCreator={isCreator}
+        canAnnotate={canAnnotate}
       />
     </div>
   );
