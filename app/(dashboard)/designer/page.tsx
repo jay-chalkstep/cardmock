@@ -7,24 +7,14 @@ import { supabase, Logo, CardTemplate, Folder, Project } from '@/lib/supabase';
 import { buildFolderTree } from '@/lib/folders';
 import Toast from '@/components/Toast';
 import GmailLayout from '@/components/layout/GmailLayout';
-import FolderSelector from '@/components/folders/FolderSelector';
 import CreateFolderModal from '@/components/folders/CreateFolderModal';
+import DesignerSelectionPanel from '@/components/designer/DesignerSelectionPanel';
+import DesignerPositionControls from '@/components/designer/DesignerPositionControls';
+import DesignerSizeControls from '@/components/designer/DesignerSizeControls';
+import DesignerSavePanel from '@/components/designer/DesignerSavePanel';
+import DesignerBrandSelector from '@/components/designer/DesignerBrandSelector';
 import {
-  Layers,
-  Image as ImageIcon,
-  CreditCard,
-  Save,
-  Loader2,
-  ChevronUp,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  Maximize2,
-  Move,
-  Grid,
-  Lock,
-  Unlock,
-  ArrowLeft
+  Grid
 } from 'lucide-react';
 import { KonvaEventObject } from 'konva/lib/Node';
 import type { KonvaCanvasRef } from '@/components/designer/KonvaCanvas';
@@ -550,155 +540,29 @@ export default function DesignerPage() {
           {/* Control Panel */}
           <div className="lg:col-span-1 space-y-4">
             {/* Selection Section */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-              <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                <Layers className="h-4 w-4" />
-                Elements
-              </h3>
-
-              {/* Logo Selection */}
-              <div className="mb-4">
-                <label className="text-sm text-gray-600 mb-2 block">Brand</label>
-                <button
-                  onClick={() => setShowLogoSelector(true)}
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-between"
-                >
-                  <span className="flex items-center gap-2">
-                    <ImageIcon className="h-4 w-4" />
-                    {selectedBrand ? selectedBrand.company_name : 'Select Brand'}
-                  </span>
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
-
-              {/* Template Selection */}
-              <div>
-                <label className="text-sm text-gray-600 mb-2 block">Asset Template</label>
-                <button
-                  onClick={() => setShowTemplateSelector(true)}
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-between"
-                >
-                  <span className="flex items-center gap-2">
-                    <CreditCard className="h-4 w-4" />
-                    {selectedTemplate ? selectedTemplate.template_name : 'Select Template'}
-                  </span>
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
+            <DesignerSelectionPanel
+              selectedBrand={selectedBrand}
+              selectedTemplate={selectedTemplate}
+              onShowBrandSelector={() => setShowLogoSelector(true)}
+              onShowTemplateSelector={() => setShowTemplateSelector(true)}
+            />
 
             {/* Position Controls */}
             {selectedBrand && (
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                  <Move className="h-4 w-4" />
-                  Position
-                </h3>
-
-                {/* Arrow Controls */}
-                <div className="grid grid-cols-3 gap-1 mb-3">
-                  <div />
-                  <button
-                    onClick={() => moveLogo('up')}
-                    className="p-2 bg-gray-100 rounded hover:bg-gray-200 transition-colors"
-                  >
-                    <ChevronUp className="h-4 w-4 mx-auto" />
-                  </button>
-                  <div />
-                  <button
-                    onClick={() => moveLogo('left')}
-                    className="p-2 bg-gray-100 rounded hover:bg-gray-200 transition-colors"
-                  >
-                    <ChevronLeft className="h-4 w-4 mx-auto" />
-                  </button>
-                  <button
-                    onClick={() => setPresetPosition('center')}
-                    className="p-2 bg-gray-100 rounded hover:bg-gray-200 transition-colors"
-                  >
-                    <Maximize2 className="h-4 w-4 mx-auto" />
-                  </button>
-                  <button
-                    onClick={() => moveLogo('right')}
-                    className="p-2 bg-gray-100 rounded hover:bg-gray-200 transition-colors"
-                  >
-                    <ChevronRight className="h-4 w-4 mx-auto" />
-                  </button>
-                  <div />
-                  <button
-                    onClick={() => moveLogo('down')}
-                    className="p-2 bg-gray-100 rounded hover:bg-gray-200 transition-colors"
-                  >
-                    <ChevronDown className="h-4 w-4 mx-auto" />
-                  </button>
-                  <div />
-                </div>
-
-                {/* Preset Positions */}
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    onClick={() => setPresetPosition('top-left')}
-                    className="px-2 py-1 text-xs bg-gray-100 rounded hover:bg-gray-200"
-                  >
-                    Top Left
-                  </button>
-                  <button
-                    onClick={() => setPresetPosition('top-right')}
-                    className="px-2 py-1 text-xs bg-gray-100 rounded hover:bg-gray-200"
-                  >
-                    Top Right
-                  </button>
-                  <button
-                    onClick={() => setPresetPosition('bottom-left')}
-                    className="px-2 py-1 text-xs bg-gray-100 rounded hover:bg-gray-200"
-                  >
-                    Bottom Left
-                  </button>
-                  <button
-                    onClick={() => setPresetPosition('bottom-right')}
-                    className="px-2 py-1 text-xs bg-gray-100 rounded hover:bg-gray-200"
-                  >
-                    Bottom Right
-                  </button>
-                </div>
-              </div>
+              <DesignerPositionControls
+                onMove={moveLogo}
+                onSetPresetPosition={setPresetPosition}
+              />
             )}
 
             {/* Size Controls */}
             {selectedBrand && (
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                <h3 className="font-semibold text-gray-900 mb-3">Size</h3>
-
-                <div className="space-y-3">
-                  <div>
-                    <div className="flex justify-between mb-1">
-                      <label className="text-sm text-gray-600">Logo Size</label>
-                      <span className="text-sm font-medium">{logoScale}%</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="10"
-                      max="50"
-                      value={logoScale}
-                      onChange={(e) => updateLogoScale(Number(e.target.value))}
-                      className="w-full"
-                    />
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setKeepAspectRatio(!keepAspectRatio)}
-                      className="flex items-center gap-2 text-sm"
-                    >
-                      {keepAspectRatio ? (
-                        <Lock className="h-4 w-4 text-[#374151]" />
-                      ) : (
-                        <Unlock className="h-4 w-4 text-gray-400" />
-                      )}
-                      Aspect Ratio
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <DesignerSizeControls
+                logoScale={logoScale}
+                keepAspectRatio={keepAspectRatio}
+                onScaleChange={updateLogoScale}
+                onAspectRatioToggle={() => setKeepAspectRatio(!keepAspectRatio)}
+              />
             )}
 
             {/* Visual Aids */}
@@ -717,62 +581,20 @@ export default function DesignerPage() {
 
             {/* Save Section */}
             {selectedBrand && selectedTemplate && (
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                <h3 className="font-semibold text-gray-900 mb-3">Save Mockup</h3>
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-sm text-gray-600 mb-1 block">Mockup Name</label>
-                    <input
-                      type="text"
-                      value={mockupName}
-                      onChange={(e) => setMockupName(e.target.value)}
-                      placeholder="Enter mockup name..."
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#374151]"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm text-gray-600 mb-1 block">Folder (Optional)</label>
-                    <FolderSelector
-                      folders={folders}
-                      selectedFolderId={selectedFolderId}
-                      onSelect={setSelectedFolderId}
-                      onCreateFolder={() => setShowCreateFolderModal(true)}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm text-gray-600 mb-1 block">Project (Optional)</label>
-                    <select
-                      value={selectedProjectId || ''}
-                      onChange={(e) => setSelectedProjectId(e.target.value || null)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#374151] text-sm"
-                    >
-                      <option value="">No project</option>
-                      {projects.map((project) => (
-                        <option key={project.id} value={project.id}>
-                          {project.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <button
-                    onClick={saveMockup}
-                    disabled={saving || !mockupName.trim()}
-                    className="w-full px-4 py-2 bg-[#374151] text-white rounded-lg hover:bg-[#1f2937] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-                  >
-                    {saving ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="h-4 w-4" />
-                        Save Mockup
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
+              <DesignerSavePanel
+                mockupName={mockupName}
+                onMockupNameChange={setMockupName}
+                folders={folders}
+                selectedFolderId={selectedFolderId}
+                onFolderSelect={setSelectedFolderId}
+                onCreateFolder={() => setShowCreateFolderModal(true)}
+                projects={projects}
+                selectedProjectId={selectedProjectId}
+                onProjectSelect={setSelectedProjectId}
+                onSave={saveMockup}
+                saving={saving}
+                canSave={!!mockupName.trim()}
+              />
             )}
           </div>
 
@@ -811,149 +633,19 @@ export default function DesignerPage() {
         </div>
 
         {/* Logo Selector Modal */}
-        {showLogoSelector && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg max-w-4xl w-full max-h-[80vh] overflow-hidden">
-              <div className="p-6 border-b flex items-center justify-between">
-                {expandedBrand ? (
-                  <>
-                    <div className="flex items-center gap-3">
-                      <button
-                        onClick={() => setExpandedBrand(null)}
-                        className="p-1 hover:bg-gray-100 rounded transition-colors"
-                      >
-                        <ArrowLeft className="h-5 w-5 text-gray-600" />
-                      </button>
-                      <h3 className="text-xl font-semibold">
-                        {brandGroups.find(b => b.id === expandedBrand)?.company_name} Logos
-                      </h3>
-                    </div>
-                    <span className="text-sm text-gray-500">
-                      {brandGroups.find(b => b.id === expandedBrand)?.variantCount} variants
-                    </span>
-                  </>
-                ) : (
-                  <h3 className="text-xl font-semibold">Select a Logo</h3>
-                )}
-              </div>
-
-              <div className="p-6 overflow-y-auto max-h-[60vh]">
-                {!expandedBrand ? (
-                  /* Brand Cards View */
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                    {brandGroups.map((brand) => (
-                      <button
-                        key={brand.id}
-                        onClick={() => {
-                          if (brand.variantCount === 1) {
-                            // If only one variant, select it directly
-                            loadBrandImage(brand.variants[0]);
-                          } else {
-                            // Otherwise expand to show variants
-                            setExpandedBrand(brand.id);
-                          }
-                        }}
-                        className="relative p-4 border border-gray-200 rounded-lg hover:border-[#374151] hover:shadow-md transition-all group"
-                      >
-                        {/* Count Badge */}
-                        {brand.variantCount > 1 && (
-                          <div className="absolute top-2 right-2 bg-[#374151] text-white text-xs font-semibold rounded-full h-6 w-6 flex items-center justify-center shadow-md">
-                            {brand.variantCount}
-                          </div>
-                        )}
-
-                        {/* Logo Preview */}
-                        <img
-                          src={brand.primaryVariant?.logo_url}
-                          alt={brand.company_name}
-                          className="w-full h-20 object-contain mb-2"
-                        />
-
-                        {/* Brand Name */}
-                        <p className="text-sm text-gray-700 truncate font-medium">
-                          {brand.company_name}
-                        </p>
-
-                        {/* Hint text for multiple variants */}
-                        {brand.variantCount > 1 && (
-                          <p className="text-xs text-gray-500 mt-1">
-                            Click to view all
-                          </p>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  /* Variant Grid View */
-                  (() => {
-                    const brand = brandGroups.find(b => b.id === expandedBrand);
-                    return brand ? (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                        {brand.variants.map((variant) => (
-                          <button
-                            key={variant.id}
-                            onClick={() => loadBrandImage(variant)}
-                            className="p-4 border border-gray-200 rounded-lg hover:border-[#374151] hover:shadow-md transition-all text-left"
-                          >
-                            {/* Logo Preview */}
-                            <div className="h-24 flex items-center justify-center mb-3 bg-gray-50 rounded">
-                              <img
-                                src={variant.logo_url}
-                                alt={`${variant.logo_type} ${variant.theme || ''}`}
-                                className="max-h-full max-w-full object-contain"
-                              />
-                            </div>
-
-                            {/* Badges */}
-                            <div className="space-y-2">
-                              {/* Format Badge - Most Important */}
-                              <div className="flex items-center gap-2">
-                                <span className={`px-2 py-1 text-xs font-bold rounded border uppercase ${getFormatColor(variant.logo_format)}`}>
-                                  {variant.logo_format || 'N/A'}
-                                </span>
-                                {variant.width && variant.height && (
-                                  <span className="text-xs text-gray-500">
-                                    {variant.width}×{variant.height}
-                                  </span>
-                                )}
-                              </div>
-
-                              {/* Type and Theme Badges */}
-                              <div className="flex flex-wrap gap-1">
-                                {variant.logo_type && (
-                                  <span className={`px-2 py-0.5 text-xs rounded border capitalize ${getTypeColor(variant.logo_type)}`}>
-                                    {variant.logo_type}
-                                  </span>
-                                )}
-                                {variant.theme && (
-                                  <span className="px-2 py-0.5 text-xs rounded border capitalize bg-gray-100 text-gray-700 border-gray-200">
-                                    {variant.theme}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    ) : null;
-                  })()
-                )}
-              </div>
-
-              <div className="p-6 border-t">
-                <button
-                  onClick={() => {
-                    setShowLogoSelector(false);
-                    setExpandedBrand(null);
-                  }}
-                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        <DesignerBrandSelector
+          isOpen={showLogoSelector}
+          onClose={() => {
+            setShowLogoSelector(false);
+            setExpandedBrand(null);
+          }}
+          brandGroups={brandGroups}
+          expandedBrand={expandedBrand}
+          onExpandBrand={setExpandedBrand}
+          onSelectBrand={loadBrandImage}
+          getFormatColor={getFormatColor}
+          getTypeColor={getTypeColor}
+        />
 
         {/* Template Selector Modal */}
         {showTemplateSelector && (

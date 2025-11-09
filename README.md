@@ -1,8 +1,8 @@
-# Aiproval v3.6.0
+# Aiproval v3.7.0
 
-> Multi-tenant SaaS for brand asset management and collaborative mockup review with AI-powered features and user-level approval tracking
+> Multi-tenant SaaS for brand asset management and collaborative mockup review with user-level approval tracking
 
-A comprehensive platform for design teams, marketing departments, and agencies to search, organize, and collaborate on brand assets with AI-powered tagging and search, real-time visual annotation, multi-stage approval workflows, and project-based review management.
+A comprehensive platform for design teams, marketing departments, and agencies to search, organize, and collaborate on brand assets with real-time visual annotation, multi-stage approval workflows, and project-based review management.
 
 ---
 
@@ -11,9 +11,7 @@ A comprehensive platform for design teams, marketing departments, and agencies t
 **Aiproval** is a full-featured brand asset management and collaboration platform that enables teams to:
 
 - 🔍 **Search & Save** company logos via Brandfetch API with automatic metadata extraction
-- 🤖 **AI-Powered Analysis** with automated tagging, color extraction, and accessibility checking
-- 🔎 **Smart Search** using natural language to find mockups by visual similarity
-- 📁 **Organize** brand assets in personal and shared folder hierarchies with AI-suggested folders
+- 📁 **Organize** brand assets in personal and shared folder hierarchies
 - 📋 **Manage Projects** with client-based organization and workflow assignments
 - 🔄 **Standardize Workflows** with reusable multi-stage approval templates
 - 🎨 **Design** professional mockups using an interactive canvas editor
@@ -144,14 +142,12 @@ Built for teams who need more than basic file storage—Aiproval provides contex
 
 ### Backend & Services
 - **Authentication**: Clerk 6.33.7 (multi-tenant organizations)
-- **Database**: Supabase PostgreSQL 2.75.0 with pgvector extension
+- **Database**: Supabase PostgreSQL 2.75.0
 - **Storage**: Supabase Storage (3 buckets: logos, templates, mockups)
 - **Realtime**: Supabase Realtime (for collaboration updates)
 - **Email**: SendGrid 8.1.0 (review notifications)
 - **External APIs**:
   - Brandfetch (logo search)
-  - OpenAI (text embeddings for semantic search)
-  - Google Vision API (image analysis and OCR)
 
 ### Infrastructure
 - **Build Tool**: Turbopack (Next.js 15)
@@ -169,8 +165,6 @@ Built for teams who need more than basic file storage—Aiproval provides contex
 - Clerk account (free tier works)
 - Brandfetch API key
 - SendGrid API key (optional, for email notifications)
-- OpenAI API key (for AI features)
-- Google Cloud account with Vision API enabled (for AI features)
 
 ### Installation
 
@@ -218,78 +212,7 @@ NEXT_PUBLIC_BRANDFETCH_API_KEY=your_brandfetch_key
 # SendGrid (optional, for email notifications)
 SENDGRID_API_KEY=SG.your_sendgrid_key
 SENDGRID_FROM_EMAIL=noreply@yourdomain.com
-
-# AI Features (required for AI-powered features in v3.2.0+)
-OPENAI_API_KEY=sk-proj-...
-GOOGLE_VISION_API_KEY=AIza...
 ```
-
----
-
-## 🤖 Using AI Features
-
-### Getting Started with AI
-
-Once deployed with the required API keys, AI features are available on mockup detail pages:
-
-#### 1. **Analyzing a Mockup**
-- Navigate to any mockup detail page (`/mockups/[id]`)
-- Click the **"Analyze with AI"** button (purple gradient with ✨ icon) in the top-right corner
-- Wait for analysis (typically 5-10 seconds)
-- View results in the **"AI Insights"** tab in the right sidebar
-
-#### 2. **AI Insights Panel**
-The AI Insights tab displays comprehensive analysis:
-
-- **📍 Visual Tags**: Categorized tags for visual elements, composition, brands, and objects
-- **🎨 Color Palette**: Dominant, accent, and neutral colors with hex values
-- **📝 Extracted Text**: Any text found in the mockup via OCR
-- **♿ Accessibility Score**:
-  - WCAG compliance level (AAA, AA, A, or Fail)
-  - Contrast ratio analysis
-  - Readability score (0-100)
-  - Issues and improvement suggestions
-- **📊 Confidence Score**: How confident the AI is about its analysis
-
-#### 3. **Finding Similar Mockups**
-- In the AI Insights tab, click the **eye icon** at the bottom
-- A panel opens showing visually similar mockups
-- Adjust the similarity threshold (50-100%) to filter results
-- Click any mockup to navigate to it
-
-#### 4. **Semantic Search** (Coming Soon)
-- Use natural language queries to find mockups
-- Example: "Find mockups with blue backgrounds and modern typography"
-- Access via Cmd+K shortcut or search bar
-
-#### 5. **Folder Suggestions** (Coming Soon)
-- AI recommends the best folder for organizing new mockups
-- Provides confidence scores and explanations
-- Give feedback with thumbs up/down to improve suggestions
-
-### AI Onboarding Tour
-
-New users will see an interactive spotlight tour introducing AI features:
-- 7-step guided walkthrough
-- Highlights each AI feature with explanations
-- Can be skipped or revisited later
-- Progress is saved per user
-
-### Prerequisites for AI Features
-
-1. **Required API Keys**:
-   - OpenAI API key for embeddings and semantic search
-   - Google Vision API key for image analysis and OCR
-
-2. **Database Setup**:
-   - Run migration `11_ai_features.sql`
-   - Ensure pgvector extension is enabled
-   - IVFFlat index created for fast similarity search
-
-3. **Minimum Requirements**:
-   - Mockup must have an image uploaded
-   - Organization must be active
-   - User must have access to the mockup
 
 ---
 
@@ -362,17 +285,7 @@ Run these migrations **in order** in your Supabase SQL Editor:
    - Adds reviewer performance indexes
    - Optimizes stage progress queries
 
-11. **`supabase/11_ai_features.sql`** ⭐️ NEW in v3.2
-   - Enables pgvector extension for vector embeddings
-   - Adds ai_metadata JSONB column to card_mockups
-   - Adds ai_tags array for quick filtering
-   - Adds search_vector for full-text search
-   - Adds embedding vector[1536] for semantic similarity
-   - Creates IVFFlat index for fast vector search
-   - Creates RPC functions for hybrid search and similarity queries
-   - Adds last_analyzed_at timestamp
-
-12. **`supabase/12_fix_brands_multi_tenancy.sql`** ⭐️ CRITICAL FIX in v3.4.1
+11. **`supabase/12_fix_brands_multi_tenancy.sql`** ⭐️ CRITICAL FIX in v3.4.1
    - Adds missing organization_id column to 6 tables (brands, card_mockups, card_templates, logo_variants, brand_colors, brand_fonts)
    - Fixes failed indexes from migration 04 that referenced non-existent column
    - Drops global unique constraint on brands.domain
@@ -380,36 +293,36 @@ Run these migrations **in order** in your Supabase SQL Editor:
    - Recreates all failed indexes with proper organization_id support
    - Enables true multi-tenant data isolation across all brand-related tables
 
-13. **`supabase/13_terminology_cleanup.sql`** ⭐️ NEW in v3.5.0
+12. **`supabase/13_terminology_cleanup.sql`** ⭐️ NEW in v3.5.0
    - Renames card_mockups → assets
    - Renames card_templates → templates
-   - Renames mockup_id → asset_id in related tables (mockup_stage_progress, mockup_ai_metadata, folder_suggestions)
+   - Renames mockup_id → asset_id in related tables (mockup_stage_progress)
    - Creates backward compatibility views with INSTEAD OF triggers
    - Updates indexes and constraints to match new names
    - Includes migration tracking table
 
-14. **`supabase/14_fix_security_definer_views.sql`** ⭐️ NEW in v3.5.0
+13. **`supabase/14_fix_security_definer_views.sql`** ⭐️ NEW in v3.5.0
    - Recreates card_mockups and card_templates views with SECURITY INVOKER
    - Fixes security definer warnings that blocked service role access
    - Updates folder_mockup_counts view to use new assets table name
 
-15. **`supabase/15_fix_migration_history_rls.sql`** ⭐️ NEW in v3.5.0
+14. **`supabase/15_fix_migration_history_rls.sql`** ⭐️ NEW in v3.5.0
    - Enables RLS on migration_history table
    - Creates policies for service role full access
    - Allows authenticated users to read migration history
 
-16. **`supabase/16_fix_function_search_paths.sql`** ⭐️ NEW in v3.5.0
+15. **`supabase/16_fix_function_search_paths.sql`** ⭐️ NEW in v3.5.0
    - Sets explicit search_path on all trigger functions
    - Fixes security warnings about implicit search paths
    - Secures functions against schema manipulation attacks
 
-17. **`supabase/17_fix_stage_progress_trigger.sql`** ⭐️ CRITICAL FIX in v3.5.1
+16. **`supabase/17_fix_stage_progress_trigger.sql`** ⭐️ CRITICAL FIX in v3.5.1
    - Updates initialize_mockup_stage_progress() to use asset_id instead of mockup_id
    - Updates advance_to_next_stage() to use asset_id
    - Updates reset_to_first_stage() to use asset_id
    - Fixes "column mockup_id does not exist" error when assigning mockups to workflow projects
 
-18. **`supabase/18_user_level_approvals.sql`** ⭐️ MAJOR FEATURE in v3.6.0
+17. **`supabase/18_user_level_approvals.sql`** ⭐️ MAJOR FEATURE in v3.6.0
    - Creates mockup_stage_user_approvals table for individual approval tracking
    - Adds approvals_required and approvals_received columns to mockup_stage_progress
    - Adds final approval columns to assets table (final_approved_by, final_approved_at, final_approval_notes)
@@ -426,7 +339,7 @@ Run these migrations **in order** in your Supabase SQL Editor:
    - Requires ALL reviewers to approve before stage advances
    - Project owner final approval required after all stages complete
 
-19. **`supabase/fix_approval_counts.sql`** ⭐️ UTILITY in v3.6.0
+18. **`supabase/fix_approval_counts.sql`** ⭐️ UTILITY in v3.6.0
    - Fixes "0 of 0 approved" display for existing assets
    - Updates approvals_required counts for pre-migration assets
    - Diagnostic and verification queries included
@@ -579,7 +492,6 @@ asset-studio/
 │   ├── 08_workflows.sql
 │   ├── 09_stage_progress.sql        # Active approval workflow
 │   ├── 10_reviewer_dashboard.sql
-│   ├── 11_ai_features.sql           # AI-powered features
 │   ├── 12_fix_brands_multi_tenancy.sql
 │   ├── 13_terminology_cleanup.sql
 │   ├── 14_fix_security_definer_views.sql
@@ -711,10 +623,6 @@ SUPABASE_SERVICE_ROLE_KEY
 # APIs
 NEXT_PUBLIC_BRANDFETCH_API_KEY
 
-# AI Features (v3.2.0+)
-OPENAI_API_KEY
-GOOGLE_VISION_API_KEY
-
 # Email (optional)
 SENDGRID_API_KEY
 SENDGRID_FROM_EMAIL
@@ -741,20 +649,11 @@ SENDGRID_FROM_EMAIL
 - **Cause**: Environment variables only set for "Production" environment
 - **Solution**: Edit each variable and enable "Preview" environment
 
-**4. "AI Provider not found within an AIProvider" Error**
-- **Cause**: AIContext not initialized
-- **Solution**: Already fixed in v3.2.1 with AIProvider wrapper
-
-**5. AI Features Not Showing**
-- **Cause**: Missing OpenAI or Google Vision API keys
-- **Solution**: Add `OPENAI_API_KEY` and `GOOGLE_VISION_API_KEY` to environment variables
-
 ### Post-Deployment Checklist
 
 #### Database Setup
-- [ ] Run all 18 database migrations in Supabase (in order!)
+- [ ] Run all 17 database migrations in Supabase (in order!)
 - [ ] Run fix_approval_counts.sql if you have existing assets
-- [ ] Enable pgvector extension for AI features
 - [ ] Create 3 storage buckets (logos, card-templates, card-mockups)
 - [ ] Set up storage policies
 
@@ -771,13 +670,6 @@ SENDGRID_FROM_EMAIL
 - [ ] Test mockup workflow progression
 - [ ] Verify email notifications work
 
-#### AI Features Testing (v3.2.0+)
-- [ ] Click "Analyze with AI" on a mockup
-- [ ] Verify AI Insights tab shows results
-- [ ] Test "Find Similar Mockups" feature
-- [ ] Check accessibility scoring
-- [ ] Verify color palette extraction
-
 #### Collaboration Testing
 - [ ] Add visual annotations
 - [ ] Post comments
@@ -792,6 +684,7 @@ See [CHANGELOG.md](./documentation/CHANGELOG.md) for detailed version history.
 
 ### Recent Versions
 
+- **v3.7.0** (2025-11-09) - 🧹 **Code Quality** - Removed AI features for simplification and stability, updated documentation, component extraction and organization improvements
 - **v3.6.0** (2025-10-28) - 🎉 **MAJOR FEATURE** - User-Level Approval Tracking & Final Approval System - Individual reviewer tracking, all-must-approve logic, project owner final approval, approval timeline, quick approve, 4 new email templates, comprehensive documentation
 - **v3.5.1** (2025-10-28) - 🐛 **Critical Bugfixes** - Column name mismatches after migration 13, stage progress trigger fixes, templates API fix, server-side mockup save
 - **v3.5.0** (2025-10-28) - 🚀 **Database Modernization** - Terminology cleanup, table renaming, backward compatibility views, security fixes

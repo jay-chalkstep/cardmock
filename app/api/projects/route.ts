@@ -3,7 +3,7 @@ import { getAuthContext } from '@/lib/api/auth';
 import { successResponse, errorResponse, badRequestResponse } from '@/lib/api/response';
 import { checkRequiredFields } from '@/lib/api/error-handler';
 import { handleSupabaseError } from '@/lib/api/error-handler';
-import { supabase } from '@/lib/supabase';
+import { supabaseServer } from '@/lib/supabase-server';
 import type { ProjectStatus } from '@/lib/supabase';
 import { logger } from '@/lib/utils/logger';
 
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     logger.api('/api/projects', 'GET', { orgId, statusFilter });
 
     // Build query
-    let query = supabase
+    let query = supabaseServer
       .from('projects')
       .select('*')
       .eq('organization_id', orgId)
@@ -51,14 +51,14 @@ export async function GET(request: NextRequest) {
     const projectsWithCounts = await Promise.all(
       (projects || []).map(async (project) => {
         // Get mockup count
-        const { count } = await supabase
+        const { count } = await supabaseServer
           .from('assets')
           .select('*', { count: 'exact', head: true })
           .eq('project_id', project.id)
           .eq('organization_id', orgId);
 
         // Get up to 4 mockup previews
-        const { data: mockupPreviews } = await supabase
+        const { data: mockupPreviews } = await supabaseServer
           .from('assets')
           .select('id, mockup_name, mockup_image_url')
           .eq('project_id', project.id)
@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create project
-    const { data: project, error } = await supabase
+    const { data: project, error } = await supabaseServer
       .from('projects')
       .insert({
         name: name.trim(),

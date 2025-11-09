@@ -5,24 +5,16 @@ import { useOrganization, useUser } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import { supabase, CardMockup } from '@/lib/supabase';
 import {
-  Download,
-  Trash2,
-  Loader2,
-  Calendar,
-  MessageSquare,
-  Check
+  Loader2
 } from 'lucide-react';
 import Toast from '@/components/Toast';
 import MockupCanvas from '@/components/collaboration/MockupCanvas';
-import AnnotationToolbar from '@/components/collaboration/AnnotationToolbar';
-import CommentsSidebar from '@/components/collaboration/CommentsSidebar';
 import StageActionModal from '@/components/projects/StageActionModal';
 import GmailLayout from '@/components/layout/GmailLayout';
 import PreviewArea from '@/components/preview/PreviewArea';
 import { usePanelContext } from '@/lib/contexts/PanelContext';
-import ApprovalStatusBanner from '@/components/approvals/ApprovalStatusBanner';
-import ApprovalTimelinePanel from '@/components/approvals/ApprovalTimelinePanel';
-import FinalApprovalBanner from '@/components/approvals/FinalApprovalBanner';
+import MockupDetailSidebar from '@/components/mockups/MockupDetailSidebar';
+import MockupDetailPreviewPanel from '@/components/mockups/MockupDetailPreviewPanel';
 import type { MockupStageProgressWithDetails, Project, Workflow, AssetApprovalSummary, ApprovalProgress } from '@/lib/supabase';
 
 interface ToastMessage {
@@ -493,143 +485,37 @@ export default function MockupDetailPage({ params }: { params: { id: string } })
     return null;
   }
 
-  // Context Panel - Annotation Tools
+  // Context Panel - Use MockupDetailSidebar component
   const contextPanelContent = (
-    <div className="h-full flex flex-col">
-      {/* Top Section - Info */}
-      <div className="p-4 space-y-4">
-        {/* Mockup Info */}
-        <div className="space-y-2">
-          <h2 className="text-lg font-semibold text-[var(--text-primary)]">
-            {mockup.mockup_name}
-          </h2>
-          <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
-            <Calendar className="h-3 w-3" />
-            {new Date(mockup.created_at).toLocaleDateString()}
-          </div>
-        </div>
-
-        {/* Approval Status - Show FinalApprovalBanner if pending final approval */}
-        {currentStageProgress?.status === 'pending_final_approval' && workflow && project && mockup && (
-          <FinalApprovalBanner
-            mockupName={mockup.mockup_name}
-            projectName={project.name}
-            totalStages={workflow.stages?.length || 0}
-            onFinalApprove={handleFinalApprove}
-            isProcessing={isProcessingApproval}
-          />
-        )}
-
-        {/* Approval Status Banner - Show if in review and has approval data */}
-        {currentStageProgress?.status === 'in_review' && approvalSummary && workflow && (
-          <ApprovalStatusBanner
-            stageProgress={approvalSummary.progress_summary[currentStageProgress.stage_order] || {
-              stage_order: currentStageProgress.stage_order,
-              stage_name: currentStageProgress.stage_name,
-              stage_color: currentStageProgress.stage_color,
-              approvals_required: currentStageProgress.approvals_required || 0,
-              approvals_received: currentStageProgress.approvals_received || 0,
-              is_complete: false,
-              user_approvals: []
-            }}
-            currentUserId={user?.id || ''}
-            isCurrentUserReviewer={isCurrentUserReviewer}
-            hasCurrentUserApproved={hasCurrentUserApproved}
-            onApprove={handleApprove}
-            onRequestChanges={handleRequestChanges}
-            isProcessing={isProcessingApproval}
-          />
-        )}
-
-        {/* Fallback Stage Info (for other statuses) */}
-        {currentStageProgress && workflow && project &&
-         currentStageProgress.status !== 'in_review' &&
-         currentStageProgress.status !== 'pending_final_approval' && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
-            <div className="text-xs font-semibold text-blue-900">
-              Stage: {currentStageProgress.stage_name || `Stage ${currentStageProgress.stage_order}`}
-            </div>
-            <div className="text-xs text-blue-700">
-              Status: {currentStageProgress.status}
-            </div>
-            <div className="text-xs text-blue-600">
-              Project: {project.name}
-            </div>
-            {currentStageProgress.notes && (
-              <div className="text-xs text-blue-800 pt-2 border-t border-blue-200">
-                <strong>Notes:</strong> {currentStageProgress.notes}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Annotation Toolbar */}
-        <div className="pt-4 border-t border-[var(--border-main)]">
-          <h3 className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-3">
-            Annotation Tools
-          </h3>
-          <AnnotationToolbar
-            activeTool={activeTool}
-            onToolChange={setActiveTool}
-            strokeColor={strokeColor}
-            onColorChange={setStrokeColor}
-            strokeWidth={strokeWidth}
-            onStrokeWidthChange={setStrokeWidth}
-            scale={scale}
-            onZoomIn={handleZoomIn}
-            onZoomOut={handleZoomOut}
-            onZoomReset={handleZoomReset}
-          />
-        </div>
-      </div>
-
-      {/* Bottom Section - Action Buttons */}
-      <div className="mt-auto p-4 space-y-2 border-t border-[var(--border-main)] bg-[var(--bg-secondary)]">
-        {/* Export Menu */}
-        <div className="relative">
-          <button
-            onClick={() => setShowExportMenu(!showExportMenu)}
-            className="w-full px-3 py-2 bg-white border border-[var(--border-main)] text-[var(--text-primary)] rounded-lg hover:bg-[var(--bg-hover)] transition-colors flex items-center justify-center gap-2 text-sm"
-          >
-            <Download className="h-4 w-4" />
-            Export
-          </button>
-
-          {showExportMenu && (
-            <>
-              <div
-                className="fixed inset-0 z-10"
-                onClick={() => setShowExportMenu(false)}
-              />
-              <div className="absolute left-0 right-0 bottom-full mb-2 bg-white border border-gray-200 rounded-lg shadow-lg z-20">
-                <button
-                  onClick={() => handleExport(false)}
-                  className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 rounded-t-lg"
-                >
-                  Download Clean
-                </button>
-                <button
-                  onClick={() => handleExport(true)}
-                  className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 rounded-b-lg border-t border-gray-100"
-                >
-                  Download with Annotations
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-
-        {isCreator && (
-          <button
-            onClick={handleDeleteMockup}
-            className="w-full px-3 py-2 bg-white border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors flex items-center justify-center gap-2 text-sm"
-          >
-            <Trash2 className="h-4 w-4" />
-            Delete
-          </button>
-        )}
-      </div>
-    </div>
+    <MockupDetailSidebar
+      mockup={mockup}
+      currentStageProgress={currentStageProgress}
+      workflow={workflow}
+      project={project}
+      approvalSummary={approvalSummary}
+      isCurrentUserReviewer={isCurrentUserReviewer}
+      hasCurrentUserApproved={hasCurrentUserApproved}
+      currentUserId={user?.id || ''}
+      activeTool={activeTool}
+      onToolChange={setActiveTool}
+      strokeColor={strokeColor}
+      onColorChange={setStrokeColor}
+      strokeWidth={strokeWidth}
+      onStrokeWidthChange={setStrokeWidth}
+      scale={scale}
+      onZoomIn={handleZoomIn}
+      onZoomOut={handleZoomOut}
+      onZoomReset={handleZoomReset}
+      showExportMenu={showExportMenu}
+      onToggleExportMenu={() => setShowExportMenu(!showExportMenu)}
+      onExport={handleExport}
+      isCreator={isCreator}
+      onDelete={handleDeleteMockup}
+      onApprove={handleApprove}
+      onRequestChanges={handleRequestChanges}
+      onFinalApprove={handleFinalApprove}
+      isProcessingApproval={isProcessingApproval}
+    />
   );
 
   // Center Panel - Mockup Canvas
@@ -652,72 +538,21 @@ export default function MockupDetailPage({ params }: { params: { id: string } })
     </div>
   );
 
-  // Preview Panel - Comments & AI Insights
+  // Preview Panel - Use MockupDetailPreviewPanel component
   const previewContent = (
-    <div className="h-full flex flex-col">
-      {/* Tabs */}
-      <div className="flex border-b border-gray-200 bg-gray-50">
-        <button
-          onClick={() => setRightPanelTab('comments')}
-          className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-            rightPanelTab === 'comments'
-              ? 'text-blue-600 border-b-2 border-blue-600 bg-white'
-              : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          <MessageSquare className="h-4 w-4 inline mr-2" />
-          Comments
-          {comments.length > 0 && (
-            <span className="ml-2 px-2 py-0.5 bg-gray-200 text-gray-700 text-xs rounded-full">
-              {comments.length}
-            </span>
-          )}
-        </button>
-        <button
-          onClick={() => setRightPanelTab('approvals')}
-          className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-            rightPanelTab === 'approvals'
-              ? 'text-green-600 border-b-2 border-green-600 bg-white'
-              : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          <Check className="h-4 w-4 inline mr-2" />
-          Approvals
-          {approvalSummary && approvalSummary.approvals_by_stage && Object.keys(approvalSummary.approvals_by_stage).length > 0 && (
-            <span className="ml-2 px-2 py-0.5 bg-green-200 text-green-700 text-xs rounded-full">
-              {Object.values(approvalSummary.approvals_by_stage).flat().length}
-            </span>
-          )}
-        </button>
-      </div>
-
-      {/* Tab Content */}
-      <div className="flex-1 overflow-y-auto">
-        {rightPanelTab === 'comments' ? (
-          <CommentsSidebar
-            mockupId={params.id}
-            comments={comments}
-            currentUserId={user?.id || ''}
-            isCreator={isCreator}
-            onCommentUpdate={fetchComments}
-            onCommentHover={setHoveredCommentId}
-            hoveredCommentId={hoveredCommentId}
-          />
-        ) : rightPanelTab === 'approvals' ? (
-          approvalSummary && workflow?.stages ? (
-            <ApprovalTimelinePanel
-              approvalSummary={approvalSummary}
-              stages={workflow.stages}
-            />
-          ) : (
-            <div className="p-8 text-center text-gray-500">
-              <div className="text-sm">No approvals data</div>
-              <div className="text-xs mt-1">This asset is not in an approval workflow</div>
-            </div>
-          )
-        ) : null}
-      </div>
-    </div>
+    <MockupDetailPreviewPanel
+      mockupId={params.id}
+      comments={comments}
+      currentUserId={user?.id || ''}
+      isCreator={isCreator}
+      onCommentUpdate={fetchComments}
+      onCommentHover={setHoveredCommentId}
+      hoveredCommentId={hoveredCommentId}
+      approvalSummary={approvalSummary}
+      workflow={workflow}
+      rightPanelTab={rightPanelTab}
+      onTabChange={setRightPanelTab}
+    />
   );
 
   return (
