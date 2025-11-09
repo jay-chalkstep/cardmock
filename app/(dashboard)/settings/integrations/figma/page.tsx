@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import FigmaConnectButton from '@/components/integrations/FigmaConnectButton';
 import Toast from '@/components/Toast';
 
-export default function FigmaIntegrationPage() {
+function FigmaIntegrationContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isConnected, setIsConnected] = useState(false);
@@ -155,11 +155,23 @@ export default function FigmaIntegrationPage() {
         
         {toast && (
           <div className="fixed bottom-4 right-4 z-50">
-            <Toast message={toast.message} type={toast.type} />
+            <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
           </div>
         )}
       </div>
     </div>
+  );
+}
+
+export default function FigmaIntegrationPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-gray-600" />
+      </div>
+    }>
+      <FigmaIntegrationContent />
+    </Suspense>
   );
 }
 

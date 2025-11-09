@@ -160,8 +160,8 @@ export default function PublicSharePage() {
     }
   };
   
-  const handleActionRequiringIdentity = (action: 'comment' | 'approve') => {
-    if (!shareLink) return;
+  const handleActionRequiringIdentity = (action: 'comment' | 'approve'): boolean => {
+    if (!shareLink) return false;
     
     const requiresIdentity = shareLink.identityRequiredLevel === action || shareLink.identityRequiredLevel === 'approve';
     
@@ -315,7 +315,12 @@ export default function PublicSharePage() {
       {/* Toast Notifications */}
       <div className="fixed bottom-4 right-4 z-50 space-y-2">
         {toasts.map((toast) => (
-          <Toast key={toast.id} message={toast.message} type={toast.type} />
+          <Toast 
+            key={toast.id} 
+            message={toast.message} 
+            type={toast.type} 
+            onClose={() => setToasts((prev) => prev.filter((t) => t.id !== toast.id))}
+          />
         ))}
       </div>
     </div>

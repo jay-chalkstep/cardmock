@@ -196,7 +196,7 @@ export default function CreatePresentationModal({
         
         {toast && (
           <div className="mt-4">
-            <Toast message={toast.message} type={toast.type} />
+            <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
           </div>
         )}
       </div>

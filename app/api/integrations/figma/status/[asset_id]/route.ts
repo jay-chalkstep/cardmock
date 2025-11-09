@@ -44,11 +44,14 @@ export async function GET(
     let approvalStatus = 'pending';
     let currentStage = null;
     
-    if (asset.project?.workflow_id) {
+    // Handle project as array (Supabase relationship returns array)
+    const project = Array.isArray(asset.project) ? asset.project[0] : asset.project;
+    
+    if (project?.workflow_id) {
       const { data: progress } = await supabaseServer
         .from('mockup_stage_progress')
         .select('*, stage:workflow_stages(*)')
-        .eq('mockup_id', asset_id)
+        .eq('asset_id', asset_id)
         .order('stage_order', { ascending: false })
         .limit(1)
         .single();

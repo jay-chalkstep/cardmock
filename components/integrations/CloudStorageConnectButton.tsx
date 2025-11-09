@@ -117,7 +117,7 @@ export default function CloudStorageConnectButton({
       
       {toast && (
         <div className="fixed bottom-4 right-4 z-50">
-          <Toast message={toast.message} type={toast.type} />
+          <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
         </div>
       )}
     </>
