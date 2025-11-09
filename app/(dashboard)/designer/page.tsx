@@ -15,7 +15,8 @@ import DesignerSavePanel from '@/components/designer/DesignerSavePanel';
 import DesignerBrandSelector from '@/components/designer/DesignerBrandSelector';
 import {
   Grid,
-  Loader2
+  Loader2,
+  CreditCard
 } from 'lucide-react';
 import { KonvaEventObject } from 'konva/lib/Node';
 import type { KonvaCanvasRef } from '@/components/designer/KonvaCanvas';
