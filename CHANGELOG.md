@@ -23,6 +23,14 @@ Fixed critical bugs that prevented annotations from being visible when drawing a
   - Impact: Search page now handles edge cases gracefully without crashing
   - Files modified: `app/(dashboard)/search/page.tsx`
 
+#### Brand Fetch API Response Parsing
+- **Incorrect Response Structure Handling** - Fixed brand fetch not displaying results
+  - Error: Search results not appearing after successful API call
+  - Root cause: API returns `{ success: true, data: {...} }` but frontend was using entire response object as data
+  - Fix: Extract `result.data` from API response structure and properly handle error responses
+  - Impact: Brand search now correctly displays results and shows proper error messages
+  - Files modified: `app/(dashboard)/search/page.tsx`, `app/(dashboard)/test-brandfetch/page.tsx`
+
 #### Annotation Visibility Issue
 - **Coordinate Transformation** - Fixed annotations not appearing when using annotation tools
   - Error: Annotations were drawn but not visible on canvas

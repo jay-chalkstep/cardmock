@@ -262,12 +262,15 @@ function SearchPageContent() {
       const cleanQuery = searchQuery.trim().toLowerCase().replace(/https?:\/\//, '').replace(/www\./, '');
       const response = await fetch(`/api/brandfetch?domain=${encodeURIComponent(cleanQuery)}`);
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch brand data');
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        const errorMessage = result.error || 'Failed to fetch brand data';
+        throw new Error(errorMessage);
       }
 
-      const data = await response.json();
-      setBrandData(data);
+      // Extract data from the response structure { success: true, data: {...} }
+      setBrandData(result.data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
