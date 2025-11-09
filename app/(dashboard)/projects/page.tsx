@@ -45,7 +45,9 @@ export default function ProjectsPage() {
 
   useEffect(() => {
     setActiveNav('projects');
-  }, [setActiveNav]);
+    // Clear selectedIds when entering projects page to avoid stale IDs from other pages
+    setSelectedIds([]);
+  }, [setActiveNav, setSelectedIds]);
 
   useEffect(() => {
     if (organization?.id && user?.id) {
@@ -196,11 +198,16 @@ export default function ProjectsPage() {
   );
 
   // Preview - Show individual project metrics OR aggregated overview
-  const previewContent = selectedIds.length === 1 ? (
-    <ProjectMetrics projectId={selectedIds[0]} />
+  // Only show ProjectMetrics if the selected ID is actually a project ID
+  const selectedProjectId = selectedIds.length === 1 && projects.some(p => p.id === selectedIds[0]) 
+    ? selectedIds[0] 
+    : null;
+  
+  const previewContent = selectedProjectId ? (
+    <ProjectMetrics projectId={selectedProjectId} />
   ) : selectedIds.length === 0 ? (
     <ActiveProjectsOverview statusFilter={statusFilter} />
-  ) : null; // Multiple selected = show count
+  ) : null; // Multiple selected or invalid ID = show count
 
   return (
     <>
