@@ -144,7 +144,8 @@ export async function GET(request: NextRequest) {
     // Get unique user IDs
     const userIds = [...new Set(projects.map(p => p.created_by))];
 
-    // Fetch user details from Clerk (reusing client from admin check above)
+    // Fetch user details from Clerk
+    const client = await clerkClient();
     const userDetailsPromises = userIds.map(async (userId) => {
       try {
         const user = await client.users.getUser(userId);
@@ -155,7 +156,7 @@ export async function GET(request: NextRequest) {
           avatar: user.imageUrl
         };
       } catch (error) {
-        console.error(`Error fetching user ${userId}:`, error);
+        logger.error(`Error fetching user ${userId}`, error, { userId });
         return {
           id: userId,
           name: 'Unknown User',

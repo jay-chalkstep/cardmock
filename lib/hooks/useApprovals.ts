@@ -13,8 +13,6 @@ interface UseApprovalsOptions {
 
 export function useApprovals({ mockupId, enabled = true }: UseApprovalsOptions) {
   const [approvalSummary, setApprovalSummary] = useState<AssetApprovalSummary | null>(null);
-  const [isCurrentUserReviewer, setIsCurrentUserReviewer] = useState(false);
-  const [hasCurrentUserApproved, setHasCurrentUserApproved] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -47,8 +45,6 @@ export function useApprovals({ mockupId, enabled = true }: UseApprovalsOptions) 
       });
 
       setApprovalSummary(data);
-      setIsCurrentUserReviewer(data.is_current_user_reviewer || false);
-      setHasCurrentUserApproved(data.has_current_user_approved || false);
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
       setError(error);
@@ -64,8 +60,6 @@ export function useApprovals({ mockupId, enabled = true }: UseApprovalsOptions) 
 
   return {
     approvalSummary,
-    isCurrentUserReviewer,
-    hasCurrentUserApproved,
     loading,
     error,
     refetch: fetchApprovals,

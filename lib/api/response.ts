@@ -31,15 +31,20 @@ export function errorResponse(
 
   logger.error('API error response', error, { status, message });
 
-  return NextResponse.json(
-    {
-      success: false,
-      error: message,
-      ...(formattedError.code && { code: formattedError.code }),
-      ...(formattedError.details && process.env.NODE_ENV === 'development' && { details: formattedError.details }),
-    },
-    { status }
-  );
+  const responseBody: any = {
+    success: false,
+    error: message,
+  };
+
+  if (formattedError.code) {
+    responseBody.code = formattedError.code;
+  }
+
+  if (formattedError.details && process.env.NODE_ENV === 'development') {
+    responseBody.details = formattedError.details;
+  }
+
+  return NextResponse.json(responseBody, { status });
 }
 
 /**

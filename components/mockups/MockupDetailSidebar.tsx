@@ -8,6 +8,7 @@ import AnnotationToolbar from '@/components/collaboration/AnnotationToolbar';
 import ApprovalStatusBanner from '@/components/approvals/ApprovalStatusBanner';
 import FinalApprovalBanner from '@/components/approvals/FinalApprovalBanner';
 import type { CardMockup, MockupStageProgressWithDetails, Project, Workflow, AssetApprovalSummary } from '@/lib/supabase';
+import type { AnnotationTool } from '@/app/(dashboard)/mockups/[id]/page';
 
 interface MockupDetailSidebarProps {
   mockup: CardMockup;
@@ -19,8 +20,8 @@ interface MockupDetailSidebarProps {
   hasCurrentUserApproved: boolean;
   currentUserId: string;
   // Annotation tools
-  activeTool: string;
-  onToolChange: (tool: string) => void;
+  activeTool: AnnotationTool;
+  onToolChange: (tool: AnnotationTool) => void;
   strokeColor: string;
   onColorChange: (color: string) => void;
   strokeWidth: number;

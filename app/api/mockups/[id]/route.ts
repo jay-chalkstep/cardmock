@@ -1,8 +1,8 @@
 import { NextRequest } from 'next/server';
 import { getAuthContext } from '@/lib/api/auth';
-import { successResponse, errorResponse, notFoundResponse } from '@/lib/api/response';
+import { successResponse, errorResponse, notFoundResponse, forbiddenResponse } from '@/lib/api/response';
 import { handleSupabaseError } from '@/lib/api/error-handler';
-import { supabase } from '@/lib/supabase';
+import { supabaseServer } from '@/lib/supabase-server';
 import { logger } from '@/lib/utils/logger';
 
 // Mark as dynamic to prevent build-time evaluation
@@ -27,7 +27,7 @@ export async function GET(
     logger.api(`/api/mockups/${id}`, 'GET', { orgId });
 
     // Fetch mockup with logo and template data
-    const { data: mockup, error: mockupError } = await supabase
+    const { data: mockup, error: mockupError } = await supabaseServer
       .from('assets')
       .select(`
         *,
@@ -71,35 +71,39 @@ export async function PATCH(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId, orgId } = await getUserContext();
+    const authResult = await getAuthContext();
+    if (authResult instanceof Response) return authResult;
+    const { userId, orgId } = authResult;
+    
     const { id } = await context.params;
 
     const body = await request.json();
     const { folder_id, project_id } = body;
 
     // Get the mockup to check ownership
-    const { data: mockup, error: fetchError } = await supabase
+    const { data: mockup, error: fetchError } = await supabaseServer
       .from('assets')
       .select('*')
       .eq('id', id)
       .eq('organization_id', orgId)
       .single();
 
+    logger.api(`/api/mockups/${id}`, 'PATCH', { orgId, userId });
+
     if (fetchError || !mockup) {
-      return NextResponse.json({ error: 'Mockup not found' }, { status: 404 });
+      return notFoundResponse('Mockup not found');
     }
 
     // Check if user owns this mockup (or if it's legacy data without created_by)
     if (mockup.created_by && mockup.created_by !== userId) {
-      return NextResponse.json(
-        { error: 'You do not have permission to modify this mockup' },
-        { status: 403 }
-      );
+      return forbiddenResponse('You do not have permission to modify this mockup');
     }
+
+    logger.api(`/api/mockups/${id}`, 'PATCH', { orgId, userId, folder_id, project_id });
 
     // If moving to a folder, verify the folder exists and user can access it
     if (folder_id) {
-      const { data: folder, error: folderError } = await supabase
+      const { data: folder, error: folderError } = await supabaseServer
         .from('folders')
         .select('*')
         .eq('id', folder_id)
@@ -107,24 +111,18 @@ export async function PATCH(
         .single();
 
       if (folderError || !folder) {
-        return NextResponse.json(
-          { error: 'Target folder not found' },
-          { status: 404 }
-        );
+        return notFoundResponse('Target folder not found');
       }
 
       // Check if user can access this folder (own folder or org-shared)
       if (folder.created_by !== userId && !folder.is_org_shared) {
-        return NextResponse.json(
-          { error: 'You do not have access to this folder' },
-          { status: 403 }
-        );
+        return forbiddenResponse('You do not have access to this folder');
       }
     }
 
     // If assigning to a project, verify the project exists and belongs to organization
     if (project_id) {
-      const { data: project, error: projectError } = await supabase
+      const { data: project, error: projectError } = await supabaseServer
         .from('projects')
         .select('id')
         .eq('id', project_id)
@@ -132,10 +130,7 @@ export async function PATCH(
         .single();
 
       if (projectError || !project) {
-        return NextResponse.json(
-          { error: 'Target project not found' },
-          { status: 404 }
-        );
+        return notFoundResponse('Target project not found');
       }
     }
 
@@ -149,7 +144,7 @@ export async function PATCH(
     }
 
     // Update mockup
-    const { data: updatedMockup, error: updateError } = await supabase
+    const { data: updatedMockup, error: updateError } = await supabaseServer
       .from('assets')
       .update(updateData)
       .eq('id', id)
@@ -157,22 +152,14 @@ export async function PATCH(
       .single();
 
     if (updateError) {
-      console.error('Database error updating mockup:', updateError);
-      throw updateError;
+      return handleSupabaseError(updateError);
     }
 
-    return NextResponse.json({ mockup: updatedMockup });
+    logger.info('Mockup updated successfully', { mockupId: id });
+
+    return successResponse({ mockup: updatedMockup });
   } catch (error) {
-    console.error('Error updating mockup:', error);
-
-    if (error instanceof Error && error.message.includes('Unauthorized')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    return NextResponse.json(
-      { error: 'Failed to update mockup' },
-      { status: 500 }
-    );
+    return errorResponse(error, 'Failed to update mockup');
   }
 }
 
@@ -188,11 +175,16 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId, orgId } = await getUserContext();
+    const authResult = await getAuthContext();
+    if (authResult instanceof Response) return authResult;
+    const { userId, orgId } = authResult;
+    
     const { id } = await context.params;
 
+    logger.api(`/api/mockups/${id}`, 'DELETE', { orgId, userId });
+
     // Get the mockup to check ownership and get file URL
-    const { data: mockup, error: fetchError } = await supabase
+    const { data: mockup, error: fetchError } = await supabaseServer
       .from('assets')
       .select('*')
       .eq('id', id)
@@ -200,15 +192,12 @@ export async function DELETE(
       .single();
 
     if (fetchError || !mockup) {
-      return NextResponse.json({ error: 'Mockup not found' }, { status: 404 });
+      return notFoundResponse('Mockup not found');
     }
 
     // Check if user owns this mockup (or if it's legacy data without created_by)
     if (mockup.created_by && mockup.created_by !== userId) {
-      return NextResponse.json(
-        { error: 'You do not have permission to delete this mockup' },
-        { status: 403 }
-      );
+      return forbiddenResponse('You do not have permission to delete this mockup');
     }
 
     // Delete the mockup image from storage
@@ -219,39 +208,31 @@ export async function DELETE(
       const match = url.match(/\/card-mockups\/([^?]+)/);
 
       if (match && match[1]) {
-        const { error: storageError } = await supabase.storage
+        const { error: storageError } = await supabaseServer.storage
           .from('card-mockups')
           .remove([match[1]]);
 
         if (storageError) {
-          console.error('Error deleting storage file:', storageError);
+          logger.warn('Error deleting storage file, continuing with database deletion', { error: storageError });
           // Don't fail the whole operation if storage cleanup fails
         }
       }
     }
 
     // Delete the database record
-    const { error: deleteError } = await supabase
+    const { error: deleteError } = await supabaseServer
       .from('assets')
       .delete()
       .eq('id', id);
 
     if (deleteError) {
-      console.error('Database error deleting mockup:', deleteError);
-      throw deleteError;
+      return handleSupabaseError(deleteError);
     }
 
-    return NextResponse.json({ success: true });
+    logger.info('Mockup deleted successfully', { mockupId: id });
+
+    return successResponse({ success: true });
   } catch (error) {
-    console.error('Error deleting mockup:', error);
-
-    if (error instanceof Error && error.message.includes('Unauthorized')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    return NextResponse.json(
-      { error: 'Failed to delete mockup' },
-      { status: 500 }
-    );
+    return errorResponse(error, 'Failed to delete mockup');
   }
 }

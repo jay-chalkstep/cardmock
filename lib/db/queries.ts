@@ -19,7 +19,7 @@ export interface QueryResult<T> {
  * Execute a query with error handling
  */
 export async function executeQuery<T>(
-  queryFn: () => Promise<{ data: T | null; error: any }>,
+  queryFn: () => Promise<{ data: T | null; error: any } | { data: T[] | null; error: any }>,
   context?: string
 ): Promise<QueryResult<T>> {
   try {
@@ -34,8 +34,11 @@ export async function executeQuery<T>(
       };
     }
 
+    // Handle both single and array results
+    const data = Array.isArray(result.data) ? (result.data as any) : (result.data as T | null);
+
     return {
-      data: result.data,
+      data: data as T | null,
       error: null,
     };
   } catch (error) {
@@ -59,8 +62,8 @@ export async function getById<T>(
 ): Promise<QueryResult<T>> {
   return executeQuery<T>(
     async () => {
-      let query = client.from(table).select(select || '*').eq('id', id).single();
-      return await query;
+      const result = await client.from(table).select(select || '*').eq('id', id).single();
+      return { data: result.data as T | null, error: result.error };
     },
     `getById(${table}, ${id})`
   );
@@ -77,8 +80,8 @@ export async function getByOrg<T>(
 ): Promise<QueryResult<T[]>> {
   return executeQuery<T[]>(
     async () => {
-      let query = client.from(table).select(select || '*').eq('organization_id', orgId);
-      return await query;
+      const result = await client.from(table).select(select || '*').eq('organization_id', orgId);
+      return { data: result.data as T[] | null, error: result.error };
     },
     `getByOrg(${table}, ${orgId})`
   );
@@ -95,8 +98,8 @@ export async function getByUser<T>(
 ): Promise<QueryResult<T[]>> {
   return executeQuery<T[]>(
     async () => {
-      let query = client.from(table).select(select || '*').eq('created_by', userId);
-      return await query;
+      const result = await client.from(table).select(select || '*').eq('created_by', userId);
+      return { data: result.data as T[] | null, error: result.error };
     },
     `getByUser(${table}, ${userId})`
   );
@@ -112,7 +115,8 @@ export async function createRecord<T>(
 ): Promise<QueryResult<T>> {
   return executeQuery<T>(
     async () => {
-      return await client.from(table).insert(data).select().single();
+      const result = await client.from(table).insert(data).select().single();
+      return { data: result.data as T | null, error: result.error };
     },
     `createRecord(${table})`
   );
@@ -129,7 +133,8 @@ export async function updateRecord<T>(
 ): Promise<QueryResult<T>> {
   return executeQuery<T>(
     async () => {
-      return await client.from(table).update(data).eq('id', id).select().single();
+      const result = await client.from(table).update(data).eq('id', id).select().single();
+      return { data: result.data as T | null, error: result.error };
     },
     `updateRecord(${table}, ${id})`
   );
