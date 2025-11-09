@@ -63,6 +63,14 @@ Fixed critical bugs that prevented annotations from being visible when drawing a
   - Impact: Reports now correctly display with summary statistics and project data
   - Files modified: `app/(dashboard)/admin/reports/page.tsx`
 
+#### Reviews API Response Parsing
+- **Incorrect Response Structure Handling** - Fixed reviews not displaying in reviews page
+  - Error: Reviews not appearing after successful API call
+  - Root cause: API returns `{ success: true, data: { projects: [...] } }` but frontend was using entire response object
+  - Fix: Extract `result.data.projects` from API response structure and properly handle error responses
+  - Impact: Reviews now correctly display with pending mockups awaiting review
+  - Files modified: `app/(dashboard)/my-stage-reviews/page.tsx`
+
 #### Annotation Visibility Issue
 - **Coordinate Transformation** - Fixed annotations not appearing when using annotation tools
   - Error: Annotations were drawn but not visible on canvas

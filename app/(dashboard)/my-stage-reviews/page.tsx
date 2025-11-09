@@ -98,9 +98,16 @@ export default function MyStageReviewsPage() {
     setLoading(true);
     try {
       const response = await fetch('/api/reviews/my-stage-reviews');
-      if (!response.ok) throw new Error('Failed to fetch stage reviews');
-      const { projects: fetchedProjects } = await response.json();
-      setProjects(fetchedProjects || []);
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        const errorMessage = result.error || 'Failed to fetch stage reviews';
+        throw new Error(errorMessage);
+      }
+
+      // Extract data from the response structure { success: true, data: { projects: [...] } }
+      const fetchedProjects = result.data?.projects || [];
+      setProjects(fetchedProjects);
     } catch (error) {
       console.error('Error fetching stage reviews:', error);
     } finally {
