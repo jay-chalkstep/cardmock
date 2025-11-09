@@ -5,6 +5,8 @@ import { checkRequiredFields } from '@/lib/api/error-handler';
 import { handleSupabaseError } from '@/lib/api/error-handler';
 import { supabaseServer } from '@/lib/supabase-server';
 import { logger } from '@/lib/utils/logger';
+import { clerkClient } from '@clerk/nextjs/server';
+import { createContractNotification } from '@/lib/email/contract-notifications';
 
 export const dynamic = 'force-dynamic';
 
@@ -233,6 +235,41 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       return handleSupabaseError(error);
+    }
+
+    // Send notifications to organization members (non-blocking)
+    try {
+      const { data: memberships } = await clerkClient().organizations.getOrganizationMembershipList({
+        organizationId: orgId,
+      });
+
+      const memberIds = memberships
+        .map(m => m.publicUserData?.userId)
+        .filter((id): id is string => !!id && id !== userId);
+
+      if (memberIds.length > 0) {
+        const clientName = (contract.clients as any)?.name || 'Unknown Client';
+        const userName = await clerkClient().users.getUser(userId).then(u => 
+          u.fullName || u.firstName || u.emailAddresses[0]?.emailAddress || 'Unknown User'
+        ).catch(() => 'Unknown User');
+
+        await createContractNotification(
+          memberIds,
+          orgId,
+          'contract_created',
+          `New Contract Created: ${finalContractNumber}`,
+          `${userName} created a new contract for ${clientName}`,
+          contract.id,
+          {
+            contract_number: finalContractNumber,
+            client_name: clientName,
+            created_by_name: userName,
+          }
+        );
+      }
+    } catch (notifError) {
+      logger.error('Failed to send contract creation notifications', notifError, { contractId: contract.id });
+      // Don't fail the request if notifications fail
     }
 
     return successResponse({ contract }, 201);

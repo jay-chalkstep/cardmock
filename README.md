@@ -76,16 +76,36 @@ Built for teams who need more than basic file storage—Aiproval provides contex
 
 ### Contract Management ⭐️ NEW in v4.0.0
 - **Client Management** - Full client database with contact information
+  - Client list page with search and filtering
+  - Client detail page with tabs (Overview, Contracts, Projects)
+  - Create, edit, and delete clients
 - **Contract Creation** - Create new contracts and amendments
 - **Contract Status Tracking** - Draft, pending signature, signed, amended, expired, voided
 - **Document Versioning** - Upload Word documents with automatic version control
+  - Upload, view, download, and delete documents
+  - Automatic version tracking with current version marking
 - **Version History** - Complete document version history with timestamps
 - **AI Diff Summaries** - AI-powered document comparison (placeholder for future implementation)
 - **DocuSign Integration** - E-signature workflow (placeholder for future implementation)
 - **Email Mockups** - Create and approve email templates with client branding
+  - Full-featured HTML editor with preview mode
+  - Variable insertion (client_name, activation_link, etc.)
+  - Client branding selector (colors, fonts, logos)
+  - Email mockup list and preview components
 - **Payment Methods** - Flexible payment method approval workflows
+  - Add, view, and delete payment methods
+  - Support for prepaid cards, checks, Amazon cards, and custom types
 - **Contract-Project Linking** - Link contracts to projects for organization
 - **Contract Detail View** - Comprehensive contract view with tabs for all related content
+  - Documents tab - Upload and manage contract documents
+  - Email Mockups tab - Create and manage email templates
+  - Payment Methods tab - Manage payment methods
+  - Assets tab - View linked assets
+  - Comments tab - Add and view contract comments (UI ready)
+- **Contract Notifications** - In-app and email notifications for contract events
+  - Notifications sent to organization members on contract creation
+  - Notifications sent on contract status changes
+  - Email notification templates ready for document uploads
 
 ### Project Management
 - **Client Projects** - Organize mockups by client, campaign, or initiative

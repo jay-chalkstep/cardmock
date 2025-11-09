@@ -282,42 +282,36 @@ CREATE INDEX IF NOT EXISTS idx_assets_contract ON assets(contract_id) WHERE cont
 
 -- Clients RLS
 ALTER TABLE clients ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Allow all for authenticated users in org" ON clients;
 CREATE POLICY "Allow all for authenticated users in org"
   ON clients FOR ALL
   USING (true);
 
 -- Contracts RLS
 ALTER TABLE contracts ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Allow all for authenticated users in org" ON contracts;
 CREATE POLICY "Allow all for authenticated users in org"
   ON contracts FOR ALL
   USING (true);
 
 -- Contract documents RLS
 ALTER TABLE contract_documents ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Allow all for authenticated users in org" ON contract_documents;
 CREATE POLICY "Allow all for authenticated users in org"
   ON contract_documents FOR ALL
   USING (true);
 
 -- Contract document versions RLS
 ALTER TABLE contract_document_versions ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Allow all for authenticated users in org" ON contract_document_versions;
 CREATE POLICY "Allow all for authenticated users in org"
   ON contract_document_versions FOR ALL
   USING (true);
 
 -- Email mockups RLS
 ALTER TABLE email_mockups ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Allow all for authenticated users in org" ON email_mockups;
 CREATE POLICY "Allow all for authenticated users in org"
   ON email_mockups FOR ALL
   USING (true);
 
 -- Payment methods RLS
 ALTER TABLE payment_methods ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Allow all for authenticated users in org" ON payment_methods;
 CREATE POLICY "Allow all for authenticated users in org"
   ON payment_methods FOR ALL
   USING (true);

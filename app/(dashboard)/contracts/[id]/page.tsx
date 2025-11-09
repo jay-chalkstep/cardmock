@@ -6,6 +6,8 @@ import { useRouter, useParams } from 'next/navigation';
 import { usePanelContext } from '@/lib/contexts/PanelContext';
 import GmailLayout from '@/components/layout/GmailLayout';
 import Toast from '@/components/Toast';
+import { EmailMockupEditor, EmailMockupList, EmailMockupPreview } from '@/components/email-mockups';
+import { Upload, Download, FileText, Trash2, Plus, Eye } from 'lucide-react';
 
 interface Client {
   id: string;
@@ -50,6 +52,30 @@ export default function ContractDetailPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'email-mockups' | 'payment-methods' | 'assets' | 'comments'>('overview');
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  
+  // Documents state
+  const [documents, setDocuments] = useState<any[]>([]);
+  const [documentsLoading, setDocumentsLoading] = useState(false);
+  const [showDocumentUpload, setShowDocumentUpload] = useState(false);
+  
+  // Email mockups state
+  const [showEmailMockupEditor, setShowEmailMockupEditor] = useState(false);
+  const [editingEmailMockup, setEditingEmailMockup] = useState<any | null>(null);
+  const [previewingEmailMockup, setPreviewingEmailMockup] = useState<any | null>(null);
+  
+  // Payment methods state
+  const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
+  const [paymentMethodsLoading, setPaymentMethodsLoading] = useState(false);
+  const [showPaymentMethodModal, setShowPaymentMethodModal] = useState(false);
+  
+  // Assets state
+  const [assets, setAssets] = useState<any[]>([]);
+  const [assetsLoading, setAssetsLoading] = useState(false);
+  
+  // Comments state
+  const [comments, setComments] = useState<any[]>([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [newComment, setNewComment] = useState('');
 
   const showToast = (message: string, type: 'success' | 'error') => {
     const id = Date.now();
@@ -70,6 +96,20 @@ export default function ContractDetailPage() {
     }
   }, [contractId, organization?.id]);
 
+  useEffect(() => {
+    if (contractId && activeTab === 'documents') {
+      fetchDocuments();
+    } else if (contractId && activeTab === 'email-mockups') {
+      // Email mockups are fetched by EmailMockupList component
+    } else if (contractId && activeTab === 'payment-methods') {
+      fetchPaymentMethods();
+    } else if (contractId && activeTab === 'assets') {
+      fetchAssets();
+    } else if (contractId && activeTab === 'comments') {
+      fetchComments();
+    }
+  }, [contractId, activeTab]);
+
   const fetchContract = async () => {
     if (!contractId) return;
     setLoading(true);
@@ -83,6 +123,237 @@ export default function ContractDetailPage() {
       showToast('Failed to load contract', 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchDocuments = async () => {
+    if (!contractId) return;
+    setDocumentsLoading(true);
+    try {
+      const response = await fetch(`/api/contracts/${contractId}/documents`);
+      if (!response.ok) throw new Error('Failed to fetch documents');
+      const result = await response.json();
+      setDocuments(result.data?.documents || result.documents || []);
+    } catch (error) {
+      console.error('Error fetching documents:', error);
+      showToast('Failed to load documents', 'error');
+    } finally {
+      setDocumentsLoading(false);
+    }
+  };
+
+  const fetchPaymentMethods = async () => {
+    if (!contractId) return;
+    setPaymentMethodsLoading(true);
+    try {
+      const response = await fetch(`/api/contracts/${contractId}/payment-methods`);
+      if (!response.ok) throw new Error('Failed to fetch payment methods');
+      const result = await response.json();
+      setPaymentMethods(result.data?.payment_methods || result.payment_methods || []);
+    } catch (error) {
+      console.error('Error fetching payment methods:', error);
+      showToast('Failed to load payment methods', 'error');
+    } finally {
+      setPaymentMethodsLoading(false);
+    }
+  };
+
+  const fetchAssets = async () => {
+    if (!contractId) return;
+    setAssetsLoading(true);
+    try {
+      const response = await fetch(`/api/assets?contract_id=${contractId}`);
+      if (!response.ok) throw new Error('Failed to fetch assets');
+      const result = await response.json();
+      setAssets(result.data?.assets || result.assets || []);
+    } catch (error) {
+      console.error('Error fetching assets:', error);
+      showToast('Failed to load assets', 'error');
+    } finally {
+      setAssetsLoading(false);
+    }
+  };
+
+  const fetchComments = async () => {
+    if (!contractId) return;
+    setCommentsLoading(true);
+    try {
+      // TODO: Implement comments API endpoint
+      // For now, just set empty array
+      setComments([]);
+    } catch (error) {
+      console.error('Error fetching comments:', error);
+      showToast('Failed to load comments', 'error');
+    } finally {
+      setCommentsLoading(false);
+    }
+  };
+
+  const handleDocumentUpload = async (file: File) => {
+    if (!contractId) return;
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch(`/api/contracts/${contractId}/documents`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to upload document');
+      }
+
+      await fetchDocuments();
+      setShowDocumentUpload(false);
+      showToast('Document uploaded successfully', 'success');
+    } catch (error: any) {
+      console.error('Error uploading document:', error);
+      showToast(error.message || 'Failed to upload document', 'error');
+    }
+  };
+
+  const handleDeleteDocument = async (docId: string) => {
+    if (!confirm('Are you sure you want to delete this document?')) return;
+    try {
+      const response = await fetch(`/api/contracts/${contractId}/documents/${docId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to delete document');
+      }
+
+      await fetchDocuments();
+      showToast('Document deleted successfully', 'success');
+    } catch (error: any) {
+      console.error('Error deleting document:', error);
+      showToast(error.message || 'Failed to delete document', 'error');
+    }
+  };
+
+  const handleCreateEmailMockup = async (mockupData: any) => {
+    try {
+      const response = await fetch('/api/email-mockups', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...mockupData,
+          contract_id: contractId,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to create email mockup');
+      }
+
+      setShowEmailMockupEditor(false);
+      showToast('Email mockup created successfully', 'success');
+    } catch (error: any) {
+      console.error('Error creating email mockup:', error);
+      showToast(error.message || 'Failed to create email mockup', 'error');
+      throw error;
+    }
+  };
+
+  const handleUpdateEmailMockup = async (mockupId: string, mockupData: any) => {
+    try {
+      const response = await fetch(`/api/email-mockups/${mockupId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(mockupData),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to update email mockup');
+      }
+
+      setShowEmailMockupEditor(false);
+      setEditingEmailMockup(null);
+      showToast('Email mockup updated successfully', 'success');
+    } catch (error: any) {
+      console.error('Error updating email mockup:', error);
+      showToast(error.message || 'Failed to update email mockup', 'error');
+      throw error;
+    }
+  };
+
+  const handleDeleteEmailMockup = async (mockupId: string) => {
+    if (!confirm('Are you sure you want to delete this email mockup?')) return;
+    try {
+      const response = await fetch(`/api/email-mockups/${mockupId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to delete email mockup');
+      }
+
+      showToast('Email mockup deleted successfully', 'success');
+    } catch (error: any) {
+      console.error('Error deleting email mockup:', error);
+      showToast(error.message || 'Failed to delete email mockup', 'error');
+    }
+  };
+
+  const handleCreatePaymentMethod = async (paymentData: any) => {
+    try {
+      const response = await fetch(`/api/contracts/${contractId}/payment-methods`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(paymentData),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to create payment method');
+      }
+
+      await fetchPaymentMethods();
+      setShowPaymentMethodModal(false);
+      showToast('Payment method created successfully', 'success');
+    } catch (error: any) {
+      console.error('Error creating payment method:', error);
+      showToast(error.message || 'Failed to create payment method', 'error');
+      throw error;
+    }
+  };
+
+  const handleDeletePaymentMethod = async (paymentId: string) => {
+    if (!confirm('Are you sure you want to delete this payment method?')) return;
+    try {
+      const response = await fetch(`/api/contracts/${contractId}/payment-methods/${paymentId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to delete payment method');
+      }
+
+      await fetchPaymentMethods();
+      showToast('Payment method deleted successfully', 'success');
+    } catch (error: any) {
+      console.error('Error deleting payment method:', error);
+      showToast(error.message || 'Failed to delete payment method', 'error');
+    }
+  };
+
+  const handleAddComment = async () => {
+    if (!newComment.trim() || !contractId) return;
+    try {
+      // TODO: Implement comments API endpoint
+      // For now, just show a toast
+      showToast('Comments feature coming soon', 'success');
+      setNewComment('');
+    } catch (error: any) {
+      console.error('Error adding comment:', error);
+      showToast(error.message || 'Failed to add comment', 'error');
     }
   };
 
@@ -199,36 +470,364 @@ export default function ContractDetailPage() {
       case 'documents':
         return (
           <div className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Documents</h3>
-            <p className="text-gray-500">Document management coming soon...</p>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Documents</h3>
+              <button
+                onClick={() => setShowDocumentUpload(true)}
+                className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 flex items-center gap-2"
+              >
+                <Upload size={16} />
+                Upload Document
+              </button>
+            </div>
+            {documentsLoading ? (
+              <div className="text-center text-gray-500 py-8">Loading documents...</div>
+            ) : documents.length === 0 ? (
+              <div className="text-center text-gray-500 py-8">
+                <FileText size={48} className="mx-auto mb-4 text-gray-300" />
+                <p>No documents uploaded yet.</p>
+                <p className="text-sm mt-2">Upload a Word document to get started.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {documents.map((doc) => (
+                  <div
+                    key={doc.id}
+                    className="p-4 border border-gray-200 rounded-md hover:bg-gray-50 flex items-center justify-between"
+                  >
+                    <div className="flex items-center gap-3 flex-1">
+                      <FileText size={24} className="text-gray-400" />
+                      <div className="flex-1">
+                        <h4 className="font-medium text-gray-900">{doc.file_name}</h4>
+                        <div className="flex items-center gap-4 text-sm text-gray-500 mt-1">
+                          <span>Version {doc.version_number}</span>
+                          {doc.is_current && (
+                            <span className="px-2 py-0.5 bg-green-100 text-green-800 rounded-full text-xs">
+                              Current
+                            </span>
+                          )}
+                          <span>{new Date(doc.created_at).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <a
+                        href={doc.file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded"
+                        title="Download"
+                      >
+                        <Download size={18} />
+                      </a>
+                      <button
+                        onClick={() => handleDeleteDocument(doc.id)}
+                        className="p-2 text-red-600 hover:text-red-900 hover:bg-red-50 rounded"
+                        title="Delete"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {showDocumentUpload && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+                  <h3 className="text-lg font-semibold mb-4">Upload Document</h3>
+                  <input
+                    type="file"
+                    accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        handleDocumentUpload(file);
+                      }
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <div className="flex gap-3 mt-4">
+                    <button
+                      onClick={() => setShowDocumentUpload(false)}
+                      className="flex-1 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         );
       case 'email-mockups':
         return (
           <div className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Email Mockups</h3>
-            <p className="text-gray-500">Email mockup management coming soon...</p>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Email Mockups</h3>
+              <button
+                onClick={() => {
+                  setEditingEmailMockup(null);
+                  setShowEmailMockupEditor(true);
+                }}
+                className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 flex items-center gap-2"
+              >
+                <Plus size={16} />
+                New Email Mockup
+              </button>
+            </div>
+            <EmailMockupList
+              contractId={contractId}
+              onEdit={(mockup) => {
+                setEditingEmailMockup(mockup);
+                setShowEmailMockupEditor(true);
+              }}
+              onDelete={handleDeleteEmailMockup}
+              onView={(mockup) => setPreviewingEmailMockup(mockup)}
+            />
+            {showEmailMockupEditor && (
+              <EmailMockupEditor
+                isOpen={showEmailMockupEditor}
+                onClose={() => {
+                  setShowEmailMockupEditor(false);
+                  setEditingEmailMockup(null);
+                }}
+                onSave={editingEmailMockup
+                  ? (data) => handleUpdateEmailMockup(editingEmailMockup.id, data)
+                  : handleCreateEmailMockup}
+                contractId={contractId}
+                initialData={editingEmailMockup || undefined}
+              />
+            )}
+            {previewingEmailMockup && (
+              <EmailMockupPreview
+                isOpen={!!previewingEmailMockup}
+                onClose={() => setPreviewingEmailMockup(null)}
+                mockup={previewingEmailMockup}
+              />
+            )}
           </div>
         );
       case 'payment-methods':
         return (
           <div className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Payment Methods</h3>
-            <p className="text-gray-500">Payment method management coming soon...</p>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Payment Methods</h3>
+              <button
+                onClick={() => setShowPaymentMethodModal(true)}
+                className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 flex items-center gap-2"
+              >
+                <Plus size={16} />
+                Add Payment Method
+              </button>
+            </div>
+            {paymentMethodsLoading ? (
+              <div className="text-center text-gray-500 py-8">Loading payment methods...</div>
+            ) : paymentMethods.length === 0 ? (
+              <div className="text-center text-gray-500 py-8">
+                <p>No payment methods added yet.</p>
+                <p className="text-sm mt-2">Add a payment method to get started.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {paymentMethods.map((method) => (
+                  <div
+                    key={method.id}
+                    className="p-4 border border-gray-200 rounded-md hover:bg-gray-50 flex items-center justify-between"
+                  >
+                    <div className="flex-1">
+                      <h4 className="font-medium text-gray-900">{method.type}</h4>
+                      <div className="text-sm text-gray-600 mt-1">
+                        {method.amount && <span>Amount: ${method.amount}</span>}
+                        {method.description && <span className="ml-4">{method.description}</span>}
+                      </div>
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className={`px-2 py-1 text-xs rounded-full ${
+                          method.status === 'approved' ? 'bg-green-100 text-green-800' :
+                          method.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                          'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {method.status.replace('_', ' ')}
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleDeletePaymentMethod(method.id)}
+                      className="p-2 text-red-600 hover:text-red-900 hover:bg-red-50 rounded"
+                      title="Delete"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {showPaymentMethodModal && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+                  <h3 className="text-lg font-semibold mb-4">Add Payment Method</h3>
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      const formData = new FormData(e.currentTarget);
+                      handleCreatePaymentMethod({
+                        type: formData.get('type') as string,
+                        amount: formData.get('amount') ? parseFloat(formData.get('amount') as string) : null,
+                        description: formData.get('description') as string || null,
+                        status: 'pending_approval',
+                      });
+                    }}
+                    className="space-y-4"
+                  >
+                    <div>
+                      <label htmlFor="type" className="block text-sm font-medium mb-1">
+                        Type <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        id="type"
+                        name="type"
+                        required
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Select type...</option>
+                        <option value="prepaid_card">Prepaid Card</option>
+                        <option value="check">Check</option>
+                        <option value="amazon_card">Amazon Card</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="amount" className="block text-sm font-medium mb-1">
+                        Amount
+                      </label>
+                      <input
+                        id="amount"
+                        name="amount"
+                        type="number"
+                        step="0.01"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="description" className="block text-sm font-medium mb-1">
+                        Description
+                      </label>
+                      <textarea
+                        id="description"
+                        name="description"
+                        rows={3}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Additional details..."
+                      />
+                    </div>
+                    <div className="flex gap-3 pt-4">
+                      <button
+                        type="button"
+                        onClick={() => setShowPaymentMethodModal(false)}
+                        className="flex-1 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                      >
+                        Add Payment Method
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
           </div>
         );
       case 'assets':
         return (
           <div className="p-6">
             <h3 className="text-lg font-semibold mb-4">Assets</h3>
-            <p className="text-gray-500">Asset management coming soon...</p>
+            {assetsLoading ? (
+              <div className="text-center text-gray-500 py-8">Loading assets...</div>
+            ) : assets.length === 0 ? (
+              <div className="text-center text-gray-500 py-8">
+                <p>No assets linked to this contract.</p>
+                <p className="text-sm mt-2">Assets can be linked to contracts when created or updated.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {assets.map((asset) => (
+                  <div
+                    key={asset.id}
+                    onClick={() => router.push(`/mockups/${asset.id}`)}
+                    className="p-4 border border-gray-200 rounded-md hover:bg-gray-50 cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3">
+                      {asset.mockup_image_url && (
+                        <img
+                          src={asset.mockup_image_url}
+                          alt={asset.mockup_name}
+                          className="w-16 h-16 object-cover rounded"
+                        />
+                      )}
+                      <div className="flex-1">
+                        <h4 className="font-medium text-gray-900">{asset.mockup_name}</h4>
+                        {asset.project?.name && (
+                          <p className="text-sm text-gray-600">Project: {asset.project.name}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         );
       case 'comments':
         return (
           <div className="p-6">
             <h3 className="text-lg font-semibold mb-4">Comments</h3>
-            <p className="text-gray-500">Comments coming soon...</p>
+            {commentsLoading ? (
+              <div className="text-center text-gray-500 py-8">Loading comments...</div>
+            ) : (
+              <div className="space-y-4">
+                <div className="border border-gray-200 rounded-md p-4">
+                  <textarea
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    placeholder="Add a comment..."
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <button
+                    onClick={handleAddComment}
+                    disabled={!newComment.trim()}
+                    className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Add Comment
+                  </button>
+                </div>
+                {comments.length === 0 ? (
+                  <div className="text-center text-gray-500 py-8">
+                    <p>No comments yet.</p>
+                    <p className="text-sm mt-2">Be the first to add a comment.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {comments.map((comment) => (
+                      <div key={comment.id} className="p-4 border border-gray-200 rounded-md">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="font-medium text-gray-900">{comment.user_name || 'User'}</div>
+                          <div className="text-sm text-gray-500">
+                            {new Date(comment.created_at).toLocaleDateString()}
+                          </div>
+                        </div>
+                        <p className="text-gray-700">{comment.content}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         );
       default:

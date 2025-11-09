@@ -187,6 +187,14 @@ export default function ContractsPage() {
           New
         </button>
       </div>
+      <div className="mb-4">
+        <button
+          onClick={() => router.push('/clients')}
+          className="text-sm text-blue-600 hover:text-blue-800 underline"
+        >
+          Manage Clients →
+        </button>
+      </div>
       <div className="space-y-4">
         <div>
           <label className="block text-sm font-medium mb-2">Search</label>
