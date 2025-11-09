@@ -431,35 +431,75 @@ export default function MockupDetailPage({ params }: { params: { id: string } })
     }
   };
 
+  // Helper function to transform API response to AIMetadata type
+  const transformAIMetadata = (dbMetadata: any): AIMetadata | null => {
+    if (!dbMetadata) return null;
+
+    return {
+      id: dbMetadata.id,
+      mockupId: dbMetadata.mockup_id,
+      autoTags: dbMetadata.auto_tags || {
+        visual: [],
+        colors: [],
+        composition: [],
+        brands: [],
+        objects: [],
+        confidence: 0
+      },
+      colorPalette: dbMetadata.color_palette || {
+        dominant: [],
+        accent: [],
+        neutral: []
+      },
+      extractedText: dbMetadata.extracted_text || null,
+      accessibilityScore: dbMetadata.accessibility_score || {
+        wcagLevel: null,
+        contrastRatio: null,
+        readability: null,
+        issues: [],
+        suggestions: []
+      },
+      embedding: dbMetadata.embedding,
+      searchText: dbMetadata.search_text || '',
+      lastAnalyzed: dbMetadata.last_analyzed || new Date().toISOString(),
+      analysisVersion: dbMetadata.analysis_version
+    };
+  };
+
   // AI metadata handlers
   const fetchAIMetadata = async () => {
     console.log(`\n=== FETCH AI METADATA (ID: ${params.id}) ===`);
 
     try {
-      console.log('Querying assets table for AI metadata...');
+      console.log('Fetching AI metadata from API...');
 
-      const { data, error } = await supabase
-        .from('assets')
-        .select('ai_metadata')
-        .eq('id', params.id)
-        .single();
+      const response = await fetch(`/api/ai/analyze?mockupId=${params.id}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
 
-      if (error) {
-        console.error('❌ Supabase error:', error);
-        throw error;
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('❌ API error:', response.status, errorData);
+        throw new Error(`Failed to fetch AI metadata: ${response.status}`);
       }
 
-      if (data?.ai_metadata) {
+      const data = await response.json();
+
+      if (data.analyzed && data.metadata) {
         console.log('✅ AI metadata found');
-        setAiMetadata(data.ai_metadata as AIMetadata);
+        const transformedMetadata = transformAIMetadata(data.metadata);
+        setAiMetadata(transformedMetadata);
       } else {
         console.log('No AI metadata available');
+        setAiMetadata(null);
       }
 
       console.log('=== END FETCH AI METADATA ===\n');
     } catch (error) {
       console.error('❌ Error fetching AI metadata:', error);
       console.error('Error details:', error);
+      setAiMetadata(null);
     }
   };
 
@@ -472,15 +512,24 @@ export default function MockupDetailPage({ params }: { params: { id: string } })
         body: JSON.stringify({ mockupId: params.id }),
       });
 
-      if (!response.ok) throw new Error('Failed to analyze mockup');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to analyze mockup');
+      }
 
       const data = await response.json();
-      setAiMetadata(data.aiMetadata);
-      setRightPanelTab('ai'); // Switch to AI tab to show results
-      showToast('AI analysis complete!', 'success');
+      
+      if (data.success) {
+        // After successful analysis, refetch the full metadata from the database
+        // This ensures we have the complete metadata with all fields
+        await fetchAIMetadata();
+        showToast('AI analysis complete!', 'success');
+      } else {
+        throw new Error('Invalid response from analysis API');
+      }
     } catch (error) {
       console.error('Error analyzing mockup:', error);
-      showToast('Failed to analyze mockup with AI', 'error');
+      showToast(error instanceof Error ? error.message : 'Failed to analyze mockup with AI', 'error');
     } finally {
       setAnalyzing(false);
     }
