@@ -456,7 +456,7 @@ export default function GalleryPage() {
 
                 <div className="mt-4">
                   <button
-                    onClick={() => router.push(`/assets/${mockup.id}`)}
+                    onClick={() => router.push(`/mockups/${mockup.id}`)}
                     className="px-4 py-2 bg-[var(--accent-blue)] text-white rounded-lg hover:opacity-90 transition-opacity"
                   >
                     View Details
