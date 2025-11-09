@@ -178,7 +178,15 @@ export default function ContractsPage() {
   // Context Panel
   const contextPanelContent = (
     <div className="p-4">
-      <h2 className="text-lg font-semibold mb-4">Contracts</h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold">Contracts</h2>
+        <button
+          onClick={() => setShowNewContractModal(true)}
+          className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+        >
+          New
+        </button>
+      </div>
       <div className="space-y-4">
         <div>
           <label className="block text-sm font-medium mb-2">Search</label>
@@ -187,7 +195,7 @@ export default function ContractsPage() {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search contracts..."
-            className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
         <div>
@@ -195,7 +203,7 @@ export default function ContractsPage() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">All Statuses</option>
             <option value="draft">Draft</option>
@@ -211,33 +219,46 @@ export default function ContractsPage() {
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">All Types</option>
             <option value="new">New Contract</option>
             <option value="amendment">Amendment</option>
           </select>
         </div>
+        <div className="pt-2 border-t border-gray-200">
+          <div className="text-xs text-gray-500">
+            <div>Total: {contracts.length}</div>
+            <div>Filtered: {filteredContracts.length}</div>
+          </div>
+        </div>
       </div>
     </div>
   );
 
   const listViewContent = (
-    <div className="flex flex-col h-full">
-      <ListToolbar
-        title="Contracts"
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        onCreateClick={() => setShowNewContractModal(true)}
-        createLabel="New Contract"
-      />
-      <ListView
-        items={filteredContracts}
-        loading={loading}
-        onItemClick={handleContractClick}
-        selectedIds={selectedIds}
-        onSelectionChange={setSelectedIds}
-        renderItem={(contract) => (
+    <ListView
+      items={filteredContracts}
+      loading={loading}
+      onItemClick={handleContractClick}
+      selectedIds={selectedIds}
+      onSelectionChange={setSelectedIds}
+      toolbar={
+        <ListToolbar
+          totalCount={filteredContracts.length}
+          onSelectAll={() => setSelectedIds(filteredContracts.map(c => c.id))}
+          onClearSelection={() => setSelectedIds([])}
+          actions={
+            <button
+              onClick={() => setShowNewContractModal(true)}
+              className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+            >
+              New Contract
+            </button>
+          }
+        />
+      }
+      renderItem={(contract) => (
           <div className="p-4 border-b border-gray-200 hover:bg-gray-50 cursor-pointer">
             <div className="flex items-start justify-between">
               <div className="flex-1">
@@ -272,7 +293,6 @@ export default function ContractsPage() {
         )}
         emptyMessage="No contracts found. Create your first contract to get started."
       />
-    </div>
   );
 
   return (
