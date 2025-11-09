@@ -4,11 +4,8 @@ import { useState, useEffect, useRef } from 'react';
 import { UserButton, useUser } from '@clerk/nextjs';
 import {
   Menu,
-  Command,
   Bell,
-  Sparkles,
   Settings,
-  HelpCircle,
 } from 'lucide-react';
 import { usePanelContext } from '@/lib/contexts/PanelContext';
 import { NotificationsPanel } from '@/components/notifications';
@@ -45,11 +42,6 @@ export default function AppHeader() {
   const handleToggleNav = () => {
     // Toggle Context Panel visibility instead of NavRail
     setVisibility({ context: !visibility.context });
-  };
-
-  const handleCommandPalette = () => {
-    // TODO: Open command palette modal
-    console.log('Command palette opened');
   };
 
   const handleNotifications = () => {
@@ -106,18 +98,6 @@ export default function AppHeader() {
 
       {/* Right Section - Tools + User */}
       <div className="flex items-center gap-2 flex-shrink-0">
-        {/* Command Palette */}
-        <button
-          onClick={handleCommandPalette}
-          className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-[var(--bg-hover)] transition-colors"
-          title="Command palette"
-        >
-          <Command size={16} className="text-[var(--text-icon)]" />
-          <kbd className="hidden lg:inline-block px-1.5 py-0.5 text-xs font-semibold text-[var(--text-tertiary)] bg-[var(--bg-primary)] border border-[var(--border-main)] rounded">
-            ⌘K
-          </kbd>
-        </button>
-
         {/* Notifications */}
         <div className="relative">
           <button
