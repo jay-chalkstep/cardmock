@@ -106,6 +106,7 @@ export interface Brand {
   organization_id: string;
   description?: string;
   primary_logo_variant_id?: string;
+  client_id?: string; // Client association (Migration 25)
   created_at: string;
   updated_at: string;
   // Optional related data
@@ -113,6 +114,7 @@ export interface Brand {
   brand_colors?: BrandColor[];
   brand_fonts?: BrandFont[];
   primary_logo_variant?: LogoVariant;
+  client?: Client; // Optional relation
 }
 
 // Deprecated: Use Brand + LogoVariant instead
@@ -256,9 +258,27 @@ export interface Client {
   phone?: string;
   address?: string;
   notes?: string;
+  ein?: string; // Employer Identification Number (Migration 25)
+  parent_client_id?: string; // Client hierarchy (Migration 25)
   created_by: string;
   created_at: string;
   updated_at: string;
+  // Optional relations
+  parent_client?: Client; // Parent client in hierarchy
+  child_clients?: Client[]; // Child clients in hierarchy
+}
+
+export interface ClientUser {
+  id: string;
+  client_id: string;
+  user_id: string; // Clerk user ID
+  organization_id: string;
+  assigned_by: string; // Clerk user ID who assigned
+  assigned_at: string;
+  created_at: string;
+  updated_at: string;
+  // Optional relations
+  client?: Client; // Client relation
 }
 
 export interface Contract {

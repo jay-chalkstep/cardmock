@@ -1,7 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
+import { useOrganization } from '@clerk/nextjs';
+
+interface Client {
+  id: string;
+  name: string;
+  parent_client_id?: string;
+}
 
 interface NewClientModalProps {
   isOpen: boolean;
@@ -12,16 +19,46 @@ interface NewClientModalProps {
     phone?: string;
     address?: string;
     notes?: string;
+    ein?: string;
+    parent_client_id?: string;
   }) => Promise<void>;
 }
 
 export default function NewClientModal({ isOpen, onClose, onCreate }: NewClientModalProps) {
+  const { organization } = useOrganization();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [notes, setNotes] = useState('');
+  const [ein, setEin] = useState('');
+  const [parentClientId, setParentClientId] = useState<string>('');
+  const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingClients, setLoadingClients] = useState(false);
+
+  // Fetch clients for parent selector
+  useEffect(() => {
+    if (isOpen && organization?.id) {
+      fetchClients();
+    }
+  }, [isOpen, organization?.id]);
+
+  const fetchClients = async () => {
+    if (!organization?.id) return;
+    setLoadingClients(true);
+    try {
+      const response = await fetch('/api/clients');
+      if (!response.ok) throw new Error('Failed to fetch clients');
+      const result = await response.json();
+      const fetchedClients = result.data?.clients || result.clients || [];
+      setClients(fetchedClients);
+    } catch (error) {
+      console.error('Error fetching clients:', error);
+    } finally {
+      setLoadingClients(false);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -37,6 +74,8 @@ export default function NewClientModal({ isOpen, onClose, onCreate }: NewClientM
         phone: phone.trim() || undefined,
         address: address.trim() || undefined,
         notes: notes.trim() || undefined,
+        ein: ein.trim() || undefined,
+        parent_client_id: parentClientId || undefined,
       });
       // Reset form
       setName('');
@@ -44,6 +83,8 @@ export default function NewClientModal({ isOpen, onClose, onCreate }: NewClientM
       setPhone('');
       setAddress('');
       setNotes('');
+      setEin('');
+      setParentClientId('');
       onClose();
     } catch (error) {
       console.error('Error creating client:', error);
@@ -121,6 +162,43 @@ export default function NewClientModal({ isOpen, onClose, onCreate }: NewClientM
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Street address, City, State, ZIP"
             />
+          </div>
+
+          <div>
+            <label htmlFor="ein" className="block text-sm font-medium mb-1">
+              EIN (Employer Identification Number)
+            </label>
+            <input
+              id="ein"
+              type="text"
+              value={ein}
+              onChange={(e) => setEin(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="12-3456789"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="parent_client" className="block text-sm font-medium mb-1">
+              Parent Client
+            </label>
+            <select
+              id="parent_client"
+              value={parentClientId}
+              onChange={(e) => setParentClientId(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={loadingClients}
+            >
+              <option value="">None (Top-level client)</option>
+              {clients.map((client) => (
+                <option key={client.id} value={client.id}>
+                  {client.name}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-gray-500">
+              Select a parent client to create a hierarchy (e.g., Energy Hub → ComEd)
+            </p>
           </div>
 
           <div>

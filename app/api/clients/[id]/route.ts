@@ -53,7 +53,9 @@ export async function GET(
  *   email?: string,
  *   phone?: string,
  *   address?: string,
- *   notes?: string
+ *   notes?: string,
+ *   ein?: string,
+ *   parent_client_id?: string
  * }
  */
 export async function PATCH(
@@ -67,7 +69,7 @@ export async function PATCH(
     
     const { id } = await context.params;
     const body = await request.json();
-    const { name, email, phone, address, notes } = body;
+    const { name, email, phone, address, notes, ein, parent_client_id } = body;
 
     logger.api(`/api/clients/${id}`, 'PATCH', { orgId });
 
@@ -81,6 +83,38 @@ export async function PATCH(
 
     if (!existingClient) {
       return notFoundResponse('Client not found');
+    }
+
+    // Validate parent_client_id if provided
+    if (parent_client_id !== undefined) {
+      if (parent_client_id === null) {
+        // Setting to null is allowed (removing parent)
+      } else if (parent_client_id === id) {
+        return badRequestResponse('Client cannot be its own parent');
+      } else {
+        // Check if parent client exists
+        const { data: parentClient } = await supabaseServer
+          .from('clients')
+          .select('id')
+          .eq('id', parent_client_id)
+          .eq('organization_id', orgId)
+          .single();
+
+        if (!parentClient) {
+          return badRequestResponse('Parent client not found');
+        }
+
+        // Check for circular reference using database function
+        const { data: isValid, error: checkError } = await supabaseServer
+          .rpc('check_client_hierarchy_valid', {
+            client_id: id,
+            new_parent_id: parent_client_id
+          });
+
+        if (checkError || !isValid) {
+          return badRequestResponse('Cannot set parent client: would create circular reference');
+        }
+      }
     }
 
     // Build update object
@@ -98,6 +132,8 @@ export async function PATCH(
     if (phone !== undefined) updateData.phone = phone?.trim() || null;
     if (address !== undefined) updateData.address = address?.trim() || null;
     if (notes !== undefined) updateData.notes = notes?.trim() || null;
+    if (ein !== undefined) updateData.ein = ein?.trim() || null;
+    if (parent_client_id !== undefined) updateData.parent_client_id = parent_client_id;
 
     // Update client
     const { data: client, error } = await supabaseServer

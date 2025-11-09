@@ -16,53 +16,108 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { event, data } = body;
-
-    logger.api('/api/webhooks/docusign', 'POST', { event });
+    
+    logger.api('/api/webhooks/docusign', 'POST', { body });
 
     // TODO: Verify webhook signature from DocuSign
-    // TODO: Handle different event types
-    // - envelope-sent
-    // - envelope-delivered
-    // - envelope-signed
-    // - envelope-declined
-    // - envelope-voided
+    // DocuSign sends webhooks with HMAC signature in headers
+    // const signature = request.headers.get('X-DocuSign-Signature-1');
+    // Verify signature using secret key
 
-    // For now, log the event
-    logger.info('DocuSign webhook received:', { event, data });
+    // DocuSign webhook format can vary, but typically includes:
+    // - data.envelopeId
+    // - data.envelopeStatus
+    // - data.event
+    // - data.recipients (array of recipient statuses)
 
-    // Example: Update document status based on envelope status
-    if (data?.envelope_id) {
-      // Find document by envelope_id
-      const { data: document } = await supabaseServer
-        .from('contract_documents')
-        .select('id, contract_id')
-        .eq('docu_sign_envelope_id', data.envelope_id)
-        .single();
+    const envelopeId = body.data?.envelopeId || body.envelopeId || body.data?.envelope_id;
+    const envelopeStatus = body.data?.envelopeStatus || body.status || body.data?.status;
+    const event = body.event || body.data?.event || envelopeStatus;
 
-      if (document) {
-        // Update document status
-        await supabaseServer
-          .from('contract_documents')
-          .update({
-            docu_sign_status: event === 'envelope-signed' ? 'signed' : 
-                             event === 'envelope-declined' ? 'declined' :
-                             event === 'envelope-voided' ? 'voided' :
-                             event === 'envelope-delivered' ? 'delivered' : 'sent',
-          })
-          .eq('id', document.id);
-
-        // Update contract status if signed
-        if (event === 'envelope-signed') {
-          await supabaseServer
-            .from('contracts')
-            .update({ status: 'signed' })
-            .eq('id', document.contract_id);
-        }
-      }
+    if (!envelopeId) {
+      logger.warn('DocuSign webhook received without envelope ID', { body });
+      return successResponse({ message: 'Webhook received but no envelope ID found' });
     }
 
-    return successResponse({ message: 'Webhook processed' });
+    logger.info('DocuSign webhook received', { envelopeId, envelopeStatus, event });
+
+    // Find document by envelope_id
+    const { data: document, error: docError } = await supabaseServer
+      .from('contract_documents')
+      .select('id, contract_id, docu_sign_status')
+      .eq('docu_sign_envelope_id', envelopeId)
+      .single();
+
+    if (docError || !document) {
+      logger.warn('Document not found for envelope', { envelopeId, error: docError });
+      return successResponse({ message: 'Document not found for envelope' });
+    }
+
+    // Map DocuSign status to our status enum
+    let docuSignStatus: string;
+    switch (envelopeStatus?.toLowerCase()) {
+      case 'sent':
+        docuSignStatus = 'sent';
+        break;
+      case 'delivered':
+        docuSignStatus = 'delivered';
+        break;
+      case 'completed':
+      case 'signed':
+        docuSignStatus = 'signed';
+        break;
+      case 'declined':
+        docuSignStatus = 'declined';
+        break;
+      case 'voided':
+        docuSignStatus = 'voided';
+        break;
+      default:
+        docuSignStatus = envelopeStatus || 'sent';
+    }
+
+    // Update document status
+    const { error: updateError } = await supabaseServer
+      .from('contract_documents')
+      .update({
+        docu_sign_status: docuSignStatus,
+      })
+      .eq('id', document.id);
+
+    if (updateError) {
+      logger.error('Failed to update document status', updateError);
+      return errorResponse(updateError, 'Failed to update document status');
+    }
+
+    // Update contract status based on envelope status
+    if (docuSignStatus === 'signed' || envelopeStatus?.toLowerCase() === 'completed') {
+      await supabaseServer
+        .from('contracts')
+        .update({ status: 'signed' })
+        .eq('id', document.contract_id);
+    } else if (docuSignStatus === 'declined') {
+      await supabaseServer
+        .from('contracts')
+        .update({ status: 'draft' })
+        .eq('id', document.contract_id);
+    } else if (docuSignStatus === 'sent' || docuSignStatus === 'delivered') {
+      await supabaseServer
+        .from('contracts')
+        .update({ status: 'pending_signature' })
+        .eq('id', document.contract_id);
+    }
+
+    logger.info('DocuSign webhook processed successfully', { 
+      envelopeId, 
+      docuSignStatus, 
+      documentId: document.id 
+    });
+
+    return successResponse({ 
+      message: 'Webhook processed',
+      envelopeId,
+      status: docuSignStatus,
+    });
   } catch (error) {
     logger.error('DocuSign webhook error:', error);
     return errorResponse(error, 'Failed to process webhook');

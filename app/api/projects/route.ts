@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { getAuthContext } from '@/lib/api/auth';
+import { getAuthContext, isClient, getUserAssignedClientId } from '@/lib/api/auth';
 import { successResponse, errorResponse, badRequestResponse } from '@/lib/api/response';
 import { checkRequiredFields } from '@/lib/api/error-handler';
 import { handleSupabaseError } from '@/lib/api/error-handler';
@@ -29,6 +29,17 @@ export async function GET(request: NextRequest) {
 
     logger.api('/api/projects', 'GET', { orgId, statusFilter });
 
+    // For Client-role users: Filter projects by their assigned client via contract_id
+    const userIsClient = await isClient();
+    let assignedClientId: string | null = null;
+    if (userIsClient) {
+      assignedClientId = await getUserAssignedClientId();
+      if (!assignedClientId) {
+        // Client-role user with no client assignment - return empty array
+        return successResponse({ projects: [] });
+      }
+    }
+
     // Build query
     let query = supabaseServer
       .from('projects')
@@ -43,13 +54,34 @@ export async function GET(request: NextRequest) {
 
     const { data: projects, error } = await query;
 
+    // For Client-role users: Filter projects by contract -> client
+    let filteredProjects = projects || [];
+    if (userIsClient && assignedClientId) {
+      // Get all contracts for the assigned client
+      const { data: contracts } = await supabaseServer
+        .from('contracts')
+        .select('id')
+        .eq('client_id', assignedClientId)
+        .eq('organization_id', orgId);
+
+      const contractIds = contracts?.map(c => c.id) || [];
+      if (contractIds.length > 0) {
+        filteredProjects = filteredProjects.filter((p: any) => 
+          p.contract_id && contractIds.includes(p.contract_id)
+        );
+      } else {
+        // No contracts for this client - return empty array
+        filteredProjects = [];
+      }
+    }
+
     if (error) {
       return handleSupabaseError(error);
     }
 
     // Fetch mockup counts and previews for each project
     const projectsWithCounts = await Promise.all(
-      (projects || []).map(async (project) => {
+      filteredProjects.map(async (project) => {
         // Get mockup count
         const { count } = await supabaseServer
           .from('assets')

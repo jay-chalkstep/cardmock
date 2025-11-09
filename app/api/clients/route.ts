@@ -12,6 +12,9 @@ export const dynamic = 'force-dynamic';
  * GET /api/clients
  *
  * Get all clients for the current organization
+ *
+ * Query params:
+ * - parent_client_id?: string (optional filter by parent client)
  */
 export async function GET(request: NextRequest) {
   try {
@@ -19,13 +22,22 @@ export async function GET(request: NextRequest) {
     if (authResult instanceof Response) return authResult;
     const { orgId } = authResult;
 
-    logger.api('/api/clients', 'GET', { orgId });
+    const { searchParams } = new URL(request.url);
+    const parentClientId = searchParams.get('parent_client_id');
 
-    const { data: clients, error } = await supabaseServer
+    logger.api('/api/clients', 'GET', { orgId, parentClientId });
+
+    let query = supabaseServer
       .from('clients')
       .select('*')
-      .eq('organization_id', orgId)
-      .order('created_at', { ascending: false });
+      .eq('organization_id', orgId);
+
+    // Filter by parent client if provided
+    if (parentClientId) {
+      query = query.eq('parent_client_id', parentClientId);
+    }
+
+    const { data: clients, error } = await query.order('created_at', { ascending: false });
 
     if (error) {
       return handleSupabaseError(error);
@@ -48,7 +60,9 @@ export async function GET(request: NextRequest) {
  *   email?: string (optional),
  *   phone?: string (optional),
  *   address?: string (optional),
- *   notes?: string (optional)
+ *   notes?: string (optional),
+ *   ein?: string (optional),
+ *   parent_client_id?: string (optional)
  * }
  */
 export async function POST(request: NextRequest) {
@@ -58,7 +72,7 @@ export async function POST(request: NextRequest) {
     const { userId, orgId } = authResult;
 
     const body = await request.json();
-    const { name, email, phone, address, notes } = body;
+    const { name, email, phone, address, notes, ein, parent_client_id } = body;
 
     logger.api('/api/clients', 'POST', { orgId, userId });
 
@@ -78,6 +92,20 @@ export async function POST(request: NextRequest) {
       return badRequestResponse('Client name must be less than 200 characters');
     }
 
+    // Validate parent_client_id if provided
+    if (parent_client_id) {
+      const { data: parentClient } = await supabaseServer
+        .from('clients')
+        .select('id')
+        .eq('id', parent_client_id)
+        .eq('organization_id', orgId)
+        .single();
+
+      if (!parentClient) {
+        return badRequestResponse('Parent client not found');
+      }
+    }
+
     // Create client
     const { data: client, error } = await supabaseServer
       .from('clients')
@@ -87,6 +115,8 @@ export async function POST(request: NextRequest) {
         phone: phone?.trim() || null,
         address: address?.trim() || null,
         notes: notes?.trim() || null,
+        ein: ein?.trim() || null,
+        parent_client_id: parent_client_id || null,
         organization_id: orgId,
         created_by: userId,
       })

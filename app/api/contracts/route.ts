@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { getAuthContext } from '@/lib/api/auth';
+import { getAuthContext, isClient, getUserAssignedClientId } from '@/lib/api/auth';
 import { successResponse, errorResponse, badRequestResponse } from '@/lib/api/response';
 import { checkRequiredFields } from '@/lib/api/error-handler';
 import { handleSupabaseError } from '@/lib/api/error-handler';
@@ -32,6 +32,19 @@ export async function GET(request: NextRequest) {
     const typeFilter = searchParams.get('type');
 
     logger.api('/api/contracts', 'GET', { orgId, clientId, statusFilter, typeFilter });
+
+    // For Client-role users: Filter by their assigned client
+    const userIsClient = await isClient();
+    if (userIsClient) {
+      const assignedClientId = await getUserAssignedClientId();
+      if (assignedClientId) {
+        // Override any clientId query param with assigned client
+        clientId = assignedClientId;
+      } else {
+        // Client-role user with no client assignment - return empty array
+        return successResponse({ contracts: [] });
+      }
+    }
 
     // Build query - use separate selects to avoid join issues if tables don't exist
     let query = supabaseServer

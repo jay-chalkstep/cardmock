@@ -7,6 +7,8 @@ import { usePanelContext } from '@/lib/contexts/PanelContext';
 import GmailLayout from '@/components/layout/GmailLayout';
 import Toast from '@/components/Toast';
 import { EmailMockupEditor, EmailMockupList, EmailMockupPreview } from '@/components/email-mockups';
+import { DocumentViewer } from '@/components/contracts';
+import PaymentMethodForm from '@/components/contracts/PaymentMethodForm';
 import { Upload, Download, FileText, Trash2, Plus, Eye } from 'lucide-react';
 
 interface Client {
@@ -57,6 +59,7 @@ export default function ContractDetailPage() {
   const [documents, setDocuments] = useState<any[]>([]);
   const [documentsLoading, setDocumentsLoading] = useState(false);
   const [showDocumentUpload, setShowDocumentUpload] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState<any | null>(null);
   
   // Email mockups state
   const [showEmailMockupEditor, setShowEmailMockupEditor] = useState(false);
@@ -469,93 +472,163 @@ export default function ContractDetailPage() {
         );
       case 'documents':
         return (
-          <div className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Documents</h3>
-              <button
-                onClick={() => setShowDocumentUpload(true)}
-                className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 flex items-center gap-2"
-              >
-                <Upload size={16} />
-                Upload Document
-              </button>
-            </div>
-            {documentsLoading ? (
-              <div className="text-center text-gray-500 py-8">Loading documents...</div>
-            ) : documents.length === 0 ? (
-              <div className="text-center text-gray-500 py-8">
-                <FileText size={48} className="mx-auto mb-4 text-gray-300" />
-                <p>No documents uploaded yet.</p>
-                <p className="text-sm mt-2">Upload a Word document to get started.</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {documents.map((doc) => (
-                  <div
-                    key={doc.id}
-                    className="p-4 border border-gray-200 rounded-md hover:bg-gray-50 flex items-center justify-between"
-                  >
-                    <div className="flex items-center gap-3 flex-1">
-                      <FileText size={24} className="text-gray-400" />
-                      <div className="flex-1">
-                        <h4 className="font-medium text-gray-900">{doc.file_name}</h4>
-                        <div className="flex items-center gap-4 text-sm text-gray-500 mt-1">
-                          <span>Version {doc.version_number}</span>
-                          {doc.is_current && (
-                            <span className="px-2 py-0.5 bg-green-100 text-green-800 rounded-full text-xs">
-                              Current
-                            </span>
-                          )}
-                          <span>{new Date(doc.created_at).toLocaleDateString()}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <a
-                        href={doc.file_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded"
-                        title="Download"
-                      >
-                        <Download size={18} />
-                      </a>
-                      <button
-                        onClick={() => handleDeleteDocument(doc.id)}
-                        className="p-2 text-red-600 hover:text-red-900 hover:bg-red-50 rounded"
-                        title="Delete"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            {showDocumentUpload && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
-                  <h3 className="text-lg font-semibold mb-4">Upload Document</h3>
-                  <input
-                    type="file"
-                    accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        handleDocumentUpload(file);
-                      }
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <div className="flex gap-3 mt-4">
+          <div className="flex flex-col h-full">
+            {selectedDocument ? (
+              <div className="flex-1 flex flex-col">
+                <div className="p-4 border-b border-gray-200 bg-white">
+                  <div className="flex items-center justify-between">
                     <button
-                      onClick={() => setShowDocumentUpload(false)}
-                      className="flex-1 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+                      onClick={() => setSelectedDocument(null)}
+                      className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-2"
                     >
-                      Cancel
+                      ← Back to Documents
+                    </button>
+                    <button
+                      onClick={() => setShowDocumentUpload(true)}
+                      className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 flex items-center gap-2"
+                    >
+                      <Upload size={16} />
+                      Upload New Version
                     </button>
                   </div>
                 </div>
+                <div className="flex-1 overflow-hidden">
+                  <DocumentViewer
+                    document={selectedDocument}
+                    contractId={contractId}
+                    onVersionSelect={(version) => {
+                      // Handle version selection if needed
+                    }}
+                    onDownload={(url, fileName) => {
+                      const link = document.createElement('a');
+                      link.href = url;
+                      link.download = fileName;
+                      link.target = '_blank';
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                    }}
+                    onSendForSignature={(docId) => {
+                      // TODO: Implement DocuSign integration
+                      showToast('DocuSign integration coming soon', 'error');
+                    }}
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold">Documents</h3>
+                  <button
+                    onClick={() => setShowDocumentUpload(true)}
+                    className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 flex items-center gap-2"
+                  >
+                    <Upload size={16} />
+                    Upload Document
+                  </button>
+                </div>
+                {documentsLoading ? (
+                  <div className="text-center text-gray-500 py-8">Loading documents...</div>
+                ) : documents.length === 0 ? (
+                  <div className="text-center text-gray-500 py-8">
+                    <FileText size={48} className="mx-auto mb-4 text-gray-300" />
+                    <p>No documents uploaded yet.</p>
+                    <p className="text-sm mt-2">Upload a Word document to get started.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {documents.map((doc) => (
+                      <div
+                        key={doc.id}
+                        className="p-4 border border-gray-200 rounded-md hover:bg-gray-50 flex items-center justify-between cursor-pointer"
+                        onClick={() => setSelectedDocument(doc)}
+                      >
+                        <div className="flex items-center gap-3 flex-1">
+                          <FileText size={24} className="text-gray-400" />
+                          <div className="flex-1">
+                            <h4 className="font-medium text-gray-900">{doc.file_name}</h4>
+                            <div className="flex items-center gap-4 text-sm text-gray-500 mt-1">
+                              <span>Version {doc.version_number}</span>
+                              {doc.is_current && (
+                                <span className="px-2 py-0.5 bg-green-100 text-green-800 rounded-full text-xs">
+                                  Current
+                                </span>
+                              )}
+                              {doc.docu_sign_status && (
+                                <span className={`px-2 py-0.5 rounded-full text-xs ${
+                                  doc.docu_sign_status === 'signed' ? 'bg-blue-100 text-blue-800' :
+                                  doc.docu_sign_status === 'delivered' ? 'bg-yellow-100 text-yellow-800' :
+                                  'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {doc.docu_sign_status}
+                                </span>
+                              )}
+                              <span>{new Date(doc.created_at).toLocaleDateString()}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedDocument(doc);
+                            }}
+                            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded"
+                            title="View"
+                          >
+                            <Eye size={18} />
+                          </button>
+                          <a
+                            href={doc.file_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded"
+                            title="Download"
+                          >
+                            <Download size={18} />
+                          </a>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteDocument(doc.id);
+                            }}
+                            className="p-2 text-red-600 hover:text-red-900 hover:bg-red-50 rounded"
+                            title="Delete"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {showDocumentUpload && (
+                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+                      <h3 className="text-lg font-semibold mb-4">Upload Document</h3>
+                      <input
+                        type="file"
+                        accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            handleDocumentUpload(file);
+                          }
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                      <div className="flex gap-3 mt-4">
+                        <button
+                          onClick={() => setShowDocumentUpload(false)}
+                          className="flex-1 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -633,112 +706,66 @@ export default function ContractDetailPage() {
                 {paymentMethods.map((method) => (
                   <div
                     key={method.id}
-                    className="p-4 border border-gray-200 rounded-md hover:bg-gray-50 flex items-center justify-between"
+                    className="p-4 border border-gray-200 rounded-md hover:bg-gray-50"
                   >
-                    <div className="flex-1">
-                      <h4 className="font-medium text-gray-900">{method.type}</h4>
-                      <div className="text-sm text-gray-600 mt-1">
-                        {method.amount && <span>Amount: ${method.amount}</span>}
-                        {method.description && <span className="ml-4">{method.description}</span>}
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h4 className="font-medium text-gray-900 capitalize">
+                            {method.type.replace('_', ' ')}
+                          </h4>
+                          <span className={`px-2 py-1 text-xs rounded-full ${
+                            method.status === 'approved' ? 'bg-green-100 text-green-800' :
+                            method.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                            'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {method.status.replace('_', ' ')}
+                          </span>
+                        </div>
+                        <div className="text-sm text-gray-600 space-y-1">
+                          {method.details?.amount && (
+                            <div>Amount: ${parseFloat(method.details.amount).toFixed(2)}</div>
+                          )}
+                          {method.details?.card_number && (
+                            <div>Card Number: {method.details.card_number}</div>
+                          )}
+                          {method.details?.check_number && (
+                            <div>Check Number: {method.details.check_number}</div>
+                          )}
+                          {method.details?.payable_to && (
+                            <div>Payable To: {method.details.payable_to}</div>
+                          )}
+                          {method.details?.description && (
+                            <div>{method.details.description}</div>
+                          )}
+                          {method.details?.notes && (
+                            <div className="text-gray-500 italic">{method.details.notes}</div>
+                          )}
+                        </div>
+                        {method.approved_by && (
+                          <div className="text-xs text-gray-500 mt-2">
+                            Approved by {method.approved_by} on {method.approved_at ? new Date(method.approved_at).toLocaleDateString() : ''}
+                          </div>
+                        )}
                       </div>
-                      <div className="flex items-center gap-2 mt-2">
-                        <span className={`px-2 py-1 text-xs rounded-full ${
-                          method.status === 'approved' ? 'bg-green-100 text-green-800' :
-                          method.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                          'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {method.status.replace('_', ' ')}
-                        </span>
-                      </div>
+                      <button
+                        onClick={() => handleDeletePaymentMethod(method.id)}
+                        className="p-2 text-red-600 hover:text-red-900 hover:bg-red-50 rounded ml-4"
+                        title="Delete"
+                      >
+                        <Trash2 size={18} />
+                      </button>
                     </div>
-                    <button
-                      onClick={() => handleDeletePaymentMethod(method.id)}
-                      className="p-2 text-red-600 hover:text-red-900 hover:bg-red-50 rounded"
-                      title="Delete"
-                    >
-                      <Trash2 size={18} />
-                    </button>
                   </div>
                 ))}
               </div>
             )}
             {showPaymentMethodModal && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
-                  <h3 className="text-lg font-semibold mb-4">Add Payment Method</h3>
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      const formData = new FormData(e.currentTarget);
-                      handleCreatePaymentMethod({
-                        type: formData.get('type') as string,
-                        amount: formData.get('amount') ? parseFloat(formData.get('amount') as string) : null,
-                        description: formData.get('description') as string || null,
-                        status: 'pending_approval',
-                      });
-                    }}
-                    className="space-y-4"
-                  >
-                    <div>
-                      <label htmlFor="type" className="block text-sm font-medium mb-1">
-                        Type <span className="text-red-500">*</span>
-                      </label>
-                      <select
-                        id="type"
-                        name="type"
-                        required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="">Select type...</option>
-                        <option value="prepaid_card">Prepaid Card</option>
-                        <option value="check">Check</option>
-                        <option value="amazon_card">Amazon Card</option>
-                        <option value="other">Other</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label htmlFor="amount" className="block text-sm font-medium mb-1">
-                        Amount
-                      </label>
-                      <input
-                        id="amount"
-                        name="amount"
-                        type="number"
-                        step="0.01"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="0.00"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="description" className="block text-sm font-medium mb-1">
-                        Description
-                      </label>
-                      <textarea
-                        id="description"
-                        name="description"
-                        rows={3}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Additional details..."
-                      />
-                    </div>
-                    <div className="flex gap-3 pt-4">
-                      <button
-                        type="button"
-                        onClick={() => setShowPaymentMethodModal(false)}
-                        className="flex-1 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                        className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                      >
-                        Add Payment Method
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </div>
+              <PaymentMethodForm
+                isOpen={showPaymentMethodModal}
+                onClose={() => setShowPaymentMethodModal(false)}
+                onSubmit={handleCreatePaymentMethod}
+              />
             )}
           </div>
         );

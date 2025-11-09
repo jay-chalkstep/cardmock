@@ -4,6 +4,7 @@ import { successResponse, errorResponse, notFoundResponse } from '@/lib/api/resp
 import { handleSupabaseError } from '@/lib/api/error-handler';
 import { supabaseServer } from '@/lib/supabase-server';
 import { logger } from '@/lib/utils/logger';
+import { generateDiffSummaryFromUrls } from '@/lib/ai/document-diff';
 
 export const dynamic = 'force-dynamic';
 
@@ -62,32 +63,41 @@ export async function POST(
       });
     }
 
-    // TODO: Implement AI diff generation
-    // For now, return a placeholder
-    // This would use OpenAI or Anthropic API to compare document versions
-    // Extract text from Word documents using mammoth or docx package
-    // Send to AI service with prompt to generate diff summary
-    // Store result in contract_document_versions.diff_summary
-
-    const placeholderSummary = `Document version ${currentVersion.version_number} compared to version ${previousVersion.version_number}. AI diff generation not yet implemented.`;
+    // Generate AI diff summary
+    let diffSummary: string;
+    try {
+      diffSummary = await generateDiffSummaryFromUrls(
+        previousVersion.file_url,
+        currentVersion.file_url
+      );
+    } catch (error) {
+      logger.error('Failed to generate AI diff summary:', error);
+      
+      // Return error but don't fail the request
+      // The user can retry later
+      return errorResponse(
+        error instanceof Error ? error : new Error('Failed to generate diff summary'),
+        'Failed to generate AI diff summary. Please ensure OPENAI_API_KEY is configured and try again.'
+      );
+    }
 
     // Update version with diff summary
     const { error: updateError } = await supabaseServer
       .from('contract_document_versions')
       .update({
-        diff_summary: placeholderSummary,
+        diff_summary: diffSummary,
         diff_summary_generated_at: new Date().toISOString(),
       })
       .eq('id', currentVersion.id);
 
     if (updateError) {
       logger.error('Failed to update diff summary:', updateError);
+      return errorResponse(updateError, 'Failed to save diff summary');
     }
 
     return successResponse({ 
-      diff_summary: placeholderSummary,
-      generated_at: new Date().toISOString(),
-      note: 'AI diff generation not yet implemented. This is a placeholder.'
+      diff_summary: diffSummary,
+      generated_at: new Date().toISOString()
     });
   } catch (error) {
     return errorResponse(error, 'Failed to generate diff summary');

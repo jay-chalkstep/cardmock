@@ -225,6 +225,14 @@ export default function ProjectDetailPage() {
                 {project.client_name && (
                   <span className="text-gray-500 text-sm truncate">• {project.client_name}</span>
                 )}
+                {project.contract && (
+                  <span 
+                    className="text-blue-600 text-sm truncate cursor-pointer hover:underline"
+                    onClick={() => router.push(`/contracts/${project.contract.id}`)}
+                  >
+                    • Contract: {project.contract.contract_number}
+                  </span>
+                )}
               </div>
 
               {/* Divider */}

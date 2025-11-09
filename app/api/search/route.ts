@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { getAuthContext } from '@/lib/api/auth';
+import { getAuthContext, isClient, getUserAssignedClientId } from '@/lib/api/auth';
 import { successResponse, errorResponse } from '@/lib/api/response';
 import { createServerAdminClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/utils/logger';
@@ -58,12 +58,25 @@ export async function GET(request: NextRequest) {
     }
 
     // Search brands
-    const { data: brands, error: brandsError } = await supabase
+    let brandsQuery = supabase
       .from('brands')
       .select('id, company_name, domain')
       .eq('organization_id', orgId)
-      .or(`company_name.ilike.${searchTerm},domain.ilike.${searchTerm}`)
-      .limit(5);
+      .or(`company_name.ilike.${searchTerm},domain.ilike.${searchTerm}`);
+
+    // For Client-role users: Filter by their assigned client
+    const userIsClient = await isClient();
+    if (userIsClient) {
+      const assignedClientId = await getUserAssignedClientId();
+      if (assignedClientId) {
+        brandsQuery = brandsQuery.eq('client_id', assignedClientId);
+      } else {
+        // Client-role user with no client assignment - skip brands
+        brandsQuery = brandsQuery.eq('id', '00000000-0000-0000-0000-000000000000'); // Return no results
+      }
+    }
+
+    const { data: brands, error: brandsError } = await brandsQuery.limit(5);
 
     if (!brandsError && brands) {
       brands.forEach((brand) => {
@@ -97,12 +110,37 @@ export async function GET(request: NextRequest) {
     }
 
     // Search assets (check both name and mockup_name fields)
-    const { data: assets, error: assetsError } = await supabase
+    let assetsQuery = supabase
       .from('assets')
-      .select('id, name, mockup_name')
+      .select('id, name, mockup_name, contract_id')
       .eq('organization_id', orgId)
-      .or(`name.ilike.${searchTerm},mockup_name.ilike.${searchTerm}`)
-      .limit(5);
+      .or(`name.ilike.${searchTerm},mockup_name.ilike.${searchTerm}`);
+
+    // For Client-role users: Filter assets by contract -> client
+    if (userIsClient) {
+      const assignedClientId = await getUserAssignedClientId();
+      if (assignedClientId) {
+        // Get all contracts for the assigned client
+        const { data: contracts } = await supabase
+          .from('contracts')
+          .select('id')
+          .eq('client_id', assignedClientId)
+          .eq('organization_id', orgId);
+
+        const contractIds = contracts?.map(c => c.id) || [];
+        if (contractIds.length > 0) {
+          assetsQuery = assetsQuery.in('contract_id', contractIds);
+        } else {
+          // No contracts for this client - return no results
+          assetsQuery = assetsQuery.eq('id', '00000000-0000-0000-0000-000000000000'); // Return no results
+        }
+      } else {
+        // Client-role user with no client assignment - return no results
+        assetsQuery = assetsQuery.eq('id', '00000000-0000-0000-0000-000000000000'); // Return no results
+      }
+    }
+
+    const { data: assets, error: assetsError } = await assetsQuery.limit(5);
 
     if (!assetsError && assets) {
       assets.forEach((asset: any) => {

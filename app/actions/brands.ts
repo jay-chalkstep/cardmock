@@ -67,6 +67,7 @@ export async function saveBrand(data: {
           domain: data.domain,
           description: data.description || null,
           organization_id: orgId,
+          client_id: (data as any).client_id || null, // Support client_id if provided
         }])
         .select()
         .single();

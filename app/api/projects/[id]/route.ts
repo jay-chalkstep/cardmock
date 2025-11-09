@@ -27,10 +27,10 @@ export async function GET(
 
     logger.api(`/api/projects/${id}`, 'GET', { orgId });
 
-    // Fetch project with workflow JOIN
+    // Fetch project with workflow and contract JOIN
     const { data: project, error } = await supabaseServer
       .from('projects')
-      .select('*, workflows(*)')
+      .select('*, workflows(*), contract:contracts(*, client:clients(*))')
       .eq('id', id)
       .eq('organization_id', orgId)
       .single();
@@ -57,13 +57,15 @@ export async function GET(
 
     // Rename workflows (table name) to workflow (expected by UI)
     // Supabase may return workflows as an array or object depending on the relationship
-    const { workflows, ...projectData } = project;
+    const { workflows, contract, ...projectData } = project;
     const workflowData = Array.isArray(workflows) ? workflows[0] : workflows;
+    const contractData = Array.isArray(contract) ? contract[0] : contract;
 
     return successResponse({
       project: {
         ...projectData,
         workflow: workflowData || null, // Rename to match Project interface
+        contract: contractData || null, // Include contract data
         mockup_count: count || 0,
         mockup_previews: mockupPreviews || [],
       },
@@ -121,7 +123,7 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { name, client_name, description, status, color, workflow_id } = body;
+    const { name, client_name, description, status, color, workflow_id, contract_id } = body;
 
     // Prepare update data
     const updateData: any = {};
@@ -190,6 +192,25 @@ export async function PATCH(
       }
 
       updateData.workflow_id = workflow_id;
+    }
+
+    // Handle contract_id update
+    if (contract_id !== undefined) {
+      // Validate contract exists if not null
+      if (contract_id !== null) {
+        const { data: contract, error: contractError } = await supabaseServer
+          .from('contracts')
+          .select('id')
+          .eq('id', contract_id)
+          .eq('organization_id', orgId)
+          .single();
+
+        if (contractError || !contract) {
+          return notFoundResponse('Contract not found');
+        }
+      }
+
+      updateData.contract_id = contract_id;
     }
 
     // Perform update

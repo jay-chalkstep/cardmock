@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
-import { getAuthContext } from '@/lib/api/auth';
-import { successResponse, errorResponse, badRequestResponse, notFoundResponse } from '@/lib/api/response';
+import { getAuthContext, isClient, getUserAssignedClientId } from '@/lib/api/auth';
+import { successResponse, errorResponse, badRequestResponse, notFoundResponse, forbiddenResponse } from '@/lib/api/response';
 import { handleSupabaseError } from '@/lib/api/error-handler';
 import { supabaseServer } from '@/lib/supabase-server';
 import { logger } from '@/lib/utils/logger';
@@ -36,6 +36,18 @@ export async function GET(
 
     if (error || !contract) {
       return notFoundResponse('Contract not found');
+    }
+
+    // For Client-role users: Verify contract belongs to their assigned client
+    const userIsClient = await isClient();
+    if (userIsClient) {
+      const assignedClientId = await getUserAssignedClientId();
+      if (!assignedClientId) {
+        return forbiddenResponse('Client assignment required');
+      }
+      if (contract.client_id !== assignedClientId) {
+        return forbiddenResponse('Access denied: Contract does not belong to your assigned client');
+      }
     }
 
     return successResponse({ contract });
