@@ -3,7 +3,7 @@
  * Contains mockup info, approval status, annotation tools, and action buttons
  */
 
-import { Calendar, Loader2, Sparkles, Download, Trash2 } from 'lucide-react';
+import { Calendar, Download, Trash2 } from 'lucide-react';
 import AnnotationToolbar from '@/components/collaboration/AnnotationToolbar';
 import ApprovalStatusBanner from '@/components/approvals/ApprovalStatusBanner';
 import FinalApprovalBanner from '@/components/approvals/FinalApprovalBanner';
@@ -31,8 +31,6 @@ interface MockupDetailSidebarProps {
   onZoomOut: () => void;
   onZoomReset: () => void;
   // Actions
-  analyzing: boolean;
-  onAnalyzeWithAI: () => void;
   showExportMenu: boolean;
   onToggleExportMenu: () => void;
   onExport: (includeAnnotations: boolean) => void;
@@ -63,8 +61,6 @@ export default function MockupDetailSidebar({
   onZoomIn,
   onZoomOut,
   onZoomReset,
-  analyzing,
-  onAnalyzeWithAI,
   showExportMenu,
   onToggleExportMenu,
   onExport,
@@ -166,25 +162,6 @@ export default function MockupDetailSidebar({
 
       {/* Bottom Section - Action Buttons */}
       <div className="mt-auto p-4 space-y-2 border-t border-[var(--border-main)] bg-[var(--bg-secondary)]">
-        <button
-          onClick={onAnalyzeWithAI}
-          disabled={analyzing}
-          className="w-full px-3 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2 text-sm disabled:opacity-50"
-          data-tour="analyze-button"
-        >
-          {analyzing ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Analyzing...
-            </>
-          ) : (
-            <>
-              <Sparkles className="h-4 w-4" />
-              Analyze with AI
-            </>
-          )}
-        </button>
-
         {/* Export Menu */}
         <div className="relative">
           <button

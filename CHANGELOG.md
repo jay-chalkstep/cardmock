@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.7.0] - 2025-11-09
+
+### Removed
+
+#### AI Features Removal
+- **Removed all AI-powered features** for simplification and stability
+  - Removed automated visual tagging
+  - Removed text recognition (OCR)
+  - Removed color palette extraction
+  - Removed accessibility analysis
+  - Removed semantic search
+  - Removed visual similarity search
+  - Removed folder suggestions
+  - Removed AI onboarding tour
+- **Database Changes**
+  - Dropped `mockup_ai_metadata` table
+  - Dropped `folder_suggestions` table
+  - Dropped `search_queries` table
+  - Removed pgvector extension (if not used elsewhere)
+- **Code Cleanup**
+  - Removed all AI API routes (`/api/ai/*`)
+  - Removed all AI components (`components/ai/*`)
+  - Removed all AI library functions (`lib/ai/*`)
+  - Removed AI hooks (`useAIMetadata`)
+  - Removed AI types (`types/ai.ts`)
+  - Removed AI context (`AIContext`)
+  - Removed OpenAI package dependency
+
+---
+
 ## [3.6.0] - 2025-10-28
 
 ### 🎉 **MAJOR FEATURE - User-Level Approval Tracking & Final Approval System**

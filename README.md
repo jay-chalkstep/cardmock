@@ -129,17 +129,6 @@ Built for teams who need more than basic file storage—Aiproval provides contex
 - **Real-Time Counts** on folders
 - **Search Within Folders** for scoped discovery
 
-### AI-Powered Features ⭐️ NEW in v3.2
-- **Automated Visual Tagging** - AI extracts visual elements, colors, composition, brands, and objects
-- **Text Recognition (OCR)** - Automatically extract text from mockup images
-- **Color Palette Extraction** - Identify dominant, accent, and complete color schemes
-- **Accessibility Analysis** - WCAG compliance checking with contrast ratios and readability scores
-- **Natural Language Search** - Find mockups using plain English queries
-- **Visual Similarity Search** - Discover mockups with similar visual characteristics
-- **Folder Suggestions** - AI recommends best folders for organizing mockups
-- **Interactive Onboarding** - Spotlight tour to introduce AI features to new users
-- **Confidence Scoring** - All AI predictions include confidence levels
-- **Feedback Loop** - Thumbs up/down to improve AI suggestions over time
 
 ---
 

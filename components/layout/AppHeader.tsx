@@ -11,7 +11,6 @@ import {
   HelpCircle,
 } from 'lucide-react';
 import { usePanelContext } from '@/lib/contexts/PanelContext';
-import AIGlobalSearch from '@/components/search/AIGlobalSearch';
 
 export default function AppHeader() {
   const { visibility, setVisibility } = usePanelContext();
@@ -33,10 +32,6 @@ export default function AppHeader() {
     console.log('Notifications opened');
   };
 
-  const handleAIAssistant = () => {
-    // TODO: Toggle AI assistant panel
-    console.log('AI assistant toggled');
-  };
 
   const handleSettings = () => {
     // TODO: Open settings menu
@@ -67,7 +62,7 @@ export default function AppHeader() {
 
       {/* Center Section - Global Search */}
       <div className="flex-1 max-w-2xl mx-auto">
-        <AIGlobalSearch />
+        {/* Search functionality removed */}
       </div>
 
       {/* Right Section - Tools + User */}
@@ -98,14 +93,6 @@ export default function AppHeader() {
           )}
         </button>
 
-        {/* AI Assistant */}
-        <button
-          onClick={handleAIAssistant}
-          className="p-2 rounded-lg hover:bg-[var(--bg-hover)] transition-colors"
-          title="AI Assistant"
-        >
-          <Sparkles size={20} className="text-[var(--accent-purple)]" />
-        </button>
 
         {/* Settings/Help Dropdown */}
         <div className="relative group">

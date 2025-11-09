@@ -10,16 +10,13 @@ import {
   Loader2,
   Calendar,
   MessageSquare,
-  Check,
-  Sparkles
+  Check
 } from 'lucide-react';
 import Toast from '@/components/Toast';
 import MockupCanvas from '@/components/collaboration/MockupCanvas';
 import AnnotationToolbar from '@/components/collaboration/AnnotationToolbar';
 import CommentsSidebar from '@/components/collaboration/CommentsSidebar';
 import StageActionModal from '@/components/projects/StageActionModal';
-import SimilarMockupsModal from '@/components/ai/SimilarMockupsModal';
-import AIOnboardingTour from '@/components/ai/AIOnboardingTour';
 import GmailLayout from '@/components/layout/GmailLayout';
 import PreviewArea from '@/components/preview/PreviewArea';
 import { usePanelContext } from '@/lib/contexts/PanelContext';
@@ -27,7 +24,6 @@ import ApprovalStatusBanner from '@/components/approvals/ApprovalStatusBanner';
 import ApprovalTimelinePanel from '@/components/approvals/ApprovalTimelinePanel';
 import FinalApprovalBanner from '@/components/approvals/FinalApprovalBanner';
 import type { MockupStageProgressWithDetails, Project, Workflow, AssetApprovalSummary, ApprovalProgress } from '@/lib/supabase';
-import type { AIMetadata } from '@/types/ai';
 
 interface ToastMessage {
   message: string;
@@ -107,11 +103,8 @@ export default function MockupDetailPage({ params }: { params: { id: string } })
   // Toast notifications
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
-  // AI features state
-  const [aiMetadata, setAiMetadata] = useState<AIMetadata | null>(null);
-  const [analyzing, setAnalyzing] = useState(false);
-  const [showSimilarModal, setShowSimilarModal] = useState(false);
-  const [rightPanelTab, setRightPanelTab] = useState<'comments' | 'ai' | 'approvals'>('comments');
+  // Right panel tab state
+  const [rightPanelTab, setRightPanelTab] = useState<'comments' | 'approvals'>('comments');
 
   // Approval state
   const [approvalSummary, setApprovalSummary] = useState<AssetApprovalSummary | null>(null);
@@ -170,7 +163,6 @@ export default function MockupDetailPage({ params }: { params: { id: string } })
       fetchMockupData();
       fetchComments();
       fetchStageProgress();
-      fetchAIMetadata();
       fetchApprovals();
       // Note: Realtime subscriptions removed due to RLS blocking with Clerk Auth
       // Using polling fallback instead
@@ -458,109 +450,6 @@ export default function MockupDetailPage({ params }: { params: { id: string } })
     }
   };
 
-  // Helper function to transform API response to AIMetadata type
-  const transformAIMetadata = (dbMetadata: any): AIMetadata | null => {
-    if (!dbMetadata) return null;
-
-    return {
-      id: dbMetadata.id,
-      mockupId: dbMetadata.mockup_id,
-      autoTags: dbMetadata.auto_tags || {
-        visual: [],
-        colors: [],
-        composition: [],
-        brands: [],
-        objects: [],
-        confidence: 0
-      },
-      colorPalette: dbMetadata.color_palette || {
-        dominant: [],
-        accent: [],
-        neutral: []
-      },
-      extractedText: dbMetadata.extracted_text || null,
-      accessibilityScore: dbMetadata.accessibility_score || {
-        wcagLevel: null,
-        contrastRatio: null,
-        readability: null,
-        issues: [],
-        suggestions: []
-      },
-      embedding: dbMetadata.embedding,
-      searchText: dbMetadata.search_text || '',
-      lastAnalyzed: dbMetadata.last_analyzed || new Date().toISOString(),
-      analysisVersion: dbMetadata.analysis_version
-    };
-  };
-
-  // AI metadata handlers
-  const fetchAIMetadata = async () => {
-    console.log(`\n=== FETCH AI METADATA (ID: ${params.id}) ===`);
-
-    try {
-      console.log('Fetching AI metadata from API...');
-
-      const response = await fetch(`/api/ai/analyze?mockupId=${params.id}`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('❌ API error:', response.status, errorData);
-        throw new Error(`Failed to fetch AI metadata: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      if (data.analyzed && data.metadata) {
-        console.log('✅ AI metadata found');
-        const transformedMetadata = transformAIMetadata(data.metadata);
-        setAiMetadata(transformedMetadata);
-      } else {
-        console.log('No AI metadata available');
-        setAiMetadata(null);
-      }
-
-      console.log('=== END FETCH AI METADATA ===\n');
-    } catch (error) {
-      console.error('❌ Error fetching AI metadata:', error);
-      console.error('Error details:', error);
-      setAiMetadata(null);
-    }
-  };
-
-  const handleAnalyzeWithAI = async () => {
-    setAnalyzing(true);
-    try {
-      const response = await fetch('/api/ai/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mockupId: params.id }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to analyze mockup');
-      }
-
-      const data = await response.json();
-      
-      if (data.success) {
-        // After successful analysis, refetch the full metadata from the database
-        // This ensures we have the complete metadata with all fields
-        await fetchAIMetadata();
-        showToast('AI analysis complete!', 'success');
-      } else {
-        throw new Error('Invalid response from analysis API');
-      }
-    } catch (error) {
-      console.error('Error analyzing mockup:', error);
-      showToast(error instanceof Error ? error.message : 'Failed to analyze mockup with AI', 'error');
-    } finally {
-      setAnalyzing(false);
-    }
-  };
 
   const handleDeleteMockup = async () => {
     if (!confirm('Are you sure you want to delete this mockup? This action cannot be undone.')) {
@@ -696,25 +585,6 @@ export default function MockupDetailPage({ params }: { params: { id: string } })
 
       {/* Bottom Section - Action Buttons */}
       <div className="mt-auto p-4 space-y-2 border-t border-[var(--border-main)] bg-[var(--bg-secondary)]">
-        <button
-          onClick={handleAnalyzeWithAI}
-          disabled={analyzing}
-          className="w-full px-3 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2 text-sm disabled:opacity-50"
-          data-tour="analyze-button"
-        >
-          {analyzing ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Analyzing...
-            </>
-          ) : (
-            <>
-              <Sparkles className="h-4 w-4" />
-              Analyze with AI
-            </>
-          )}
-        </button>
-
         {/* Export Menu */}
         <div className="relative">
           <button
@@ -878,22 +748,6 @@ export default function MockupDetailPage({ params }: { params: { id: string } })
         />
       )}
 
-      {/* Similar Mockups Modal */}
-      {showSimilarModal && mockup && (
-        <SimilarMockupsModal
-          mockupId={params.id}
-          mockupName={mockup.mockup_name}
-          isOpen={showSimilarModal}
-          onClose={() => setShowSimilarModal(false)}
-        />
-      )}
-
-      {/* AI Onboarding Tour */}
-      <AIOnboardingTour
-        onComplete={() => {
-          showToast('AI tour complete! Start exploring.', 'success');
-        }}
-      />
 
       {/* Toast Notifications */}
       <div className="fixed bottom-4 right-4 z-50 space-y-2">
