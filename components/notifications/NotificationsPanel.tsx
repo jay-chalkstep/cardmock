@@ -30,7 +30,7 @@ interface Notification {
 interface NotificationsPanelProps {
   isOpen: boolean;
   onClose: () => void;
-  triggerRef?: React.RefObject<HTMLButtonElement>;
+  triggerRef?: React.RefObject<HTMLButtonElement | null>;
 }
 
 export default function NotificationsPanel({

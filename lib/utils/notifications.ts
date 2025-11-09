@@ -47,7 +47,10 @@ export async function createNotification(
     });
 
     if (error) {
-      logger.error('Failed to create notification', error, params);
+      logger.error('Failed to create notification', error, {
+        userId: params.userId,
+        type: params.type,
+      });
       // Don't throw - notification creation failure shouldn't break the main flow
     } else {
       logger.info('Notification created successfully', {
@@ -56,7 +59,10 @@ export async function createNotification(
       });
     }
   } catch (error) {
-    logger.error('Error creating notification', error, params);
+    logger.error('Error creating notification', error, {
+      userId: params.userId,
+      type: params.type,
+    });
     // Don't throw - notification creation failure shouldn't break the main flow
   }
 }

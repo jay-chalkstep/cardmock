@@ -113,10 +113,10 @@ export default function SettingsModal({
   if (!isOpen) return null;
 
   const tabs: Array<{ id: Tab; label: string; icon: React.ComponentType<{ size?: number; className?: string }> }> = [
-    { id: 'preferences', label: 'Preferences', icon: Bell },
-    { id: 'account', label: 'Account', icon: User },
-    ...(isAdmin ? [{ id: 'organization', label: 'Organization', icon: Building2 }] : []),
-    { id: 'help', label: 'Help & Support', icon: HelpCircle },
+    { id: 'preferences' as Tab, label: 'Preferences', icon: Bell },
+    { id: 'account' as Tab, label: 'Account', icon: User },
+    ...(isAdmin ? [{ id: 'organization' as Tab, label: 'Organization', icon: Building2 }] : []),
+    { id: 'help' as Tab, label: 'Help & Support', icon: HelpCircle },
   ];
 
   return (
