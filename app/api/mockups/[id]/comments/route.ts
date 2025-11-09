@@ -73,13 +73,14 @@ export async function POST(
     const isCreator = mockup.created_by === userId;
     let isReviewer = false;
 
-    if (!isCreator) {
+    if (!isCreator && mockup.project_id) {
+      // Check if user is a reviewer for this project
       const { data: reviewerAccess } = await supabaseServer
-        .from('mockup_reviewers')
+        .from('project_stage_reviewers')
         .select('id')
-        .eq('asset_id', mockupId)
-        .eq('reviewer_id', userId)
-        .single();
+        .eq('project_id', mockup.project_id)
+        .eq('user_id', userId)
+        .maybeSingle();
 
       isReviewer = !!reviewerAccess;
     }
@@ -120,18 +121,8 @@ export async function POST(
       return handleSupabaseError(createError);
     }
 
-    // Mark reviewer as "viewed" if they haven't viewed yet
-    if (isReviewer) {
-      await supabaseServer
-        .from('mockup_reviewers')
-        .update({
-          status: 'viewed',
-          viewed_at: new Date().toISOString()
-        })
-        .eq('asset_id', mockupId)
-        .eq('reviewer_id', userId)
-        .eq('status', 'pending'); // Only update if still pending
-    }
+    // Note: Reviewer viewing status is now tracked via project_stage_reviewers
+    // No need to update a separate table for viewed status
 
     return successResponse({ comment }, 201);
   } catch (error) {

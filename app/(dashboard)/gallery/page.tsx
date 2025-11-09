@@ -113,7 +113,15 @@ export default function GalleryPage() {
       const response = await fetch('/api/folders');
       if (!response.ok) throw new Error('Failed to fetch folders');
 
-      const { folders: fetchedFolders } = await response.json();
+      const result = await response.json();
+      const fetchedFolders = result.data?.folders || result.folders || [];
+      
+      if (!Array.isArray(fetchedFolders)) {
+        console.error('Invalid folders response:', result);
+        setFolders([]);
+        return;
+      }
+
       const folderTree = buildFolderTree(fetchedFolders);
       setFolders(folderTree);
 

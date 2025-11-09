@@ -71,7 +71,8 @@ export function useAIMetadata({ mockupId, enabled = true }: UseAIMetadataOptions
         throw new Error(errorData.error || `Failed to fetch AI metadata: ${response.status}`);
       }
 
-      const data = await response.json();
+      const result = await response.json();
+      const data = result.data || result;
 
       if (data.analyzed && data.metadata) {
         const transformedMetadata = transformAIMetadata(data.metadata);
@@ -111,9 +112,10 @@ export function useAIMetadata({ mockupId, enabled = true }: UseAIMetadataOptions
         throw new Error(errorData.error || 'Failed to analyze mockup');
       }
 
-      const data = await response.json();
+      const result = await response.json();
+      const data = result.data || result;
 
-      if (data.success) {
+      if (result.success || data.metadata) {
         // Refetch metadata after successful analysis
         await fetchAIMetadata();
         logger.info('AI analysis completed successfully', { mockupId });

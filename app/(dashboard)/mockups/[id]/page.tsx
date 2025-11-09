@@ -227,13 +227,14 @@ export default function MockupDetailPage({ params }: { params: { id: string } })
 
       setMockup(data);
       
-      // Check if user is a reviewer for this mockup
-      if (user?.id && data.created_by !== user.id) {
+      // Check if user is a reviewer for this mockup's project
+      // Reviewers are assigned at the project level via project_stage_reviewers
+      if (user?.id && data.created_by !== user.id && data.project_id) {
         const { data: reviewerData, error: reviewerError } = await supabase
-          .from('mockup_reviewers')
+          .from('project_stage_reviewers')
           .select('id')
-          .eq('asset_id', params.id)
-          .eq('reviewer_id', user.id)
+          .eq('project_id', data.project_id)
+          .eq('user_id', user.id)
           .maybeSingle();
         
         if (reviewerError) {
@@ -811,7 +812,7 @@ export default function MockupDetailPage({ params }: { params: { id: string } })
         >
           <Check className="h-4 w-4 inline mr-2" />
           Approvals
-          {approvalSummary && Object.keys(approvalSummary.approvals_by_stage).length > 0 && (
+          {approvalSummary && approvalSummary.approvals_by_stage && Object.keys(approvalSummary.approvals_by_stage).length > 0 && (
             <span className="ml-2 px-2 py-0.5 bg-green-200 text-green-700 text-xs rounded-full">
               {Object.values(approvalSummary.approvals_by_stage).flat().length}
             </span>

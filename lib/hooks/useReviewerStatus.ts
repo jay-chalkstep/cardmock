@@ -35,11 +35,24 @@ export function useReviewerStatus({
 
       logger.db('Checking reviewer status', { mockupId, userId });
 
+      // First, get the mockup's project_id
+      const { data: mockup, error: mockupError } = await supabase
+        .from('assets')
+        .select('project_id')
+        .eq('id', mockupId)
+        .single();
+
+      if (mockupError || !mockup?.project_id) {
+        setIsReviewer(false);
+        return;
+      }
+
+      // Check if user is a reviewer for this project
       const { data: reviewerData, error: reviewerError } = await supabase
-        .from('mockup_reviewers')
+        .from('project_stage_reviewers')
         .select('id')
-        .eq('asset_id', mockupId)
-        .eq('reviewer_id', userId)
+        .eq('project_id', mockup.project_id)
+        .eq('user_id', userId)
         .maybeSingle();
 
       if (reviewerError) {
