@@ -239,7 +239,8 @@ export async function POST(request: NextRequest) {
 
     // Send notifications to organization members (non-blocking)
     try {
-      const { data: memberships } = await clerkClient().organizations.getOrganizationMembershipList({
+      const client = await clerkClient();
+      const { data: memberships } = await client.organizations.getOrganizationMembershipList({
         organizationId: orgId,
       });
 
@@ -249,9 +250,8 @@ export async function POST(request: NextRequest) {
 
       if (memberIds.length > 0) {
         const clientName = (contract.clients as any)?.name || 'Unknown Client';
-        const userName = await clerkClient().users.getUser(userId).then(u => 
-          u.fullName || u.firstName || u.emailAddresses[0]?.emailAddress || 'Unknown User'
-        ).catch(() => 'Unknown User');
+        const user = await client.users.getUser(userId);
+        const userName = user.fullName || user.firstName || user.emailAddresses[0]?.emailAddress || 'Unknown User';
 
         await createContractNotification(
           memberIds,

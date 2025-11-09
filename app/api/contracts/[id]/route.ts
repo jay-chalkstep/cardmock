@@ -119,7 +119,8 @@ export async function PATCH(
     // Send notifications if status changed (non-blocking)
     if (status !== undefined && oldContract && oldContract.status !== status) {
       try {
-        const { data: memberships } = await clerkClient().organizations.getOrganizationMembershipList({
+        const client = await clerkClient();
+        const { data: memberships } = await client.organizations.getOrganizationMembershipList({
           organizationId: orgId,
         });
 
@@ -128,9 +129,8 @@ export async function PATCH(
           .filter((id): id is string => !!id);
 
         if (memberIds.length > 0) {
-          const userName = await clerkClient().users.getUser(authResult.userId).then(u => 
-            u.fullName || u.firstName || u.emailAddresses[0]?.emailAddress || 'Unknown User'
-          ).catch(() => 'Unknown User');
+          const user = await client.users.getUser(userId);
+          const userName = user.fullName || user.firstName || user.emailAddresses[0]?.emailAddress || 'Unknown User';
 
           await createContractNotification(
             memberIds,
