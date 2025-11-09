@@ -434,7 +434,19 @@ export default function MockupCanvas({
         })
       });
 
-      if (!response.ok) throw new Error('Failed to create comment');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error || errorData.message || 'Failed to create comment';
+        console.error('Comment creation failed:', {
+          status: response.status,
+          error: errorMessage,
+          response: errorData
+        });
+        throw new Error(errorMessage);
+      }
+
+      const result = await response.json();
+      console.log('Comment created successfully:', result);
 
       // Reset state
       setCommentText('');
@@ -446,7 +458,7 @@ export default function MockupCanvas({
       onCommentCreate();
     } catch (error) {
       console.error('Error creating comment:', error);
-      alert('Failed to create comment');
+      alert(error instanceof Error ? error.message : 'Failed to create comment');
     }
   };
 

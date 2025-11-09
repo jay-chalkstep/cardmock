@@ -274,9 +274,10 @@ export default function MockupDetailPage({ params }: { params: { id: string } })
         throw new Error(`Failed to fetch comments: ${response.status}`);
       }
 
-      const { comments } = await response.json();
+      const result = await response.json();
+      const comments = result.data?.comments || result.comments || [];
       console.log('✅ Comments fetched:', comments?.length || 0);
-      setComments(comments || []);
+      setComments(comments);
       console.log('=== END FETCH COMMENTS ===\n');
     } catch (error) {
       console.error('❌ Error fetching comments:', error);
