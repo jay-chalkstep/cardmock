@@ -4,6 +4,7 @@ import { successResponse, errorResponse, badRequestResponse, notFoundResponse, f
 import { handleSupabaseError } from '@/lib/api/error-handler';
 import { supabase } from '@/lib/supabase';
 import { clerkClient } from '@clerk/nextjs/server';
+import { createNotificationsForUsers } from '@/lib/utils/notifications';
 import { logger } from '@/lib/utils/logger';
 
 // Mark as dynamic to prevent build-time evaluation
@@ -100,7 +101,45 @@ export async function POST(
       .eq('asset_id', mockupId)
       .order('stage_order', { ascending: true });
 
-    // TODO: Send "Asset Approved" email to all stakeholders
+    // Create notifications for all stakeholders (creator and reviewers)
+    const notificationUserIds: string[] = [];
+    
+    // Add creator if different from approver
+    if (mockup.created_by && mockup.created_by !== userId) {
+      notificationUserIds.push(mockup.created_by);
+    }
+
+    // Get all reviewers who participated
+    const { data: reviewers } = await supabase
+      .from('project_stage_reviewers')
+      .select('user_id')
+      .eq('project_id', mockup.project_id);
+
+    if (reviewers) {
+      reviewers.forEach((r: any) => {
+        if (r.user_id !== userId && !notificationUserIds.includes(r.user_id)) {
+          notificationUserIds.push(r.user_id);
+        }
+      });
+    }
+
+    // Create notifications for all stakeholders
+    if (notificationUserIds.length > 0) {
+      await createNotificationsForUsers(
+        notificationUserIds,
+        orgId,
+        'final_approval',
+        `Final approval: ${mockup.mockup_name}`,
+        `${userName} gave final approval to ${mockup.mockup_name}. All workflow stages are complete.`,
+        `/mockups/${mockupId}`,
+        mockupId,
+        mockup.project_id,
+        {
+          approved_by: userName,
+          project_name: project.name,
+        }
+      );
+    }
 
     logger.info('Final approval recorded successfully', {
       mockupId,

@@ -8,6 +8,7 @@ import {
   sendChangesRequestedNotification,
   sendAllStagesApprovedNotification
 } from '@/lib/email/stage-notifications';
+import { createNotificationsForUsers, createNotification } from '@/lib/utils/notifications';
 import { logger } from '@/lib/utils/logger';
 import type { MockupStageProgress, WorkflowStage, ProjectStageReviewer } from '@/lib/supabase';
 
@@ -173,7 +174,7 @@ export async function POST(
           .eq('stage_order', nextStage.order);
 
         if (nextStageReviewers && nextStageReviewers.length > 0) {
-          // Send notification to each reviewer (in parallel)
+          // Send email notification to each reviewer (in parallel)
           await Promise.allSettled(
             nextStageReviewers.map((reviewer: ProjectStageReviewer) =>
               sendStageReviewNotification({
@@ -189,6 +190,23 @@ export async function POST(
                 logger.error('Failed to send stage review notification', err, { reviewerId: reviewer.user_id });
               })
             )
+          );
+
+          // Create in-app notifications for next stage reviewers
+          await createNotificationsForUsers(
+            nextStageReviewers.map((r: ProjectStageReviewer) => r.user_id),
+            orgId,
+            'approval_request',
+            `Review needed: ${mockup.mockup_name}`,
+            `${userName} approved Stage ${stageOrder}. ${mockup.mockup_name} is now in "${nextStage.name}" and needs your review.`,
+            `/mockups/${mockupId}`,
+            mockupId,
+            mockup.project_id,
+            {
+              stage_name: nextStage.name,
+              stage_order: nextStage.order,
+              project_name: project.name,
+            }
           );
 
           // Mark notifications as sent
@@ -216,6 +234,22 @@ export async function POST(
           total_stages: stages.length
         }).catch(err => {
           logger.error('Failed to send all approved notification', err);
+        });
+
+        // Create in-app notification for creator (final approval needed)
+        await createNotification({
+          userId: mockup.created_by,
+          organizationId: orgId,
+          type: 'final_approval',
+          title: `All stages approved: ${mockup.mockup_name}`,
+          message: `All ${stages.length} workflow stages have been approved. Final approval is needed.`,
+          linkUrl: `/mockups/${mockupId}`,
+          relatedAssetId: mockupId,
+          relatedProjectId: mockup.project_id,
+          metadata: {
+            total_stages: stages.length,
+            project_name: project.name,
+          },
         });
       }
 
@@ -282,6 +316,24 @@ export async function POST(
         notes
       }).catch(err => {
         logger.error('Failed to send changes requested notification', err);
+      });
+
+      // Create in-app notification for creator
+      await createNotification({
+        userId: mockup.created_by,
+        organizationId: orgId,
+        type: 'changes_requested',
+        title: `Changes requested: ${mockup.mockup_name}`,
+        message: `${userName} requested changes in "${currentStage.name}". The mockup has been reset to Stage 1.`,
+        linkUrl: `/mockups/${mockupId}`,
+        relatedAssetId: mockupId,
+        relatedProjectId: mockup.project_id,
+        metadata: {
+          stage_name: currentStage.name,
+          stage_order: stageOrder,
+          requested_by: userName,
+          notes,
+        },
       });
 
       // Fetch updated progress for response

@@ -1,4 +1,4 @@
-# Aiproval v3.7.0
+# Aiproval v3.8.0
 
 > Multi-tenant SaaS for brand asset management and collaborative mockup review with user-level approval tracking
 
@@ -17,6 +17,8 @@ A comprehensive platform for design teams, marketing departments, and agencies t
 - 🎨 **Design** professional mockups using an interactive canvas editor
 - 👥 **Collaborate** with visual annotations, comments, and structured review workflows
 - ✅ **Review & Approve** mockups with approval tracking and email notifications
+- 🔔 **Notifications** - In-app notification system for approvals, comments, and workflow updates ⭐️ NEW
+- ⚙️ **Settings** - Comprehensive settings modal with preferences, account, and organization management ⭐️ NEW
 - 📊 **Track** complete audit trail of edits, resolutions, and feedback history
 
 Built for teams who need more than basic file storage—Aiproval provides context-aware collaboration with visual feedback directly on mockup designs, organized by client projects with customizable approval workflows.
@@ -34,6 +36,26 @@ Built for teams who need more than basic file storage—Aiproval provides contex
 - **Responsive Navigation** - NavRail present on all pages with consistent behavior
 - **Improved Scrolling** - Fixed overflow issues for seamless content browsing
 - **Clear Visual Hierarchy** - Color legends positioned for maximum visibility
+
+### Notifications System ⭐️ NEW in v3.8.0
+- **In-App Notifications** - Real-time notification system with dropdown panel
+- **Notification Types** - Approval requests, approval received, comments, stage progress, final approval, changes requested
+- **Unread Badge** - Visual indicator showing unread notification count
+- **Mark as Read** - Click to mark individual notifications as read
+- **Mark All as Read** - Bulk action to clear all unread notifications
+- **Auto-Navigation** - Click notification to navigate to related asset/project
+- **Real-Time Updates** - Polling system checks for new notifications every 30 seconds
+- **Notification History** - Persistent storage in database for full notification history
+- **Smart Grouping** - Notifications grouped by date with visual indicators
+
+### Settings & Preferences ⭐️ NEW in v3.8.0
+- **Settings Modal** - Comprehensive settings interface with tabbed navigation
+- **User Preferences** - Customizable notification preferences (email and in-app)
+- **Display Settings** - Theme selection (light, dark, system)
+- **Account Management** - Integrated Clerk UserProfile for profile settings
+- **Organization Management** - Integrated Clerk OrganizationProfile for admin users
+- **Help & Support** - Documentation links and support resources
+- **Consolidated Navigation** - User and organization management moved from admin nav to Settings
 
 ### Brand Asset Management
 - **Brand Search** via Brandfetch API (search by domain or company name)
@@ -344,6 +366,28 @@ Run these migrations **in order** in your Supabase SQL Editor:
    - Updates approvals_required counts for pre-migration assets
    - Diagnostic and verification queries included
    - Run after migration 18 to fix existing data
+
+19. **`supabase/19_fix_templates_columns.sql`** ⭐️ NEW in v3.7.0
+   - Fixes template column references
+   - Updates template-related queries
+
+20. **`supabase/20_remove_ai_features.sql`** ⭐️ NEW in v3.7.0
+   - Removes AI features for simplification
+   - Cleans up AI-related tables and functions
+
+21. **`supabase/21_notifications.sql`** ⭐️ NEW in v3.8.0
+   - Creates notifications table with notification_type enum
+   - Supports approval requests, comments, stage progress, final approvals, and changes requested
+   - Includes RLS policies for organization-scoped access
+   - Creates helper function for unread notification count
+   - Performance indexes for fast queries
+
+22. **`supabase/22_user_preferences.sql`** ⭐️ NEW in v3.8.0
+   - Creates user_preferences table for storing user settings
+   - Notification preferences (email and in-app) with JSONB storage
+   - Display preferences (theme, layout)
+   - RLS policies for user-scoped access
+   - One preference record per user per organization
 
 ### Storage Buckets
 
@@ -684,6 +728,7 @@ See [CHANGELOG.md](./documentation/CHANGELOG.md) for detailed version history.
 
 ### Recent Versions
 
+- **v3.8.0** (2025-01-XX) - 🎉 **MAJOR FEATURE** - Notifications System & Settings Modal - In-app notifications with dropdown panel, comprehensive settings modal with preferences/account/org management, consolidated navigation
 - **v3.7.2** (2025-01-XX) - 🐛 **Critical Bugfixes** - Fixed annotation visibility issues by correcting coordinate transformation, and improved permission enforcement for annotations and comments
 - **v3.7.1** (2025-01-XX) - 🐛 **Critical Bugfixes** - Fixed project loading and metrics display issues by using correct Supabase client in API routes and proper response format handling
 - **v3.7.0** (2025-11-09) - 🧹 **Code Quality** - Removed AI features for simplification and stability, updated documentation, component extraction and organization improvements

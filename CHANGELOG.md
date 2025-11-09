@@ -7,6 +7,139 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.8.0] - 2025-01-XX
+
+### 🎉 **MAJOR FEATURE - Notifications System & Settings Modal**
+
+Added comprehensive in-app notification system and settings management modal, consolidating user preferences, account settings, and organization management into a unified interface.
+
+### Added
+
+#### Notifications System
+- **In-App Notifications** - Real-time notification system with dropdown panel accessible from header bell icon
+- **Notification Types** - Support for 6 notification types:
+  - Approval requests (when assigned as reviewer)
+  - Approval received (progress updates)
+  - Comments (new comments on assets)
+  - Stage progress (stage advancement)
+  - Final approval (all stages complete)
+  - Changes requested (reviewer requests changes)
+- **Unread Badge** - Visual indicator in header showing unread notification count
+- **Notification Panel** - Dropdown panel with:
+  - List of notifications grouped by date
+  - Unread indicators with visual styling
+  - Click to navigate to related asset/project
+  - Mark as read on click
+  - "Mark all as read" button
+  - "View all notifications" link (future: dedicated page)
+- **Real-Time Updates** - Polling system checks for new notifications every 30 seconds
+- **Notification History** - Persistent storage in database for full notification history
+- **Auto-Creation** - Notifications automatically created when:
+  - User is assigned as reviewer
+  - Stage advances to next stage
+  - Comments are added
+  - Approvals are recorded
+  - Final approval is given
+  - Changes are requested
+
+#### Settings Modal
+- **Comprehensive Settings Interface** - Modal with tabbed navigation:
+  - **Preferences Tab** - User preferences for notifications and display
+  - **Account Tab** - Integrated Clerk UserProfile for profile management
+  - **Organization Tab** - Integrated Clerk OrganizationProfile for admin users (admin only)
+  - **Help & Support Tab** - Documentation links and support resources
+- **Notification Preferences** - Granular control over email and in-app notifications:
+  - Email notifications (approval requests, comments, stage progress, etc.)
+  - In-app notifications (same types)
+  - Individual toggles for each notification type
+- **Display Preferences** - Theme selection (light, dark, system)
+- **User Preferences API** - RESTful API for fetching and updating preferences
+- **Database Storage** - User preferences stored in database with RLS policies
+
+#### Navigation Consolidation
+- **Removed Users Tab** - User management moved from admin nav to Settings modal
+- **Updated Admin Nav** - Cleaner navigation with Workflows, Reports, and Templates only
+- **Backward Compatibility** - `/admin/users` page shows redirect message
+
+### Database Changes
+
+#### Migration 21: Notifications System
+- Created `notifications` table with:
+  - `notification_type` enum (6 types)
+  - User and organization scoping
+  - Read/unread status tracking
+  - Related asset and project links
+  - Metadata JSONB for additional context
+- RLS policies for organization-scoped access
+- Performance indexes for fast queries
+- Helper function for unread notification count
+
+#### Migration 22: User Preferences
+- Created `user_preferences` table with:
+  - Notification preferences (JSONB)
+  - Display preferences (theme, layout)
+  - User and organization scoping
+- RLS policies for user-scoped access
+- One preference record per user per organization
+
+### Technical Details
+
+#### API Endpoints
+- `GET /api/notifications` - Fetch notifications with pagination
+- `GET /api/notifications/unread-count` - Get unread count for badge
+- `POST /api/notifications/[id]/read` - Mark notification as read
+- `POST /api/notifications/read-all` - Mark all notifications as read
+- `GET /api/user/preferences` - Fetch user preferences (creates defaults if missing)
+- `POST /api/user/preferences` - Update user preferences
+
+#### Components
+- `components/notifications/NotificationsPanel.tsx` - Notification dropdown panel
+- `components/settings/SettingsModal.tsx` - Settings modal with tabs
+- Updated `components/layout/AppHeader.tsx` - Integrated notifications and settings
+- Updated `components/navigation/NavRail.tsx` - Removed Users tab
+
+#### Utilities
+- `lib/utils/notifications.ts` - Helper functions for creating notifications
+- Integrated notification creation into:
+  - Stage progress route
+  - Approve route
+  - Comments route
+  - Final approve route
+
+### Changed
+
+- **Admin Navigation** - Removed "Users" tab (moved to Settings)
+- **Header** - Replaced placeholder notification count with real-time unread count
+- **Header** - Replaced placeholder settings dropdown with Settings modal
+- **User Management** - Moved from `/admin/users` page to Settings modal
+
+### Files Added
+
+- `supabase/21_notifications.sql`
+- `supabase/22_user_preferences.sql`
+- `app/api/notifications/route.ts`
+- `app/api/notifications/[id]/read/route.ts`
+- `app/api/notifications/read-all/route.ts`
+- `app/api/notifications/unread-count/route.ts`
+- `app/api/user/preferences/route.ts`
+- `components/notifications/NotificationsPanel.tsx`
+- `components/notifications/index.ts`
+- `components/settings/SettingsModal.tsx`
+- `components/settings/index.ts`
+- `lib/utils/notifications.ts`
+
+### Files Modified
+
+- `components/layout/AppHeader.tsx` - Integrated notifications and settings
+- `components/navigation/NavRail.tsx` - Removed Users tab
+- `app/api/mockups/[id]/stage-progress/[stage_order]/route.ts` - Added notification creation
+- `app/api/mockups/[id]/approve/route.ts` - Added notification creation
+- `app/api/mockups/[id]/comments/route.ts` - Added notification creation
+- `app/api/mockups/[id]/final-approve/route.ts` - Added notification creation
+- `app/(dashboard)/admin/users/page.tsx` - Updated to show redirect message
+
+---
+
 ## [3.7.2] - 2025-01-XX
 
 ### 🐛 **Critical Bugfixes - Annotation Visibility & Permission Enforcement**

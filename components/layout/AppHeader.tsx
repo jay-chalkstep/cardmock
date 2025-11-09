@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { UserButton, useUser } from '@clerk/nextjs';
 import {
   Menu,
@@ -11,11 +11,36 @@ import {
   HelpCircle,
 } from 'lucide-react';
 import { usePanelContext } from '@/lib/contexts/PanelContext';
+import { NotificationsPanel } from '@/components/notifications';
+import { SettingsModal } from '@/components/settings';
 
 export default function AppHeader() {
   const { visibility, setVisibility } = usePanelContext();
   const { user } = useUser();
-  const [notificationCount] = useState(3); // TODO: Connect to real notification system
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const notificationsButtonRef = useRef<HTMLButtonElement>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // Fetch unread notification count
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      try {
+        const response = await fetch('/api/notifications/unread-count');
+        const data = await response.json();
+        if (data.success) {
+          setNotificationCount(data.data.count || 0);
+        }
+      } catch (error) {
+        console.error('Failed to fetch unread count', error);
+      }
+    };
+
+    fetchUnreadCount();
+    // Poll for new notifications every 30 seconds
+    const interval = setInterval(fetchUnreadCount, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleToggleNav = () => {
     // Toggle Context Panel visibility instead of NavRail
@@ -28,14 +53,28 @@ export default function AppHeader() {
   };
 
   const handleNotifications = () => {
-    // TODO: Open notifications panel
-    console.log('Notifications opened');
+    setNotificationsOpen(!notificationsOpen);
   };
 
+  const handleNotificationsClose = () => {
+    setNotificationsOpen(false);
+    // Refresh count when closing
+    fetch('/api/notifications/unread-count')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          setNotificationCount(data.data.count || 0);
+        }
+      })
+      .catch(console.error);
+  };
 
   const handleSettings = () => {
-    // TODO: Open settings menu
-    console.log('Settings opened');
+    setSettingsOpen(true);
+  };
+
+  const handleSettingsClose = () => {
+    setSettingsOpen(false);
   };
 
   return (
@@ -80,42 +119,38 @@ export default function AppHeader() {
         </button>
 
         {/* Notifications */}
-        <button
-          onClick={handleNotifications}
-          className="relative p-2 rounded-lg hover:bg-[var(--bg-hover)] transition-colors"
-          title="Notifications"
-        >
-          <Bell size={20} className="text-[var(--text-icon)]" />
-          {notificationCount > 0 && (
-            <span className="absolute top-1 right-1 w-4 h-4 bg-[var(--accent-red)] text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-              {notificationCount > 9 ? '9+' : notificationCount}
-            </span>
-          )}
-        </button>
-
-
-        {/* Settings/Help Dropdown */}
-        <div className="relative group">
+        <div className="relative">
           <button
-            onClick={handleSettings}
-            className="p-2 rounded-lg hover:bg-[var(--bg-hover)] transition-colors"
-            title="Settings & Help"
+            ref={notificationsButtonRef}
+            onClick={handleNotifications}
+            className="relative p-2 rounded-lg hover:bg-[var(--bg-hover)] transition-colors"
+            title="Notifications"
           >
-            <Settings size={20} className="text-[var(--text-icon)]" />
+            <Bell size={20} className="text-[var(--text-icon)]" />
+            {notificationCount > 0 && (
+              <span className="absolute top-1 right-1 w-4 h-4 bg-[var(--accent-red)] text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                {notificationCount > 9 ? '9+' : notificationCount}
+              </span>
+            )}
           </button>
-
-          {/* Dropdown Menu - TODO: Make this functional */}
-          <div className="hidden group-hover:block absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-lg border border-[var(--border-main)] py-1">
-            <button className="w-full flex items-center gap-2 px-4 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors">
-              <Settings size={16} />
-              Settings
-            </button>
-            <button className="w-full flex items-center gap-2 px-4 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors">
-              <HelpCircle size={16} />
-              Help & Support
-            </button>
-          </div>
+          {notificationsOpen && (
+            <NotificationsPanel
+              isOpen={notificationsOpen}
+              onClose={handleNotificationsClose}
+              triggerRef={notificationsButtonRef}
+            />
+          )}
         </div>
+
+
+        {/* Settings */}
+        <button
+          onClick={handleSettings}
+          className="p-2 rounded-lg hover:bg-[var(--bg-hover)] transition-colors"
+          title="Settings"
+        >
+          <Settings size={20} className="text-[var(--text-icon)]" />
+        </button>
 
         {/* User Button with Name */}
         <div className="ml-2 flex items-center gap-2">
@@ -137,6 +172,11 @@ export default function AppHeader() {
           />
         </div>
       </div>
+
+      {/* Settings Modal */}
+      {settingsOpen && (
+        <SettingsModal isOpen={settingsOpen} onClose={handleSettingsClose} />
+      )}
     </header>
   );
 }

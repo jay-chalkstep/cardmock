@@ -4,6 +4,7 @@ import { getAuthContext } from '@/lib/api/auth';
 import { successResponse, errorResponse, badRequestResponse, notFoundResponse, forbiddenResponse } from '@/lib/api/response';
 import { handleSupabaseError, checkRequiredFields } from '@/lib/api/error-handler';
 import { supabaseServer } from '@/lib/supabase-server';
+import { createNotification, createNotificationsForUsers } from '@/lib/utils/notifications';
 import { logger } from '@/lib/utils/logger';
 
 // Mark as dynamic to prevent build-time evaluation
@@ -157,6 +158,56 @@ export async function POST(
     }
 
     logger.info('Comment created successfully', { commentId: comment?.id, mockupId, hasAnnotation: !!annotation_data });
+
+    // Create notifications for relevant users
+    if (isCreator) {
+      // If creator commented, notify all reviewers
+      if (mockup.project_id) {
+        const { data: reviewers } = await supabaseServer
+          .from('project_stage_reviewers')
+          .select('user_id')
+          .eq('project_id', mockup.project_id);
+
+        if (reviewers && reviewers.length > 0) {
+          const reviewerIds = reviewers
+            .map((r: any) => r.user_id)
+            .filter((id: string) => id !== userId); // Don't notify self
+
+          if (reviewerIds.length > 0) {
+            await createNotificationsForUsers(
+              reviewerIds,
+              orgId,
+              'comment',
+              `New comment on ${mockup.mockup_name}`,
+              `${fullName} added a comment on ${mockup.mockup_name}.`,
+              `/mockups/${mockupId}`,
+              mockupId,
+              mockup.project_id,
+              {
+                commenter_name: fullName,
+              }
+            );
+          }
+        }
+      }
+    } else if (isReviewer) {
+      // If reviewer commented, notify the creator
+      if (mockup.created_by && mockup.created_by !== userId) {
+        await createNotification({
+          userId: mockup.created_by,
+          organizationId: orgId,
+          type: 'comment',
+          title: `New comment on ${mockup.mockup_name}`,
+          message: `${fullName} added a comment on ${mockup.mockup_name}.`,
+          linkUrl: `/mockups/${mockupId}`,
+          relatedAssetId: mockupId,
+          relatedProjectId: mockup.project_id || undefined,
+          metadata: {
+            commenter_name: fullName,
+          },
+        });
+      }
+    }
 
     // Note: Reviewer viewing status is now tracked via project_stage_reviewers
     // No need to update a separate table for viewed status

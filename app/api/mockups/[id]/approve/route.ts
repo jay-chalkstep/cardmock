@@ -3,6 +3,7 @@ import { getAuthContext } from '@/lib/api/auth';
 import { successResponse, errorResponse, badRequestResponse, notFoundResponse, forbiddenResponse } from '@/lib/api/response';
 import { handleSupabaseError, checkRequiredFields } from '@/lib/api/error-handler';
 import { supabase } from '@/lib/supabase';
+import { createNotificationsForUsers, createNotification } from '@/lib/utils/notifications';
 import { logger } from '@/lib/utils/logger';
 
 // Mark as dynamic to prevent build-time evaluation
@@ -165,10 +166,46 @@ export async function POST(
         const nextStage = stages.find((s: any) => s.order === nextStageOrder);
         nextStageName = nextStage?.name;
 
-        // TODO: Send email notifications to next stage reviewers
+        // Get next stage reviewers and create notifications
+        const { data: nextStageReviewers } = await supabase
+          .from('project_stage_reviewers')
+          .select('user_id')
+          .eq('project_id', mockup.project_id)
+          .eq('stage_order', nextStageOrder);
+
+        if (nextStageReviewers && nextStageReviewers.length > 0) {
+          await createNotificationsForUsers(
+            nextStageReviewers.map((r: any) => r.user_id),
+            orgId,
+            'approval_request',
+            `Review needed: ${mockup.mockup_name}`,
+            `All reviewers approved Stage ${stageOrder}. ${mockup.mockup_name} is now in "${nextStageName}" and needs your review.`,
+            `/mockups/${mockupId}`,
+            mockupId,
+            mockup.project_id,
+            {
+              stage_name: nextStageName,
+              stage_order: nextStageOrder,
+              project_name: project.name,
+            }
+          );
+        }
       } else {
         // Last stage completed - now pending final approval
-        // TODO: Send email to project owner for final approval
+        // Create notification for project owner (creator)
+        await createNotification({
+          userId: mockup.created_by,
+          organizationId: orgId,
+          type: 'final_approval',
+          title: `All stages approved: ${mockup.mockup_name}`,
+          message: `All workflow stages have been approved. Final approval is needed.`,
+          linkUrl: `/mockups/${mockupId}`,
+          relatedAssetId: mockupId,
+          relatedProjectId: mockup.project_id,
+          metadata: {
+            project_name: project.name,
+          },
+        });
       }
     }
 
