@@ -191,9 +191,9 @@ export default function ContractDetailPage() {
       return null;
     }
 
-    // Try to generate the diff summary
+    // Try to generate the diff summary for this specific version
     try {
-      const response = await fetch(`/api/contracts/documents/${docId}/diff`, {
+      const response = await fetch(`/api/contracts/documents/${docId}/versions/${version.id}/diff`, {
         method: 'POST',
       });
       if (response.ok) {
@@ -203,6 +203,10 @@ export default function ContractDetailPage() {
           setVersionDiffSummaries((prev) => ({ ...prev, [cacheKey]: summary }));
           return summary;
         }
+      } else {
+        // Log error for debugging
+        const errorResult = await response.json().catch(() => ({}));
+        console.error('Error fetching diff summary:', errorResult);
       }
     } catch (error) {
       console.error('Error fetching diff summary:', error);
@@ -695,6 +699,7 @@ export default function ContractDetailPage() {
                                       onMouseEnter={async () => {
                                         if (version.version_number > 1) {
                                           setHoveredVersion({ docId: doc.id, versionId: version.id });
+                                          // Fetch diff summary if not already available
                                           if (!diffSummary) {
                                             await fetchVersionDiffSummary(doc.id, version);
                                           }
@@ -750,19 +755,26 @@ export default function ContractDetailPage() {
                                       </div>
 
                                       {/* Hover Tooltip with Diff Summary */}
-                                      {isHovered && version.version_number > 1 && diffSummary && (
+                                      {isHovered && version.version_number > 1 && (
                                         <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-white border border-gray-200 rounded-lg shadow-xl p-4 max-h-64 overflow-y-auto">
-                                          <div className="flex items-start gap-2 mb-2">
-                                            <Sparkles size={16} className="text-blue-600 mt-0.5" />
-                                            <div className="flex-1">
-                                              <h5 className="font-medium text-gray-900 text-sm mb-1">
-                                                Changes from Version {version.version_number - 1} to Version {version.version_number}
-                                              </h5>
-                                              <p className="text-xs text-gray-600 whitespace-pre-wrap leading-relaxed">
-                                                {diffSummary}
-                                              </p>
+                                          {diffSummary ? (
+                                            <div className="flex items-start gap-2 mb-2">
+                                              <Sparkles size={16} className="text-blue-600 mt-0.5" />
+                                              <div className="flex-1">
+                                                <h5 className="font-medium text-gray-900 text-sm mb-1">
+                                                  Changes from Version {version.version_number - 1} to Version {version.version_number}
+                                                </h5>
+                                                <p className="text-xs text-gray-600 whitespace-pre-wrap leading-relaxed">
+                                                  {diffSummary}
+                                                </p>
+                                              </div>
                                             </div>
-                                          </div>
+                                          ) : (
+                                            <div className="flex items-center gap-2 text-sm text-gray-500">
+                                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                                              <span>Generating summary...</span>
+                                            </div>
+                                          )}
                                         </div>
                                       )}
                                     </div>
