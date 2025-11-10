@@ -7,6 +7,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.1.3] - 2025-01-XX
+
+### ✨ Added
+
+#### Contracts Module - Comprehensive AI Summaries & Changelog
+- **Comprehensive Contract Summary**: Added AI-generated comprehensive contract summary on overview tab
+  - Analyzes all contract documents to generate a comprehensive summary
+  - Includes contract type, parties, terms, dates, obligations, and key clauses
+  - Persistent storage in database (`ai_summary` field)
+  - Expandable/collapsible display with generation timestamp
+  - Generate button to create summary from all documents
+- **Version Changelog**: Added AI-generated comprehensive version changelog on overview tab
+  - Aggregates all version-to-version changes across all documents
+  - Chronological changelog showing evolution of contract over time
+  - Persistent storage in database (`ai_changelog` field)
+  - Expandable/collapsible display with generation timestamp
+  - Generate button to create changelog from all version changes
+- **Database Migration**: Added `36_contract_ai_summaries.sql` migration
+  - Adds `ai_summary` and `ai_summary_generated_at` fields to contracts table
+  - Adds `ai_changelog` and `ai_changelog_generated_at` fields to contracts table
+- **API Endpoints**: New endpoints for generating comprehensive summaries
+  - `POST /api/contracts/[id]/summary` - Generate comprehensive contract summary
+  - `POST /api/contracts/[id]/changelog` - Generate comprehensive version changelog
+  - Both endpoints persist results in database
+
+### 📝 Technical Details
+
+- **New AI Functions**:
+  - `lib/ai/document-diff.ts` - `generateComprehensiveContractSummary()` - Generates comprehensive summary from all documents
+  - `lib/ai/document-diff.ts` - `generateComprehensiveChangelog()` - Generates comprehensive changelog from all version changes
+- **Updated Components**:
+  - `app/(dashboard)/contracts/[id]/page.tsx` - Added comprehensive summary and changelog sections to overview tab
+  - `lib/supabase.ts` - Updated Contract interface to include AI summary fields
+- **AI Prompt Improvements**:
+  - Comprehensive summaries use 2000 max_tokens for detailed output
+  - Summaries include contract type, parties, terms, dates, obligations, and key clauses
+  - Changelogs organized chronologically with clear version headers and grouped changes
+
+---
+
 ## [4.1.2] - 2025-01-XX
 
 ### 🔄 Changed

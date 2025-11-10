@@ -95,6 +95,16 @@ Built for teams who need more than basic file storage—Aiproval provides contex
 - **AI Version Diff Summaries** - AI-powered single-sentence version change summaries ⭐️ ENHANCED
   - Concise summaries of what changed between versions
   - Examples: "This version makes changes to the limits of liability section, and removes the IP section" or "These versions appear to have no material differences"
+- **AI Contract Summary** - Comprehensive AI-generated contract summary on overview tab ⭐️ NEW
+  - Analyzes all contract documents to generate comprehensive summary
+  - Includes contract type, parties, terms, dates, obligations, and key clauses
+  - Persistent storage in database
+  - Expandable/collapsible display with generation timestamp
+- **AI Version Changelog** - Comprehensive AI-generated version changelog on overview tab ⭐️ NEW
+  - Aggregates all version-to-version changes across all documents
+  - Chronological changelog showing evolution of contract over time
+  - Persistent storage in database
+  - Expandable/collapsible display with generation timestamp
 - **DocuSign Integration** - E-signature workflow (placeholder for future implementation)
 - **Email Mockups** - Create and approve email templates with client branding
   - Full-featured HTML editor with preview mode
@@ -624,6 +634,15 @@ Run these migrations **in order** in your Supabase SQL Editor:
    - Presentation participants tracking
    - Presentation voting/polling
 
+35. **`supabase/35_add_client_id_to_projects.sql`** ⭐️ NEW in v4.1.0
+   - Adds client_id to projects table
+   - Links projects to clients for better organization
+
+36. **`supabase/36_contract_ai_summaries.sql`** ⭐️ NEW in v4.1.3
+   - Adds ai_summary and ai_summary_generated_at fields to contracts table
+   - Adds ai_changelog and ai_changelog_generated_at fields to contracts table
+   - Enables persistent storage of comprehensive AI-generated contract summaries and changelogs
+
 ### Storage Buckets
 
 Create these buckets in Supabase Dashboard → Storage:
@@ -963,6 +982,7 @@ See [CHANGELOG.md](./documentation/CHANGELOG.md) for detailed version history.
 
 ### Recent Versions
 
+- **v4.1.3** (2025-01-XX) - ✨ **NEW FEATURE** - Contracts Comprehensive AI Summaries - Comprehensive contract summaries and version changelogs on overview tab, persistent storage
 - **v4.1.2** (2025-01-XX) - 🔄 **IMPROVEMENT** - Contracts AI Summary Improvements - Tighter single-sentence summaries with CDCO context, optimized token usage
 - **v4.1.1** (2025-01-XX) - 🐛 **FIXES** - Projects Module Performance - Removed N+1 queries, optimized API endpoints, improved error handling
 - **v4.1.0** (2025-01-XX) - 🎉 **MAJOR FEATURE** - Platform Integrations - Figma plugin, public share pages, Gmail add-on, Slack integration, Drive/Dropbox import, presentation mode

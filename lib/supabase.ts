@@ -298,6 +298,10 @@ export interface Contract {
   created_by: string;
   created_at: string;
   updated_at: string;
+  ai_summary?: string;
+  ai_summary_generated_at?: string;
+  ai_changelog?: string;
+  ai_changelog_generated_at?: string;
   // Joined data
   clients?: Client;
   projects?: { id: string; name: string };

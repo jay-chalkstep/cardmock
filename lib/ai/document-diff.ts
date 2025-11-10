@@ -199,3 +199,131 @@ export async function generateDocumentSummaryFromUrl(documentUrl: string): Promi
   }
 }
 
+/**
+ * Generate comprehensive contract summary from all documents
+ * Analyzes all contract documents and generates a comprehensive summary
+ */
+export async function generateComprehensiveContractSummary(documentTexts: string[]): Promise<string> {
+  const client = getOpenAIClient();
+  
+  if (!client) {
+    throw new Error('OpenAI API key not configured. Cannot generate comprehensive contract summary.');
+  }
+
+  const combinedText = documentTexts.join('\n\n--- Document Separator ---\n\n');
+
+  const prompt = `You are a legal document analyst. Analyze all the contract documents provided and generate a comprehensive summary of the entire contract.
+
+Assume this contract is between Choice Digital (also referred to as CDCO) and a counterparty.
+
+Provide a comprehensive summary that includes:
+1. Contract type and purpose (e.g., master services agreement, amendment, etc.)
+2. Key parties involved (CDCO and the counterparty)
+3. Main terms and conditions
+4. Important dates, amounts, deadlines, or milestones
+5. Key obligations and responsibilities for each party
+6. Important clauses or provisions (payment terms, liability, IP, termination, etc.)
+7. Any notable conditions or requirements
+
+Format the summary in clear, well-organized paragraphs. Be thorough but concise. Focus on the most important information that would be useful for contract management.
+
+Contract Documents:
+${combinedText}
+
+Provide a comprehensive summary:`;
+
+  try {
+    const completion = await client.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a legal document analyst specializing in contract analysis. Provide comprehensive, well-structured summaries assuming contracts are between Choice Digital (CDCO) and a counterparty.',
+        },
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+      temperature: 0.3,
+      max_tokens: 2000, // More tokens for comprehensive summaries
+    });
+
+    const summary = completion.choices[0]?.message?.content?.trim();
+    
+    if (!summary) {
+      throw new Error('OpenAI returned empty summary');
+    }
+
+    return summary;
+  } catch (error) {
+    logger.error('Error generating comprehensive contract summary:', error);
+    throw new Error(`Failed to generate comprehensive contract summary: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+/**
+ * Generate comprehensive changelog from version summaries
+ * Creates a full changelog showing all version-to-version changes
+ */
+export async function generateComprehensiveChangelog(versionSummaries: Array<{ versionNumber: number; summary: string; createdAt: string }>): Promise<string> {
+  const client = getOpenAIClient();
+  
+  if (!client) {
+    throw new Error('OpenAI API key not configured. Cannot generate comprehensive changelog.');
+  }
+
+  // Sort by version number
+  const sortedVersions = versionSummaries.sort((a, b) => a.versionNumber - b.versionNumber);
+
+  const changelogEntries = sortedVersions.map(v => 
+    `Version ${v.versionNumber} (${new Date(v.createdAt).toLocaleDateString()}):\n${v.summary}`
+  ).join('\n\n');
+
+  const prompt = `You are a legal document analyst. Create a comprehensive changelog from the version-to-version change summaries provided.
+
+Organize the changelog chronologically, showing the evolution of the contract over time. For each version, clearly indicate what changed from the previous version.
+
+Format the changelog as a well-structured document with:
+- Clear version headers
+- Bullet points or numbered lists for changes
+- Group related changes together
+- Highlight significant changes (new sections, removed clauses, modified terms, etc.)
+
+If a version summary indicates no material differences, note that clearly.
+
+Version Changes:
+${changelogEntries}
+
+Provide a comprehensive, well-formatted changelog:`;
+
+  try {
+    const completion = await client.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a legal document analyst specializing in contract version tracking. Create clear, comprehensive changelogs that show the evolution of contracts over time.',
+        },
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+      temperature: 0.3,
+      max_tokens: 2000, // More tokens for comprehensive changelogs
+    });
+
+    const changelog = completion.choices[0]?.message?.content?.trim();
+    
+    if (!changelog) {
+      throw new Error('OpenAI returned empty changelog');
+    }
+
+    return changelog;
+  } catch (error) {
+    logger.error('Error generating comprehensive changelog:', error);
+    throw new Error(`Failed to generate comprehensive changelog: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+

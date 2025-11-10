@@ -29,6 +29,10 @@ interface Contract {
   end_date?: string;
   created_at: string;
   updated_at: string;
+  ai_summary?: string;
+  ai_summary_generated_at?: string;
+  ai_changelog?: string;
+  ai_changelog_generated_at?: string;
   clients?: Client;
   projects?: { id: string; name: string };
 }
@@ -69,8 +73,15 @@ export default function ContractDetailPage() {
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     documentSummary: true,
     versionChanges: true,
+    contractSummary: true,
+    contractChangelog: true,
   });
   
+  // Contract AI summary state
+  const [loadingContractSummary, setLoadingContractSummary] = useState(false);
+  const [contractSummaryError, setContractSummaryError] = useState<string | null>(null);
+  const [loadingContractChangelog, setLoadingContractChangelog] = useState(false);
+  const [contractChangelogError, setContractChangelogError] = useState<string | null>(null);
   
   // Comments state
   const [comments, setComments] = useState<any[]>([]);
@@ -246,6 +257,72 @@ export default function ContractDetailPage() {
       });
     }
     return null;
+  };
+
+  const fetchContractSummary = async () => {
+    if (!contractId) return;
+    setLoadingContractSummary(true);
+    setContractSummaryError(null);
+    try {
+      const response = await fetch(`/api/contracts/${contractId}/summary`, {
+        method: 'POST',
+      });
+      const result = await response.json();
+      
+      if (!response.ok) {
+        const errorMsg = result.message || result.error || 'Failed to generate summary';
+        setContractSummaryError(errorMsg);
+        return;
+      }
+      
+      // Update contract with new summary
+      if (contract) {
+        setContract({
+          ...contract,
+          ai_summary: result.data?.summary || result.summary,
+          ai_summary_generated_at: result.data?.generated_at || result.generated_at,
+        });
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Failed to fetch summary';
+      setContractSummaryError(errorMsg);
+      console.error('Error fetching contract summary:', error);
+    } finally {
+      setLoadingContractSummary(false);
+    }
+  };
+
+  const fetchContractChangelog = async () => {
+    if (!contractId) return;
+    setLoadingContractChangelog(true);
+    setContractChangelogError(null);
+    try {
+      const response = await fetch(`/api/contracts/${contractId}/changelog`, {
+        method: 'POST',
+      });
+      const result = await response.json();
+      
+      if (!response.ok) {
+        const errorMsg = result.message || result.error || 'Failed to generate changelog';
+        setContractChangelogError(errorMsg);
+        return;
+      }
+      
+      // Update contract with new changelog
+      if (contract) {
+        setContract({
+          ...contract,
+          ai_changelog: result.data?.changelog || result.changelog,
+          ai_changelog_generated_at: result.data?.generated_at || result.generated_at,
+        });
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Failed to fetch changelog';
+      setContractChangelogError(errorMsg);
+      console.error('Error fetching contract changelog:', error);
+    } finally {
+      setLoadingContractChangelog(false);
+    }
   };
 
   const fetchVersionDiffSummary = async (docId: string, version: any) => {
@@ -628,25 +705,145 @@ export default function ContractDetailPage() {
     switch (activeTab) {
       case 'overview':
         return (
-          <div className="p-6">
+          <div className="p-6 space-y-6">
             <h3 className="text-lg font-semibold mb-4">Contract Overview</h3>
-            <div className="space-y-4">
-              <div>
-                <h4 className="font-medium mb-2">Contract Details</h4>
-                <div className="space-y-2 text-sm">
-                  <div><span className="font-medium">Contract Number:</span> {contract.contract_number}</div>
-                  {contract.title && <div><span className="font-medium">Title:</span> {contract.title}</div>}
-                  {contract.description && (
-                    <div><span className="font-medium">Description:</span> {contract.description}</div>
-                  )}
-                  {contract.start_date && (
-                    <div><span className="font-medium">Start Date:</span> {new Date(contract.start_date).toLocaleDateString()}</div>
-                  )}
-                  {contract.end_date && (
-                    <div><span className="font-medium">End Date:</span> {new Date(contract.end_date).toLocaleDateString()}</div>
+            
+            {/* Contract Details */}
+            <div>
+              <h4 className="font-medium mb-2">Contract Details</h4>
+              <div className="space-y-2 text-sm bg-gray-50 p-4 rounded-md">
+                <div><span className="font-medium">Contract Number:</span> {contract.contract_number}</div>
+                {contract.title && <div><span className="font-medium">Title:</span> {contract.title}</div>}
+                {contract.description && (
+                  <div><span className="font-medium">Description:</span> {contract.description}</div>
+                )}
+                {contract.start_date && (
+                  <div><span className="font-medium">Start Date:</span> {new Date(contract.start_date).toLocaleDateString()}</div>
+                )}
+                {contract.end_date && (
+                  <div><span className="font-medium">End Date:</span> {new Date(contract.end_date).toLocaleDateString()}</div>
+                )}
+              </div>
+            </div>
+
+            {/* AI Contract Summary */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Sparkles size={16} className="text-blue-600" />
+                  <h4 className="font-medium">AI Contract Summary</h4>
+                  {contract.ai_summary_generated_at && (
+                    <span className="text-xs text-gray-500">
+                      (Generated {new Date(contract.ai_summary_generated_at).toLocaleDateString()})
+                    </span>
                   )}
                 </div>
+                <button
+                  onClick={() => setExpandedSections(prev => ({ ...prev, contractSummary: !prev.contractSummary }))}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  {expandedSections.contractSummary ? (
+                    <ChevronDown size={16} />
+                  ) : (
+                    <ChevronRight size={16} />
+                  )}
+                </button>
               </div>
+              
+              {expandedSections.contractSummary && (
+                <div className="bg-gray-50 rounded-md p-4">
+                  {loadingContractSummary ? (
+                    <div className="flex items-center gap-2 py-4 text-sm text-gray-500">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                      <span>Generating comprehensive summary...</span>
+                    </div>
+                  ) : contractSummaryError ? (
+                    <div className="py-2 text-sm text-red-600">
+                      <p className="mb-2">{contractSummaryError}</p>
+                      <button
+                        onClick={fetchContractSummary}
+                        className="text-blue-600 hover:text-blue-700 underline"
+                      >
+                        Retry
+                      </button>
+                    </div>
+                  ) : contract.ai_summary ? (
+                    <div className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
+                      {contract.ai_summary}
+                    </div>
+                  ) : (
+                    <div className="py-2 text-sm text-gray-500">
+                      <p className="mb-2">No summary available. Generate a comprehensive AI summary from all contract documents.</p>
+                      <button
+                        onClick={fetchContractSummary}
+                        className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                      >
+                        Generate Summary
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* AI Changelog */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Sparkles size={16} className="text-blue-600" />
+                  <h4 className="font-medium">Version Changelog</h4>
+                  {contract.ai_changelog_generated_at && (
+                    <span className="text-xs text-gray-500">
+                      (Generated {new Date(contract.ai_changelog_generated_at).toLocaleDateString()})
+                    </span>
+                  )}
+                </div>
+                <button
+                  onClick={() => setExpandedSections(prev => ({ ...prev, contractChangelog: !prev.contractChangelog }))}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  {expandedSections.contractChangelog ? (
+                    <ChevronDown size={16} />
+                  ) : (
+                    <ChevronRight size={16} />
+                  )}
+                </button>
+              </div>
+              
+              {expandedSections.contractChangelog && (
+                <div className="bg-gray-50 rounded-md p-4">
+                  {loadingContractChangelog ? (
+                    <div className="flex items-center gap-2 py-4 text-sm text-gray-500">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                      <span>Generating comprehensive changelog...</span>
+                    </div>
+                  ) : contractChangelogError ? (
+                    <div className="py-2 text-sm text-red-600">
+                      <p className="mb-2">{contractChangelogError}</p>
+                      <button
+                        onClick={fetchContractChangelog}
+                        className="text-blue-600 hover:text-blue-700 underline"
+                      >
+                        Retry
+                      </button>
+                    </div>
+                  ) : contract.ai_changelog ? (
+                    <div className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed max-h-96 overflow-y-auto">
+                      {contract.ai_changelog}
+                    </div>
+                  ) : (
+                    <div className="py-2 text-sm text-gray-500">
+                      <p className="mb-2">No changelog available. Generate a comprehensive AI changelog from all version changes.</p>
+                      <button
+                        onClick={fetchContractChangelog}
+                        className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                      >
+                        Generate Changelog
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         );
