@@ -4,8 +4,7 @@ import { successResponse, errorResponse, badRequestResponse, notFoundResponse } 
 import { handleSupabaseError } from '@/lib/api/error-handler';
 import { supabaseServer } from '@/lib/supabase-server';
 import { logger } from '@/lib/utils/logger';
-import { createServerAdminClient } from '@/lib/supabase/server';
-import { extractTextFromWordDocument } from '@/lib/ai/document-diff';
+import { handleDocumentUpload } from '@/lib/utils/contract-versioning';
 
 export const dynamic = 'force-dynamic';
 
@@ -111,110 +110,33 @@ export async function POST(
       return badRequestResponse('File size must be less than 10MB');
     }
 
-    // New documents always start at version 1
-    const nextVersion = 1;
-
-    // Upload file to Supabase Storage
-    const supabaseAdmin = createServerAdminClient();
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${id}/${Date.now()}-v${nextVersion}.${fileExt}`;
-    const filePath = `contract-documents/${fileName}`;
-
-    const fileBuffer = await file.arrayBuffer();
-    const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
-      .from('contract-documents')
-      .upload(filePath, fileBuffer, {
-        contentType: file.type,
-        upsert: false,
-      });
-
-    if (uploadError) {
-      logger.error('Storage upload error:', uploadError);
-      return errorResponse(uploadError, 'Failed to upload file');
-    }
-
-    // Get public URL
-    const { data: urlData } = supabaseAdmin.storage
-      .from('contract-documents')
-      .getPublicUrl(filePath);
-
-    // Mark previous documents as not current
-    await supabaseServer
-      .from('contract_documents')
-      .update({ is_current: false })
-      .eq('contract_id', id)
-      .eq('is_current', true);
-
-    // Extract text from document for search (async, don't block upload)
-    let searchableText: string | null = null;
+    // Use the unified versioning service to handle document upload
+    // This automatically determines if it's a new document or new version
     try {
-      searchableText = await extractTextFromWordDocument(urlData.publicUrl);
-      // Limit text length to prevent database issues (keep first 100k characters)
-      if (searchableText && searchableText.length > 100000) {
-        searchableText = searchableText.substring(0, 100000);
-      }
+      const result = await handleDocumentUpload({
+        contractId: id,
+        file,
+        userId,
+        orgId,
+      });
+
+      return successResponse(
+        {
+          document: result.document,
+          version: result.version,
+        },
+        201
+      );
     } catch (error) {
-      logger.warn('Failed to extract text from document for search:', {
+      logger.error('Error handling document upload:', {
         error: error instanceof Error ? error.message : String(error),
+        contractId: id,
       });
-      // Don't fail the upload if text extraction fails
+      return errorResponse(
+        error,
+        error instanceof Error ? error.message : 'Failed to upload document'
+      );
     }
-
-    // Create document record
-    const { data: document, error: docError } = await supabaseServer
-      .from('contract_documents')
-      .insert({
-        contract_id: id,
-        version_number: nextVersion,
-        file_url: urlData.publicUrl,
-        file_name: file.name,
-        file_size: file.size,
-        mime_type: file.type,
-        is_current: true,
-        uploaded_by: userId,
-        searchable_text: searchableText,
-      })
-      .select()
-      .single();
-
-    if (docError) {
-      // Clean up uploaded file if document creation fails
-      await supabaseAdmin.storage
-        .from('contract-documents')
-        .remove([filePath]);
-      
-      return handleSupabaseError(docError);
-    }
-
-    // Create version record
-    const { data: versionRecord, error: versionError } = await supabaseServer
-      .from('contract_document_versions')
-      .insert({
-        document_id: document.id,
-        version_number: nextVersion,
-        file_url: urlData.publicUrl,
-        created_by: userId,
-      })
-      .select()
-      .single();
-
-    if (versionError) {
-      logger.error('Version creation error:', versionError);
-      // Don't fail the request if version record fails - document upload succeeded
-      logger.warn(`Document ${document.id} uploaded but version record creation failed`, { 
-        documentId: document.id, 
-        versionNumber: nextVersion,
-        error: versionError 
-      });
-    } else {
-      logger.info(`Document version created successfully`, { 
-        documentId: document.id, 
-        versionId: versionRecord?.id,
-        versionNumber: nextVersion 
-      });
-    }
-
-    return successResponse({ document }, 201);
   } catch (error) {
     return errorResponse(error, 'Failed to upload document');
   }

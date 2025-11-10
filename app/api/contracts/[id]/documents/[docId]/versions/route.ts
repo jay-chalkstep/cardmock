@@ -4,9 +4,8 @@ import { successResponse, errorResponse, badRequestResponse, notFoundResponse } 
 import { handleSupabaseError } from '@/lib/api/error-handler';
 import { supabaseServer } from '@/lib/supabase-server';
 import { logger } from '@/lib/utils/logger';
-import { createServerAdminClient } from '@/lib/supabase/server';
 import { clerkClient } from '@clerk/nextjs/server';
-import { addWatermarkToDocument } from '@/lib/utils/watermark';
+import { createNewVersion } from '@/lib/utils/contract-versioning';
 
 export const dynamic = 'force-dynamic';
 
@@ -136,202 +135,34 @@ export async function POST(
       return badRequestResponse('File size must be less than 10MB');
     }
 
-    const nextVersion = document.version_number + 1;
-
-    // Upload file to Supabase Storage
-    const supabaseAdmin = createServerAdminClient();
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${id}/${Date.now()}-v${nextVersion}.${fileExt}`;
-    const filePath = `contract-documents/${fileName}`;
-
-    const fileBuffer = await file.arrayBuffer();
-    const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
-      .from('contract-documents')
-      .upload(filePath, fileBuffer, {
-        contentType: file.type,
-        upsert: false,
-      });
-
-    if (uploadError) {
-      logger.error('Storage upload error:', uploadError);
-      return errorResponse(uploadError, 'Failed to upload file');
-    }
-
-    // Get public URL
-    const { data: urlData } = supabaseAdmin.storage
-      .from('contract-documents')
-      .getPublicUrl(filePath);
-
-    // Watermark the current version (which will become the previous version)
-    // This should happen every time a new version is uploaded
-    // Skip watermarking if file is already watermarked (check filename)
-    if (document.file_url && !document.file_url.includes('-watermarked')) {
-      try {
-        logger.info('Starting watermarking process:', {
-          documentId: docId,
-          versionNumber: document.version_number,
-          fileUrl: document.file_url,
-        });
-
-        // Add watermark to the current version
-        const watermarkedBuffer = await addWatermarkToDocument(document.file_url);
-        
-        logger.info('Watermark added successfully, uploading watermarked file:', {
-          documentId: docId,
-          versionNumber: document.version_number,
-          bufferSize: watermarkedBuffer.length,
-        });
-        
-        // Create a new file path for the watermarked version
-        const watermarkedFileName = `${id}/${Date.now()}-v${document.version_number}-watermarked.${fileExt}`;
-        const watermarkedFilePath = `contract-documents/${watermarkedFileName}`;
-        
-        // Upload watermarked version
-        const { data: watermarkedUpload, error: watermarkedError } = await supabaseAdmin.storage
-          .from('contract-documents')
-          .upload(watermarkedFilePath, watermarkedBuffer, {
-            contentType: file.type,
-            upsert: false,
-          });
-
-        if (watermarkedError) {
-          logger.error('Failed to upload watermarked version:', {
-            documentId: docId,
-            versionNumber: document.version_number,
-            error: watermarkedError,
-            filePath: watermarkedFilePath,
-          });
-        } else {
-          // Get public URL for watermarked version
-          const { data: watermarkedUrlData } = supabaseAdmin.storage
-            .from('contract-documents')
-            .getPublicUrl(watermarkedFilePath);
-
-          logger.info('Watermarked file uploaded, updating database:', {
-            documentId: docId,
-            versionNumber: document.version_number,
-            watermarkedUrl: watermarkedUrlData.publicUrl,
-          });
-
-          // Update the current document's file URL with watermarked version
-          const { error: updateError } = await supabaseServer
-            .from('contract_documents')
-            .update({
-              file_url: watermarkedUrlData.publicUrl,
-            })
-            .eq('id', docId);
-
-          if (updateError) {
-            logger.error('Failed to update document with watermarked URL:', {
-              documentId: docId,
-              error: updateError,
-            });
-          }
-
-          // Also update the version record if it exists
-          const { data: currentVersion } = await supabaseServer
-            .from('contract_document_versions')
-            .select('id')
-            .eq('document_id', docId)
-            .eq('version_number', document.version_number)
-            .single();
-
-          if (currentVersion) {
-            const { error: versionUpdateError } = await supabaseServer
-              .from('contract_document_versions')
-              .update({
-                file_url: watermarkedUrlData.publicUrl,
-              })
-              .eq('id', currentVersion.id);
-
-            if (versionUpdateError) {
-              logger.error('Failed to update version record with watermarked URL:', {
-                versionId: currentVersion.id,
-                error: versionUpdateError,
-              });
-            }
-          }
-
-          logger.info('Successfully watermarked current version:', {
-            documentId: docId,
-            versionNumber: document.version_number,
-          });
-        }
-      } catch (error) {
-        logger.error('Failed to watermark current version:', {
-          documentId: docId,
-          versionNumber: document.version_number,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined,
-        });
-        // Don't fail the upload if watermarking fails
-      }
-    } else if (document.file_url && document.file_url.includes('-watermarked')) {
-      logger.info('Skipping watermarking - file already watermarked:', {
+    // Use the unified versioning service to create a new version
+    try {
+      const result = await createNewVersion({
+        contractId: id,
         documentId: docId,
-        versionNumber: document.version_number,
-        fileUrl: document.file_url,
+        file,
+        userId,
+        orgId,
       });
-    }
 
-    // Mark previous document as not current
-    await supabaseServer
-      .from('contract_documents')
-      .update({ is_current: false })
-      .eq('id', docId);
-
-    // Update document to new version
-    const { data: updatedDoc, error: docError } = await supabaseServer
-      .from('contract_documents')
-      .update({
-        version_number: nextVersion,
-        file_url: urlData.publicUrl,
-        file_name: file.name,
-        file_size: file.size,
-        mime_type: file.type,
-        is_current: true,
-      })
-      .eq('id', docId)
-      .select()
-      .single();
-
-    if (docError) {
-      await supabaseAdmin.storage
-        .from('contract-documents')
-        .remove([filePath]);
-      
-      return handleSupabaseError(docError);
-    }
-
-    // Create version record
-    const { data: version, error: versionError } = await supabaseServer
-      .from('contract_document_versions')
-      .insert({
-        document_id: docId,
-        version_number: nextVersion,
-        file_url: urlData.publicUrl,
-        created_by: userId,
-      })
-      .select()
-      .single();
-
-    if (versionError) {
-      logger.error('Version creation error:', versionError);
-      // Don't fail the request if version record fails - document upload succeeded
-      logger.warn(`Document ${docId} updated to version ${nextVersion} but version record creation failed`, { 
-        documentId: docId, 
-        versionNumber: nextVersion,
-        error: versionError 
+      return successResponse(
+        {
+          document: result.document,
+          version: result.version,
+        },
+        201
+      );
+    } catch (error) {
+      logger.error('Error creating new version:', {
+        error: error instanceof Error ? error.message : String(error),
+        documentId: docId,
+        contractId: id,
       });
-    } else {
-      logger.info(`Document version created successfully`, { 
-        documentId: docId, 
-        versionId: version?.id,
-        versionNumber: nextVersion 
-      });
+      return errorResponse(
+        error,
+        error instanceof Error ? error.message : 'Failed to create new version'
+      );
     }
-
-    return successResponse({ document: updatedDoc, version }, 201);
   } catch (error) {
     return errorResponse(error, 'Failed to create version');
   }

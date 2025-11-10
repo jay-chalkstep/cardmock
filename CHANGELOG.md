@@ -7,6 +7,69 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.1.5] - 2025-01-XX
+
+### 🔄 Changed
+
+#### Contracts Module - Complete Versioning System Rebuild
+- **Unified Versioning Service**: Complete rebuild of document versioning logic
+  - Created centralized versioning service (`lib/utils/contract-versioning.ts`)
+  - All version logic now handled through unified service
+  - Automatic version number calculation from both `contract_documents` and `contract_document_versions` tables
+  - Ensures version numbers always increment correctly, even with gaps in history
+- **Improved Watermarking**: Enhanced watermark utility with better visibility
+  - Improved watermark positioning (centered on page)
+  - Better rotation (315 degrees) for diagonal watermark
+  - Larger, more visible text (80pt font size)
+  - Proper XML structure with correct namespaces
+  - Better compression settings for file generation
+- **Robust Version Creation**: Improved version creation process
+  - Watermarks all previous versions BEFORE uploading new version
+  - Handles both document records and version records
+  - Graceful error handling - continues even if individual watermarking fails
+  - Proper cleanup on errors
+- **Simplified API Routes**: Cleaner, more maintainable code
+  - Document upload route now uses unified versioning service
+  - Version upload route now uses unified versioning service
+  - Removed duplicate code and logic
+  - Better error handling and logging
+
+### 🐛 Fixed
+
+#### Contracts Module - Version Number Issues
+- **Version Number Incrementing**: Fixed issue where version numbers weren't incrementing correctly
+  - Now properly calculates next version from both tables
+  - Handles edge cases where version history has gaps
+  - Ensures sequential version numbering
+- **Watermark Application**: Fixed issue where watermarks weren't being applied
+  - Watermarks now applied to all previous versions before new upload
+  - Handles both current document file and all version history files
+  - Properly updates file URLs in database after watermarking
+
+### 📝 Technical Details
+
+- **New Utilities**:
+  - `lib/utils/contract-versioning.ts` - Unified versioning service
+    - `calculateNextVersionNumber()` - Calculates next version from both tables
+    - `watermarkPreviousVersions()` - Watermarks all previous versions
+    - `createNewVersion()` - Creates new version with proper versioning
+    - `createNewDocument()` - Creates new document (version 1)
+    - `handleDocumentUpload()` - Automatically determines new doc vs new version
+- **Updated Utilities**:
+  - `lib/utils/watermark.ts` - Improved watermark implementation
+    - Better positioning and styling
+    - Proper XML structure with correct namespaces
+    - Better compression settings
+- **Updated API Routes**:
+  - `app/api/contracts/[id]/documents/route.ts` - Now uses unified versioning service
+  - `app/api/contracts/[id]/documents/[docId]/versions/route.ts` - Now uses unified versioning service
+- **Code Quality**:
+  - Removed ~300 lines of duplicate code
+  - Centralized versioning logic for easier maintenance
+  - Better error handling and logging throughout
+
+---
+
 ## [4.1.4] - 2025-01-XX
 
 ### ✨ Added

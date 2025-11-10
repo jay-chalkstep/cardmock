@@ -87,8 +87,10 @@ Built for teams who need more than basic file storage—Aiproval provides contex
 - **Document Versioning** - Upload Word documents with automatic version control
   - Upload, view, download, and delete documents
   - Automatic version tracking with current version marking
-  - **Automatic Watermarking** - Previous versions automatically watermarked with "PREVIOUS VERSION" ⭐️ NEW
-    - Watermarking happens when a new version is uploaded
+  - **Unified Versioning Service** - Centralized versioning logic ensures correct version numbering ⭐️ ENHANCED
+  - **Automatic Watermarking** - Previous versions automatically watermarked with "PREVIOUS VERSION" ⭐️ ENHANCED
+    - Watermarking happens synchronously before new version upload
+    - Improved watermark visibility (centered, rotated, larger text)
     - Ensures previous versions are clearly marked
     - Works with .docx files using JSZip library
 - **Version History** - Complete document version history with timestamps
@@ -991,6 +993,8 @@ See [CHANGELOG.md](./documentation/CHANGELOG.md) for detailed version history.
 
 ### Recent Versions
 
+- **v4.1.5** (2025-01-XX) - 🔄 **MAJOR REBUILD** - Contracts Versioning System - Complete rebuild of document versioning with unified service, fixed version number incrementing, improved watermarking
+- **v4.1.4** (2025-01-XX) - ✨ **NEW FEATURE** - Contracts Document Watermarking - Automatic watermarking of previous versions when new version uploaded
 - **v4.1.3** (2025-01-XX) - ✨ **NEW FEATURE** - Contracts Comprehensive AI Summaries - Comprehensive contract summaries and version changelogs on overview tab, persistent storage
 - **v4.1.2** (2025-01-XX) - 🔄 **IMPROVEMENT** - Contracts AI Summary Improvements - Tighter single-sentence summaries with CDCO context, optimized token usage
 - **v4.1.1** (2025-01-XX) - 🐛 **FIXES** - Projects Module Performance - Removed N+1 queries, optimized API endpoints, improved error handling
