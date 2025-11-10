@@ -10,15 +10,23 @@
    - **App website**: `https://app.aiproval.com` (or your production URL)
    - **App icon**: Upload an icon (optional)
 
-4. After creating the app, go to the **"OAuth"** tab
-5. Configure OAuth settings:
+4. After creating the app, go to the **"OAuth scopes"** tab
+5. Configure OAuth scopes - Check the following scopes:
+   - **Files** section:
+     - ✅ `file_content:read` - "Read the contents of and render images from files"
+     - ✅ `file_metadata:read` - "Read metadata of files"
+   - (Optional) If you need comment functionality:
+     - `file_comments:read` - "Read comments in accessible files"
+     - `file_comments:write` - "Create, modify, and delete comments in accessible files"
+
+6. Go to the **"OAuth credentials"** tab
+7. Configure OAuth settings:
    - **Redirect URI**: 
      - For production: `https://app.aiproval.com/api/integrations/figma/callback`
      - For local development: `http://localhost:3000/api/integrations/figma/callback`
-   - **Note**: Figma OAuth doesn't use scopes in the traditional sense. Permissions are configured at the app level in Figma's app settings. Make sure your app has the necessary permissions enabled in the Figma Developer Dashboard.
+   - Copy your **Client ID** and **Client Secret** from this tab
 
-6. Save the OAuth settings
-7. Copy your **Client ID** and **Client Secret** from the OAuth tab
+8. Save the OAuth settings
 
 ## Step 2: Add Environment Variables
 
@@ -74,6 +82,13 @@ FIGMA_CLIENT_SECRET=your_figma_client_secret_here
   - For local: Use `http://localhost:3000/api/integrations/figma/callback`
   - For production: Use `https://app.aiproval.com/api/integrations/figma/callback`
   - Make sure the redirect URI in Figma matches exactly (including protocol and trailing slash)
+
+### Error: "Invalid scopes for app"
+- **Cause**: The scopes requested don't match what's configured in your Figma app
+- **Solution**: 
+  - Go to your Figma app settings → OAuth scopes tab
+  - Make sure `file_content:read` and `file_metadata:read` are checked
+  - Save the settings and try again
 
 ### Error: "Invalid client secret"
 - **Cause**: `FIGMA_CLIENT_SECRET` is not set or is incorrect

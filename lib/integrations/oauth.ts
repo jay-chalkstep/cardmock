@@ -36,7 +36,7 @@ export function getOAuthConfig(integrationType: IntegrationType): OAuthConfig {
         authorizationUrl: 'https://www.figma.com/oauth',
         tokenUrl: 'https://www.figma.com/api/oauth/token',
         redirectUri: `${baseUrl}/api/integrations/figma/callback`,
-        scopes: ['file_read'],
+        scopes: ['file_content:read', 'file_metadata:read'],
       };
     case 'gmail':
       return {
@@ -89,7 +89,7 @@ export function initiateOAuthFlow(
   const config = getOAuthConfig(integrationType);
   const generatedState = state || crypto.randomUUID();
   
-  // Figma OAuth doesn't use scopes - permissions are configured in the app settings
+  // Build base OAuth parameters
   const params = new URLSearchParams({
     client_id: config.clientId,
     redirect_uri: config.redirectUri,
@@ -97,8 +97,8 @@ export function initiateOAuthFlow(
     state: generatedState,
   });
   
-  // Add scope parameter only for non-Figma integrations
-  if (integrationType !== 'figma' && config.scopes.length > 0) {
+  // Add scope parameter for all integrations (including Figma)
+  if (config.scopes.length > 0) {
     params.append('scope', config.scopes.join(' '));
   }
   
