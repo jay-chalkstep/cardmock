@@ -10,6 +10,7 @@ interface DocumentVersion {
   file_name: string;
   created_at: string;
   created_by: string;
+  created_by_name?: string;
   diff_summary?: string;
   diff_summary_generated_at?: string;
 }
@@ -58,6 +59,7 @@ export default function DocumentViewer({
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [viewerError, setViewerError] = useState(false);
+  const [isCurrentVersion, setIsCurrentVersion] = useState(true);
 
   const fetchDocumentPreview = useCallback(async (versionId?: string, forceFallback = false) => {
     if (!document?.id) return;
@@ -85,6 +87,8 @@ export default function DocumentViewer({
         }
         
         setDocumentHtml(result.data?.html || result.html || null);
+        const isCurrent = result.data?.isCurrentVersion !== false; // Default to true if not provided
+        setIsCurrentVersion(isCurrent);
         setViewerUrl(null);
         setUseFallback(true);
         setPreviewError(null);
@@ -109,6 +113,8 @@ export default function DocumentViewer({
       }
       
       const viewerUrl = result.data?.viewerUrl || result.viewerUrl;
+      const isCurrent = result.data?.isCurrentVersion !== false; // Default to true if not provided
+      setIsCurrentVersion(isCurrent);
       if (viewerUrl) {
         setViewerUrl(viewerUrl);
         setDocumentHtml(null);
@@ -134,6 +140,8 @@ export default function DocumentViewer({
     if (document?.id) {
       fetchVersions();
       fetchDocumentPreview();
+      // Reset to current version when document changes
+      setIsCurrentVersion(true);
     }
   }, [document?.id, fetchDocumentPreview]);
 
@@ -168,6 +176,9 @@ export default function DocumentViewer({
   const handleVersionClick = async (version: DocumentVersion) => {
     setSelectedVersion(version);
     setDiffError(null);
+    // Check if this version is the current version
+    const isCurrent = version.version_number === document.version_number;
+    setIsCurrentVersion(isCurrent);
     if (onVersionSelect) {
       onVersionSelect(version);
     }
@@ -345,7 +356,7 @@ export default function DocumentViewer({
                     </span>
                     <span className="flex items-center gap-1">
                       <User size={14} />
-                      Uploaded by {selectedVersion.created_by}
+                      Uploaded by {selectedVersion.created_by_name || selectedVersion.created_by}
                     </span>
                   </div>
                 </div>
@@ -427,6 +438,25 @@ export default function DocumentViewer({
                       }}
                       onLoad={() => setViewerError(false)}
                     />
+                    {!isCurrentVersion && (
+                      <div 
+                        className="absolute inset-0 pointer-events-none flex items-center justify-center"
+                        style={{
+                          background: 'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255, 0, 0, 0.03) 10px, rgba(255, 0, 0, 0.03) 20px)',
+                        }}
+                      >
+                        <div 
+                          className="text-6xl font-bold text-red-400 opacity-20 select-none"
+                          style={{
+                            transform: 'rotate(-45deg)',
+                            letterSpacing: '0.1em',
+                            textShadow: '2px 2px 4px rgba(0,0,0,0.1)',
+                          }}
+                        >
+                          PREVIOUS VERSION
+                        </div>
+                      </div>
+                    )}
                     {viewerError && (
                       <div className="absolute inset-0 bg-white flex items-center justify-center">
                         <div className="text-center">
@@ -456,7 +486,26 @@ export default function DocumentViewer({
                       Try Office Viewer
                     </button>
                   </div>
-                  <div className="p-6 overflow-y-auto max-h-[calc(100vh-400px)]">
+                  <div className="relative p-6 overflow-y-auto max-h-[calc(100vh-400px)]">
+                    {!isCurrentVersion && (
+                      <div 
+                        className="absolute inset-0 pointer-events-none flex items-center justify-center z-10"
+                        style={{
+                          background: 'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255, 0, 0, 0.03) 10px, rgba(255, 0, 0, 0.03) 20px)',
+                        }}
+                      >
+                        <div 
+                          className="text-6xl font-bold text-red-400 opacity-20 select-none"
+                          style={{
+                            transform: 'rotate(-45deg)',
+                            letterSpacing: '0.1em',
+                            textShadow: '2px 2px 4px rgba(0,0,0,0.1)',
+                          }}
+                        >
+                          PREVIOUS VERSION
+                        </div>
+                      </div>
+                    )}
                     <div 
                       dangerouslySetInnerHTML={{ __html: documentHtml }}
                       className="document-content"
@@ -523,6 +572,25 @@ export default function DocumentViewer({
                     }}
                     onLoad={() => setViewerError(false)}
                   />
+                  {!isCurrentVersion && (
+                    <div 
+                      className="absolute inset-0 pointer-events-none flex items-center justify-center"
+                      style={{
+                        background: 'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255, 0, 0, 0.03) 10px, rgba(255, 0, 0, 0.03) 20px)',
+                      }}
+                    >
+                      <div 
+                        className="text-6xl font-bold text-red-400 opacity-20 select-none"
+                        style={{
+                          transform: 'rotate(-45deg)',
+                          letterSpacing: '0.1em',
+                          textShadow: '2px 2px 4px rgba(0,0,0,0.1)',
+                        }}
+                      >
+                        PREVIOUS VERSION
+                      </div>
+                    </div>
+                  )}
                   {viewerError && (
                     <div className="absolute inset-0 bg-white flex items-center justify-center">
                       <div className="text-center">
@@ -551,7 +619,26 @@ export default function DocumentViewer({
                       Try Office Viewer
                     </button>
                   </div>
-                  <div className="p-6 overflow-y-auto max-h-[calc(100vh-400px)]">
+                  <div className="relative p-6 overflow-y-auto max-h-[calc(100vh-400px)]">
+                    {!isCurrentVersion && (
+                      <div 
+                        className="absolute inset-0 pointer-events-none flex items-center justify-center z-10"
+                        style={{
+                          background: 'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255, 0, 0, 0.03) 10px, rgba(255, 0, 0, 0.03) 20px)',
+                        }}
+                      >
+                        <div 
+                          className="text-6xl font-bold text-red-400 opacity-20 select-none"
+                          style={{
+                            transform: 'rotate(-45deg)',
+                            letterSpacing: '0.1em',
+                            textShadow: '2px 2px 4px rgba(0,0,0,0.1)',
+                          }}
+                        >
+                          PREVIOUS VERSION
+                        </div>
+                      </div>
+                    )}
                     <div 
                       dangerouslySetInnerHTML={{ __html: documentHtml }}
                       className="document-content"
@@ -630,6 +717,10 @@ export default function DocumentViewer({
                         <div className="flex items-center gap-1">
                           <Clock size={12} />
                           {formatDate(version.created_at)}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <User size={12} />
+                          {version.created_by_name || version.created_by}
                         </div>
                         {version.diff_summary && (
                           <div className="flex items-center gap-1 mt-1">

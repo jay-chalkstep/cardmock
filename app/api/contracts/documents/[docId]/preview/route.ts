@@ -44,18 +44,21 @@ export async function GET(
     }
 
     let fileUrl = document.file_url;
+    let isCurrentVersion = true;
 
     // If version_id is provided, get that specific version
     if (versionId) {
       const { data: version } = await supabaseServer
         .from('contract_document_versions')
-        .select('file_url')
+        .select('file_url, version_number')
         .eq('id', versionId)
         .eq('document_id', docId)
         .single();
 
       if (version) {
         fileUrl = version.file_url;
+        // Check if this version is the current version
+        isCurrentVersion = version.version_number === document.version_number;
       }
     }
 
@@ -85,7 +88,7 @@ export async function GET(
           </div>
         `;
 
-        return successResponse({ html: styledHtml, fallback: true });
+        return successResponse({ html: styledHtml, fallback: true, isCurrentVersion });
       } catch (error) {
         logger.error('Error converting document to HTML:', error);
         return errorResponse(
@@ -99,7 +102,8 @@ export async function GET(
     // Office Online viewer requires publicly accessible HTTPS URLs
     return successResponse({ 
       fileUrl,
-      viewerUrl: `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(fileUrl)}`
+      viewerUrl: `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(fileUrl)}`,
+      isCurrentVersion
     });
   } catch (error) {
     return errorResponse(error, 'Failed to generate document preview');

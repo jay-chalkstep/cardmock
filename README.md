@@ -88,7 +88,13 @@ Built for teams who need more than basic file storage—Aiproval provides contex
   - Upload, view, download, and delete documents
   - Automatic version tracking with current version marking
 - **Version History** - Complete document version history with timestamps
-- **AI Diff Summaries** - AI-powered document comparison (placeholder for future implementation)
+- **AI Document Summaries** - AI-powered single-sentence document summaries ⭐️ ENHANCED
+  - Assumes contracts are between Choice Digital (CDCO) and a counterparty
+  - Focuses on document purpose and key changes
+  - Example: "This is an amendment to add checks to the Clearesult programs"
+- **AI Version Diff Summaries** - AI-powered single-sentence version change summaries ⭐️ ENHANCED
+  - Concise summaries of what changed between versions
+  - Examples: "This version makes changes to the limits of liability section, and removes the IP section" or "These versions appear to have no material differences"
 - **DocuSign Integration** - E-signature workflow (placeholder for future implementation)
 - **Email Mockups** - Create and approve email templates with client branding
   - Full-featured HTML editor with preview mode
@@ -957,6 +963,8 @@ See [CHANGELOG.md](./documentation/CHANGELOG.md) for detailed version history.
 
 ### Recent Versions
 
+- **v4.1.2** (2025-01-XX) - 🔄 **IMPROVEMENT** - Contracts AI Summary Improvements - Tighter single-sentence summaries with CDCO context, optimized token usage
+- **v4.1.1** (2025-01-XX) - 🐛 **FIXES** - Projects Module Performance - Removed N+1 queries, optimized API endpoints, improved error handling
 - **v4.1.0** (2025-01-XX) - 🎉 **MAJOR FEATURE** - Platform Integrations - Figma plugin, public share pages, Gmail add-on, Slack integration, Drive/Dropbox import, presentation mode
 - **v4.0.0** (2025-01-XX) - 🎉 **MAJOR RELEASE** - Contracts Module - Complete contract lifecycle management with document versioning, email mockups, payment methods
 - **v3.8.0** (2025-01-XX) - 🎉 **MAJOR FEATURE** - Notifications System & Settings Modal - In-app notifications with dropdown panel, comprehensive settings modal with preferences/account/org management, consolidated navigation

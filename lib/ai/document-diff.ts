@@ -63,15 +63,9 @@ export async function generateDiffSummary(
     throw new Error('OpenAI API key not configured. Cannot generate diff summary.');
   }
 
-  const prompt = `You are a legal document analyst. Compare these two contract document versions and summarize the key changes in plain English. Focus on:
+  const prompt = `You are a legal document analyst. Compare these two contract document versions and provide a single sentence summarizing the key changes.
 
-1. Added clauses or sections
-2. Removed clauses or sections
-3. Modified terms, dates, or amounts
-4. Changed language or wording
-5. Any other significant changes
-
-Be concise but thorough. Use bullet points for clarity. If there are no significant changes, state that clearly.
+Focus on what was added, removed, or modified. If there are no material differences, say "These versions appear to have no material differences."
 
 Previous Version:
 ${previousText}
@@ -79,7 +73,7 @@ ${previousText}
 Current Version:
 ${currentText}
 
-Provide a clear summary of the differences:`;
+Provide a single sentence summary of the differences:`;
 
   try {
     const completion = await client.chat.completions.create({
@@ -87,7 +81,7 @@ Provide a clear summary of the differences:`;
       messages: [
         {
           role: 'system',
-          content: 'You are a legal document analyst specializing in contract comparison and change analysis.',
+          content: 'You are a legal document analyst specializing in contract comparison. Provide concise, single-sentence summaries of version changes.',
         },
         {
           role: 'user',
@@ -95,7 +89,7 @@ Provide a clear summary of the differences:`;
         },
       ],
       temperature: 0.3, // Lower temperature for more consistent, factual output
-      max_tokens: 1000,
+      max_tokens: 150, // Reduced for single sentence summaries
     });
 
     const summary = completion.choices[0]?.message?.content?.trim();
@@ -147,21 +141,14 @@ export async function generateDocumentSummary(documentText: string): Promise<str
     throw new Error('OpenAI API key not configured. Cannot generate document summary.');
   }
 
-  const prompt = `You are a legal document analyst. Analyze this contract document and provide a clear, concise summary in plain English. Focus on:
+  const prompt = `You are a legal document analyst. Analyze this contract document and provide a single sentence summary.
 
-1. Document type and purpose
-2. Key parties involved
-3. Main terms and conditions
-4. Important dates, amounts, or deadlines
-5. Key obligations and responsibilities
-6. Any notable clauses or provisions
-
-Be concise but comprehensive. Use bullet points for clarity. If the document is incomplete or unclear, note that.
+Assume this contract is between Choice Digital (also referred to as CDCO) and a counterparty. Focus on the document's purpose and key changes or terms. Examples: "This is an amendment to add checks to the Clearesult programs" or "This is a master services agreement establishing payment terms and deliverables."
 
 Document Content:
 ${documentText}
 
-Provide a clear summary of the document:`;
+Provide a single sentence summary:`;
 
   try {
     const completion = await client.chat.completions.create({
@@ -169,7 +156,7 @@ Provide a clear summary of the document:`;
       messages: [
         {
           role: 'system',
-          content: 'You are a legal document analyst specializing in contract analysis and summarization.',
+          content: 'You are a legal document analyst specializing in contract analysis. Provide concise, single-sentence summaries assuming contracts are between Choice Digital (CDCO) and a counterparty.',
         },
         {
           role: 'user',
@@ -177,7 +164,7 @@ Provide a clear summary of the document:`;
         },
       ],
       temperature: 0.3,
-      max_tokens: 1500,
+      max_tokens: 150, // Reduced for single sentence summaries
     });
 
     const summary = completion.choices[0]?.message?.content?.trim();

@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.1.2] - 2025-01-XX
+
+### 🔄 Changed
+
+#### Contracts Module - AI Summary Improvements
+- **Tighter AI Summaries**: Updated AI-powered document summaries to be single-sentence summaries
+  - Document summaries now assume contracts are between Choice Digital (CDCO) and a counterparty
+  - Summaries focus on document purpose and key changes (e.g., "This is an amendment to add checks to the Clearesult programs")
+  - Version diff summaries are now concise single sentences describing changes
+  - Examples: "This version makes changes to the limits of liability section, and removes the IP section" or "These versions appear to have no material differences"
+- **Optimized Token Usage**: Reduced max_tokens from 1000-1500 to 150 for both summary types
+  - More cost-effective AI usage
+  - Faster response times
+  - Cleaner, more focused summaries
+
+### 📝 Technical Details
+
+- **Updated Functions**:
+  - `lib/ai/document-diff.ts` - `generateDocumentSummary()` - Now generates single-sentence summaries with CDCO context
+  - `lib/ai/document-diff.ts` - `generateDiffSummary()` - Now generates single-sentence version change summaries
+- **Prompt Improvements**:
+  - Document summaries include context about Choice Digital (CDCO) as a party
+  - Version summaries focus on what was added, removed, or modified
+  - Both prompts explicitly request single-sentence output
+  - System messages updated to emphasize concise summaries
+
+---
+
 ## [4.1.1] - 2025-01-XX
 
 ### 🐛 Fixed

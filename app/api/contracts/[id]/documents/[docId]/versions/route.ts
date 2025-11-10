@@ -5,6 +5,7 @@ import { handleSupabaseError } from '@/lib/api/error-handler';
 import { supabaseServer } from '@/lib/supabase-server';
 import { logger } from '@/lib/utils/logger';
 import { createServerAdminClient } from '@/lib/supabase/server';
+import { clerkClient } from '@clerk/nextjs/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,7 +50,31 @@ export async function GET(
       return handleSupabaseError(error);
     }
 
-    return successResponse({ versions: versions || [] });
+    // Enrich versions with user names from Clerk
+    const clerk = await clerkClient();
+    const enrichedVersions = await Promise.all(
+      (versions || []).map(async (version) => {
+        try {
+          const user = await clerk.users.getUser(version.created_by);
+          const userName = user.firstName && user.lastName
+            ? `${user.firstName} ${user.lastName}`
+            : user.firstName || user.username || user.emailAddresses[0]?.emailAddress?.split('@')[0] || 'Unknown User';
+          
+          return {
+            ...version,
+            created_by_name: userName,
+          };
+        } catch (error) {
+          logger.error('Failed to fetch user from Clerk', error);
+          return {
+            ...version,
+            created_by_name: 'Unknown User',
+          };
+        }
+      })
+    );
+
+    return successResponse({ versions: enrichedVersions });
   } catch (error) {
     return errorResponse(error, 'Failed to fetch versions');
   }
