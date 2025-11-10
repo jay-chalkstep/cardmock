@@ -978,6 +978,34 @@ See [CHANGELOG.md](./documentation/CHANGELOG.md) for detailed version history.
 
 ---
 
+## 📋 To-Do / Future Features
+
+### Admin-Controlled Project/Client Visibility
+**Status**: Planned for next session
+
+**Feature Description**:
+Add admin-level ability to assign client/project visibility, allowing granular control over which clients can see which projects.
+
+**Requirements**:
+- Client-role users should see projects associated with their assigned client
+- If assigned to a child client, they should only see that child client's projects (not parent)
+- Admins should be able to assign multiple clients to a project (many-to-many relationship)
+- Visibility assignments should supplement or override the default `client_id` relationship
+
+**Implementation Considerations**:
+- Create `project_client_visibility` junction table (project_id, client_id)
+- Add admin UI for assigning clients to projects (project detail page or client detail page)
+- Update project filtering logic to check both `client_id` and visibility assignments
+- Consider whether child clients should inherit visibility from parent clients
+- Determine if visibility assignments override or supplement the default `client_id` relationship
+
+**Questions to Resolve**:
+1. Should visibility assignments override or supplement the default `client_id`?
+2. Should child clients inherit visibility from parent clients?
+3. Where should this be managed in the UI? (Project detail page, client detail page, or both?)
+
+---
+
 ## 🔗 Links & Resources
 
 - **Repository**: [https://github.com/jay-chalkstep/contentpackage](https://github.com/jay-chalkstep/contentpackage)
