@@ -34,6 +34,7 @@ interface ContractDocument {
 interface DocumentViewerProps {
   document: ContractDocument;
   contractId: string;
+  initialVersionId?: string | null;
   onVersionSelect?: (version: DocumentVersion) => void;
   onDownload?: (url: string, fileName: string) => void;
   onSendForSignature?: (docId: string) => void;
@@ -42,6 +43,7 @@ interface DocumentViewerProps {
 export default function DocumentViewer({
   document,
   contractId,
+  initialVersionId,
   onVersionSelect,
   onDownload,
   onSendForSignature,
@@ -151,6 +153,18 @@ export default function DocumentViewer({
     }
   }, [selectedVersion?.id, fetchDocumentPreview]);
 
+  // Watch for changes to initialVersionId and update selected version
+  useEffect(() => {
+    if (initialVersionId && versions.length > 0) {
+      const versionToSelect = versions.find((v: DocumentVersion) => v.id === initialVersionId);
+      if (versionToSelect && versionToSelect.id !== selectedVersion?.id) {
+        setSelectedVersion(versionToSelect);
+        const isCurrent = versionToSelect.version_number === document.version_number;
+        setIsCurrentVersion(isCurrent);
+      }
+    }
+  }, [initialVersionId, versions, document.version_number, selectedVersion?.id]);
+
   const fetchVersions = async () => {
     if (!document?.id) return;
     setLoadingVersions(true);
@@ -161,10 +175,16 @@ export default function DocumentViewer({
       const fetchedVersions = result.data?.versions || result.versions || [];
       setVersions(fetchedVersions);
       
-      // Set current version as selected by default
-      const currentVersion = fetchedVersions.find((v: DocumentVersion) => v.version_number === document.version_number);
-      if (currentVersion) {
-        setSelectedVersion(currentVersion);
+      // Set selected version: use initialVersionId if provided, otherwise use current version
+      let versionToSelect: DocumentVersion | undefined;
+      if (initialVersionId) {
+        versionToSelect = fetchedVersions.find((v: DocumentVersion) => v.id === initialVersionId);
+      }
+      if (!versionToSelect) {
+        versionToSelect = fetchedVersions.find((v: DocumentVersion) => v.version_number === document.version_number);
+      }
+      if (versionToSelect) {
+        setSelectedVersion(versionToSelect);
       }
     } catch (error) {
       console.error('Error fetching versions:', error);

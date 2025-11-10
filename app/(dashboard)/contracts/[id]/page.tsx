@@ -59,7 +59,7 @@ export default function ContractDetailPage() {
   const [documentsLoading, setDocumentsLoading] = useState(false);
   const [showDocumentUpload, setShowDocumentUpload] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<any | null>(null);
-  const [hoveredVersion, setHoveredVersion] = useState<{ docId: string; versionId: string } | null>(null);
+  const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
   const [versionDiffSummaries, setVersionDiffSummaries] = useState<Record<string, string>>({});
   const [loadingSummaries, setLoadingSummaries] = useState<Record<string, boolean>>({});
   const [summaryErrors, setSummaryErrors] = useState<Record<string, string>>({});
@@ -101,6 +101,14 @@ export default function ContractDetailPage() {
       fetchDocuments();
     }
   }, [contractId, activeTab]);
+
+  // Reset selectedVersionId when document changes (unless clicking a version)
+  useEffect(() => {
+    if (selectedDocument?.id && !selectedVersionId) {
+      // Document was selected without a specific version, so reset to show current version
+      setSelectedVersionId(null);
+    }
+  }, [selectedDocument?.id]);
 
   useEffect(() => {
     if (selectedDocument?.id && activeTab === 'documents') {
@@ -668,6 +676,7 @@ export default function ContractDetailPage() {
                   <DocumentViewer
                     document={selectedDocument}
                     contractId={contractId}
+                    initialVersionId={selectedVersionId}
                     onVersionSelect={(version) => {
                       // Handle version selection if needed
                     }}
@@ -780,26 +789,15 @@ export default function ContractDetailPage() {
                               <div className="p-2 text-xs font-medium text-gray-600 px-4">Version History</div>
                               <div className="divide-y divide-gray-200">
                                 {doc.versions.map((version: any, index: number) => {
-                                  const cacheKey = `${doc.id}-${version.id}`;
-                                  const diffSummary = versionDiffSummaries[cacheKey] || version.diff_summary;
-                                  const isLoading = loadingSummaries[cacheKey];
-                                  const error = summaryErrors[cacheKey];
-                                  const isHovered = hoveredVersion?.docId === doc.id && hoveredVersion?.versionId === version.id;
-                                  
                                   return (
                                     <div
                                       key={version.id}
-                                      className="relative px-4 py-3 hover:bg-white transition-colors"
-                                      onMouseEnter={async () => {
-                                        if (version.version_number > 1) {
-                                          setHoveredVersion({ docId: doc.id, versionId: version.id });
-                                          // Fetch diff summary if not already available
-                                          if (!diffSummary && !isLoading) {
-                                            await fetchVersionDiffSummary(doc.id, version);
-                                          }
-                                        }
+                                      className="px-4 py-3 hover:bg-white transition-colors cursor-pointer"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedDocument(doc);
+                                        setSelectedVersionId(version.id);
                                       }}
-                                      onMouseLeave={() => setHoveredVersion(null)}
                                     >
                                       <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-3 flex-1">
@@ -827,12 +825,6 @@ export default function ContractDetailPage() {
                                               minute: '2-digit',
                                             })}
                                           </span>
-                                          {version.version_number > 1 && (
-                                            <div className="flex items-center gap-1 text-xs text-blue-600">
-                                              <Sparkles size={12} />
-                                              <span>Hover for changes</span>
-                                            </div>
-                                          )}
                                         </div>
                                         <div className="flex items-center gap-2">
                                           <a
@@ -847,57 +839,6 @@ export default function ContractDetailPage() {
                                           </a>
                                         </div>
                                       </div>
-
-                                      {/* Hover Tooltip with Diff Summary */}
-                                      {isHovered && version.version_number > 1 && (
-                                        <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-white border border-gray-200 rounded-lg shadow-xl p-4 max-h-64 overflow-y-auto">
-                                          {error ? (
-                                            <div className="flex items-start gap-2">
-                                              <div className="flex-1">
-                                                <h5 className="font-medium text-gray-900 text-sm mb-1">
-                                                  Changes from Version {version.version_number - 1} to Version {version.version_number}
-                                                </h5>
-                                                <p className="text-xs text-red-600 mb-2">{error}</p>
-                                                <button
-                                                  onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    fetchVersionDiffSummary(doc.id, version);
-                                                  }}
-                                                  className="text-xs text-blue-600 hover:text-blue-700 underline"
-                                                >
-                                                  Retry
-                                                </button>
-                                              </div>
-                                            </div>
-                                          ) : diffSummary ? (
-                                            <div className="flex items-start gap-2 mb-2">
-                                              <Sparkles size={16} className="text-blue-600 mt-0.5" />
-                                              <div className="flex-1">
-                                                <h5 className="font-medium text-gray-900 text-sm mb-1">
-                                                  Changes from Version {version.version_number - 1} to Version {version.version_number}
-                                                </h5>
-                                                <p className="text-xs text-gray-600 whitespace-pre-wrap leading-relaxed">
-                                                  {diffSummary}
-                                                </p>
-                                              </div>
-                                            </div>
-                                          ) : isLoading ? (
-                                            <div className="flex items-center gap-2 text-sm text-gray-500">
-                                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                                              <span>Generating summary...</span>
-                                            </div>
-                                          ) : (
-                                            <div className="flex items-start gap-2">
-                                              <div className="flex-1">
-                                                <h5 className="font-medium text-gray-900 text-sm mb-1">
-                                                  Changes from Version {version.version_number - 1} to Version {version.version_number}
-                                                </h5>
-                                                <p className="text-xs text-gray-500">Click to view document for details</p>
-                                              </div>
-                                            </div>
-                                          )}
-                                        </div>
-                                      )}
                                     </div>
                                   );
                                 })}
