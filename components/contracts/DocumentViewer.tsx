@@ -56,6 +56,38 @@ export default function DocumentViewer({
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
 
+  const fetchDocumentPreview = useCallback(async (versionId?: string) => {
+    if (!document?.id) return;
+    setLoadingPreview(true);
+    setDocumentHtml(null);
+    setPreviewError(null);
+    try {
+      const url = versionId 
+        ? `/api/contracts/documents/${document.id}/preview?version_id=${versionId}`
+        : `/api/contracts/documents/${document.id}/preview`;
+      
+      const response = await fetch(url);
+      const result = await response.json();
+      
+      if (!response.ok) {
+        const errorMessage = result.message || result.error || 'Failed to load document preview';
+        setPreviewError(errorMessage);
+        setDocumentHtml(null);
+        return;
+      }
+      
+      setDocumentHtml(result.data?.html || result.html || null);
+      setPreviewError(null);
+    } catch (error) {
+      console.error('Error fetching document preview:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load document preview';
+      setPreviewError(errorMessage);
+      setDocumentHtml(null);
+    } finally {
+      setLoadingPreview(false);
+    }
+  }, [document?.id]);
+
   useEffect(() => {
     if (document?.id) {
       fetchVersions();
@@ -110,38 +142,6 @@ export default function DocumentViewer({
       setDiffError(null);
     }
   };
-
-  const fetchDocumentPreview = useCallback(async (versionId?: string) => {
-    if (!document?.id) return;
-    setLoadingPreview(true);
-    setDocumentHtml(null);
-    setPreviewError(null);
-    try {
-      const url = versionId 
-        ? `/api/contracts/documents/${document.id}/preview?version_id=${versionId}`
-        : `/api/contracts/documents/${document.id}/preview`;
-      
-      const response = await fetch(url);
-      const result = await response.json();
-      
-      if (!response.ok) {
-        const errorMessage = result.message || result.error || 'Failed to load document preview';
-        setPreviewError(errorMessage);
-        setDocumentHtml(null);
-        return;
-      }
-      
-      setDocumentHtml(result.data?.html || result.html || null);
-      setPreviewError(null);
-    } catch (error) {
-      console.error('Error fetching document preview:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to load document preview';
-      setPreviewError(errorMessage);
-      setDocumentHtml(null);
-    } finally {
-      setLoadingPreview(false);
-    }
-  }, [document?.id]);
 
   const fetchDiffSummary = async (docId: string) => {
     setLoadingDiff(true);
