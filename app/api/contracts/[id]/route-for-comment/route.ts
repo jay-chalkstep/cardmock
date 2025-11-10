@@ -453,13 +453,51 @@ export async function POST(
           .eq('organization_id', orgId)
           .single();
 
-        if (integrationError || !integration) {
-          return errorResponse(new Error('Slack integration not found'), 'Slack integration not connected');
+        if (integrationError) {
+          logger.error('Error fetching Slack integration', { error: integrationError, orgId });
+          if (integrationError.code === 'PGRST116') {
+            return errorResponse(new Error('Slack integration not found'), 'Slack integration not connected. Please connect Slack in Settings → Integrations.');
+          }
+          return errorResponse(integrationError, 'Failed to fetch Slack integration');
+        }
+
+        if (!integration) {
+          logger.warn('Slack integration not found', { orgId });
+          return errorResponse(new Error('Slack integration not found'), 'Slack integration not connected. Please connect Slack in Settings → Integrations.');
+        }
+
+        if (!integration.bot_token_encrypted) {
+          logger.error('Slack integration missing bot_token_encrypted', { integration_id: integration.id, orgId });
+          return errorResponse(
+            new Error('Slack integration is incomplete'),
+            'Slack integration is incomplete. Please reconnect Slack in Settings → Integrations.'
+          );
         }
 
         // Decrypt bot token
-        const credentials = decryptCredentials(integration.bot_token_encrypted);
-        const botToken = credentials.bot_token as string;
+        let botToken: string;
+        try {
+          const credentials = decryptCredentials(integration.bot_token_encrypted);
+          if (!credentials.bot_token || typeof credentials.bot_token !== 'string') {
+            logger.error('Decrypted credentials missing bot_token', { integration_id: integration.id });
+            return errorResponse(
+              new Error('Slack bot token not found in credentials'),
+              'Slack integration credentials are invalid. Please reconnect Slack in Settings → Integrations.'
+            );
+          }
+          botToken = credentials.bot_token;
+        } catch (decryptError) {
+          const errorMessage = decryptError instanceof Error ? decryptError.message : 'Unknown error';
+          logger.error('Failed to decrypt Slack bot token', {
+            error: errorMessage,
+            integration_id: integration.id,
+            orgId,
+          });
+          return errorResponse(
+            decryptError instanceof Error ? decryptError : new Error(errorMessage),
+            'Failed to decrypt Slack credentials. Please reconnect Slack in Settings → Integrations.'
+          );
+        }
 
         // Build Slack message
         const versionOwnerLabel = document.version_owner === 'client' ? "Client's Version" : "CDCO's Version";
@@ -539,25 +577,75 @@ export async function POST(
         });
 
         // Send message to Slack
-        const slackResponse = await fetch('https://slack.com/api/chat.postMessage', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${botToken}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(slackMessage),
-        });
+        let slackResponse: Response;
+        try {
+          slackResponse = await fetch('https://slack.com/api/chat.postMessage', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${botToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(slackMessage),
+          });
+        } catch (fetchError) {
+          const errorMessage = fetchError instanceof Error ? fetchError.message : 'Unknown error';
+          logger.error('Failed to send Slack API request', {
+            error: errorMessage,
+            contract_id: id,
+            slack_channel_id,
+          });
+          if (routing_method === 'slack') {
+            return errorResponse(
+              fetchError instanceof Error ? fetchError : new Error(errorMessage),
+              `Failed to connect to Slack API: ${errorMessage}`
+            );
+          }
+          // Continue if both methods requested
+          throw fetchError;
+        }
 
-        const slackData = await slackResponse.json();
+        let slackData: any;
+        try {
+          slackData = await slackResponse.json();
+        } catch (parseError) {
+          const errorMessage = parseError instanceof Error ? parseError.message : 'Unknown error';
+          logger.error('Failed to parse Slack API response', {
+            error: errorMessage,
+            status: slackResponse.status,
+            statusText: slackResponse.statusText,
+          });
+          if (routing_method === 'slack') {
+            return errorResponse(
+              parseError instanceof Error ? parseError : new Error(errorMessage),
+              'Failed to parse Slack API response'
+            );
+          }
+          // Continue if both methods requested
+          throw parseError;
+        }
 
         if (!slackData.ok) {
-          logger.error('Failed to send Slack message', { error: slackData.error });
+          const slackError = slackData.error || 'Unknown Slack error';
+          logger.error('Slack API returned error', {
+            error: slackError,
+            contract_id: id,
+            slack_channel_id,
+            response: slackData,
+          });
           if (routing_method === 'slack') {
-            return errorResponse(new Error(slackData.error), 'Failed to send Slack notification');
+            return errorResponse(
+              new Error(slackError),
+              `Failed to send Slack notification: ${slackError}`
+            );
           }
         } else {
           slackSuccess = true;
           slackMessageTs = slackData.ts;
+          logger.info('Slack message sent successfully', {
+            contract_id: id,
+            slack_channel_id,
+            message_ts: slackMessageTs,
+          });
         }
       } catch (error) {
         logger.error('Error sending Slack routing:', error);
@@ -568,45 +656,85 @@ export async function POST(
     }
 
     // Create routing event record
-    const { data: routingEvent, error: eventError } = await supabaseServer
-      .from('contract_routing_events')
-      .insert({
-        contract_id: id,
-        document_id: document.id,
-        routed_by: userId,
-        routing_method: routing_method,
-        recipients: finalRecipients,
-        slack_channel_id: routing_method === 'slack' || routing_method === 'both' ? slack_channel_id : null,
-        message: message || null,
-        ai_summary_included: include_ai_summary,
-        organization_id: orgId,
-      })
-      .select()
-      .single();
+    let routingEvent = null;
+    try {
+      const { data: event, error: eventError } = await supabaseServer
+        .from('contract_routing_events')
+        .insert({
+          contract_id: id,
+          document_id: document.id,
+          routed_by: userId,
+          routing_method: routing_method,
+          recipients: finalRecipients,
+          slack_channel_id: routing_method === 'slack' || routing_method === 'both' ? slack_channel_id : null,
+          message: message || null,
+          ai_summary_included: include_ai_summary,
+          organization_id: orgId,
+        })
+        .select()
+        .single();
 
-    if (eventError) {
-      logger.error('Error creating routing event:', eventError);
-      // Don't fail the request if event creation fails, but log it
+      if (eventError) {
+        logger.error('Error creating routing event', {
+          error: eventError,
+          contract_id: id,
+          document_id: document.id,
+        });
+        // Don't fail the request if event creation fails, but log it
+      } else {
+        routingEvent = event;
+        logger.debug('Routing event created successfully', { event_id: event?.id });
+      }
+    } catch (eventError) {
+      logger.error('Unexpected error creating routing event', {
+        error: eventError instanceof Error ? eventError.message : String(eventError),
+        contract_id: id,
+      });
+      // Don't fail the request if event creation fails
     }
 
     // Record Slack notification event if Slack was used
     if (slackSuccess && slackMessageTs) {
-      const { data: slackIntegration } = await supabaseServer
-        .from('slack_integrations')
-        .select('id')
-        .eq('organization_id', orgId)
-        .single();
+      try {
+        const { data: slackIntegration, error: slackIntegrationError } = await supabaseServer
+          .from('slack_integrations')
+          .select('id')
+          .eq('organization_id', orgId)
+          .single();
 
-      if (slackIntegration) {
-        await supabaseServer
-          .from('slack_notification_events')
-          .insert({
-            integration_id: slackIntegration.id,
-            channel_id: slack_channel_id,
-            message_ts: slackMessageTs,
-            event_type: 'contract_routed',
-            status: 'sent',
+        if (slackIntegrationError) {
+          logger.warn('Error fetching Slack integration for notification event', {
+            error: slackIntegrationError,
+            orgId,
           });
+        } else if (slackIntegration) {
+          const { error: notificationError } = await supabaseServer
+            .from('slack_notification_events')
+            .insert({
+              integration_id: slackIntegration.id,
+              channel_id: slack_channel_id,
+              message_ts: slackMessageTs,
+              event_type: 'contract_routed',
+              status: 'sent',
+            });
+
+          if (notificationError) {
+            logger.warn('Error recording Slack notification event', {
+              error: notificationError,
+              integration_id: slackIntegration.id,
+            });
+          } else {
+            logger.debug('Slack notification event recorded', {
+              integration_id: slackIntegration.id,
+              message_ts: slackMessageTs,
+            });
+          }
+        }
+      } catch (notificationError) {
+        logger.warn('Unexpected error recording Slack notification event', {
+          error: notificationError instanceof Error ? notificationError.message : String(notificationError),
+        });
+        // Don't fail the request if notification event recording fails
       }
     }
 
