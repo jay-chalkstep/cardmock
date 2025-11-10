@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.1.6] - 2025-11-10
+
+### ✨ Added
+
+#### Contracts Module - Delete Functionality & AI Summary Panel
+- **Contract Deletion**: Added ability to delete contracts from the contracts list page
+  - Delete button appears on each contract item (trash icon)
+  - Only visible to contract creator and admins
+  - Confirmation dialog before deletion
+  - Proper permission checking on backend API
+  - Toast notifications for success/error feedback
+- **AI Summary Preview Panel**: Added fourth panel to contracts list page
+  - Displays AI-generated contract summary when a contract is selected
+  - Shows contract number and title in header
+  - Fetches stored AI summary from database
+  - Loading state while fetching summary
+  - "View Details" link to navigate to full contract page
+  - Empty state when no contract is selected
+  - Graceful handling when summary is not available
+
+### 🔄 Changed
+
+#### Contracts Module - API Security
+- **DELETE Endpoint Permissions**: Updated contract deletion API to check permissions
+  - Only contract creator or admin can delete contracts
+  - Returns 403 Forbidden if user lacks permission
+  - Proper error messages for unauthorized attempts
+
+### 📝 Technical Details
+
+- **Updated Files**:
+  - `app/api/contracts/[id]/route.ts` - Added permission checking to DELETE endpoint
+  - `app/(dashboard)/contracts/page.tsx` - Added delete button, AI summary panel, and selection state
+- **New Features**:
+  - Contract selection state management
+  - AI summary fetching with fallback handling
+  - Delete confirmation dialog
+  - Permission-based UI rendering
+
+---
+
 ## [4.1.5] - 2025-01-XX
 
 ### 🔄 Changed

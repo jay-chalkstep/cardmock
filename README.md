@@ -83,6 +83,7 @@ Built for teams who need more than basic file storage—Aiproval provides contex
   - Client detail page with tabs (Overview, Contracts, Projects)
   - Create, edit, and delete clients
 - **Contract Creation** - Create new contracts and amendments
+- **Contract Deletion** - Delete contracts from list page (creator and admin only) ⭐️ NEW
 - **Contract Status Tracking** - Draft, pending signature, signed, amended, expired, voided
 - **Document Versioning** - Upload Word documents with automatic version control
   - Upload, view, download, and delete documents
@@ -98,6 +99,11 @@ Built for teams who need more than basic file storage—Aiproval provides contex
   - Clean table layout showing all contract information at a glance
   - Status badges with color coding
   - Expandable AI summary and changelog sections
+- **Contracts List Page** - Enhanced with delete and AI summary preview ⭐️ NEW
+  - Delete button on each contract (visible to creator and admin only)
+  - Fourth panel displays AI summary when contract is selected
+  - Quick preview of contract summary without navigating to detail page
+  - Permission-based UI rendering
 - **AI Document Summaries** - AI-powered single-sentence document summaries ⭐️ ENHANCED
   - Assumes contracts are between Choice Digital (CDCO) and a counterparty
   - Focuses on document purpose and key changes
@@ -993,6 +999,7 @@ See [CHANGELOG.md](./documentation/CHANGELOG.md) for detailed version history.
 
 ### Recent Versions
 
+- **v4.1.6** (2025-11-10) - ✨ **NEW FEATURES** - Contracts Delete & AI Summary Panel - Added contract deletion from list page (creator/admin only), added fourth panel with AI summary preview
 - **v4.1.5** (2025-01-XX) - 🔄 **MAJOR REBUILD** - Contracts Versioning System - Complete rebuild of document versioning with unified service, fixed version number incrementing, improved watermarking
 - **v4.1.4** (2025-01-XX) - ✨ **NEW FEATURE** - Contracts Document Watermarking - Automatic watermarking of previous versions when new version uploaded
 - **v4.1.3** (2025-01-XX) - ✨ **NEW FEATURE** - Contracts Comprehensive AI Summaries - Comprehensive contract summaries and version changelogs on overview tab, persistent storage

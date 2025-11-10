@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { getAuthContext, isClient, getUserAssignedClientId } from '@/lib/api/auth';
+import { getAuthContext, isClient, getUserAssignedClientId, isAdmin } from '@/lib/api/auth';
 import { successResponse, errorResponse, badRequestResponse, notFoundResponse, forbiddenResponse } from '@/lib/api/response';
 import { handleSupabaseError } from '@/lib/api/error-handler';
 import { supabaseServer } from '@/lib/supabase-server';
@@ -245,22 +245,30 @@ export async function DELETE(
   try {
     const authResult = await getAuthContext();
     if (authResult instanceof Response) return authResult;
-    const { orgId } = authResult;
+    const { userId, orgId } = authResult;
     
     const { id } = await context.params;
 
-    logger.api(`/api/contracts/${id}`, 'DELETE', { orgId });
+    logger.api(`/api/contracts/${id}`, 'DELETE', { orgId, userId });
 
-    // Check if contract exists
-    const { data: existingContract } = await supabaseServer
+    // Check if contract exists and get creator info
+    const { data: existingContract, error: fetchError } = await supabaseServer
       .from('contracts')
-      .select('id')
+      .select('id, created_by')
       .eq('id', id)
       .eq('organization_id', orgId)
       .single();
 
-    if (!existingContract) {
+    if (fetchError || !existingContract) {
       return notFoundResponse('Contract not found');
+    }
+
+    // Check permissions - only creator or admin can delete
+    const userIsAdmin = await isAdmin();
+    const canDelete = existingContract.created_by === userId || userIsAdmin;
+
+    if (!canDelete) {
+      return forbiddenResponse('You do not have permission to delete this contract. Only the creator or an admin can delete contracts.');
     }
 
     // Delete contract (cascade will handle related records)

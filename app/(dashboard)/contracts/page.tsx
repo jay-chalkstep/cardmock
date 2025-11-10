@@ -45,7 +45,7 @@ interface ToastMessage {
 }
 
 export default function ContractsPage() {
-  const { organization, isLoaded } = useOrganization();
+  const { organization, isLoaded, membership } = useOrganization();
   const { user } = useUser();
   const router = useRouter();
   const { selectedIds, setSelectedIds, setActiveNav } = usePanelContext();
@@ -58,6 +58,9 @@ export default function ContractsPage() {
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [showNewContractModal, setShowNewContractModal] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
+  const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
 
   const showToast = (message: string, type: 'success' | 'error') => {
     const id = Date.now();
@@ -120,8 +123,95 @@ export default function ContractsPage() {
     }
   };
 
-  const handleContractClick = (contractId: string) => {
-    router.push(`/contracts/${contractId}`);
+  const handleContractClick = (contractId: string, e?: React.MouseEvent) => {
+    // Don't navigate if clicking on delete button
+    if (e && (e.target as HTMLElement).closest('button')) {
+      return;
+    }
+    
+    const contract = filteredContracts.find(c => c.id === contractId);
+    if (contract) {
+      setSelectedContract(contract);
+      fetchContractSummary(contractId);
+    }
+  };
+
+  const handleDeleteContract = async (contractId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (!confirm('Are you sure you want to delete this contract? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/contracts/${contractId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to delete contract');
+      }
+
+      // Remove from local state
+      setContracts(prev => prev.filter(c => c.id !== contractId));
+      if (selectedContract?.id === contractId) {
+        setSelectedContract(null);
+        setAiSummary(null);
+      }
+      showToast('Contract deleted successfully', 'success');
+    } catch (error: any) {
+      console.error('Error deleting contract:', error);
+      showToast(error.message || 'Failed to delete contract', 'error');
+    }
+  };
+
+  const fetchContractSummary = async (contractId: string) => {
+    setSummaryLoading(true);
+    setAiSummary(null);
+    
+    try {
+      // First, try to get the contract with its stored summary
+      const contractResponse = await fetch(`/api/contracts/${contractId}`);
+      if (contractResponse.ok) {
+        const contractResult = await contractResponse.json();
+        const contract = contractResult.data?.contract || contractResult.contract;
+        
+        if (contract?.ai_summary) {
+          setAiSummary(contract.ai_summary);
+          setSummaryLoading(false);
+          return;
+        }
+      }
+
+      // If no stored summary, try to generate one
+      const summaryResponse = await fetch(`/api/contracts/${contractId}/summary`, {
+        method: 'POST',
+      });
+
+      if (summaryResponse.ok) {
+        const summaryResult = await summaryResponse.json();
+        const summary = summaryResult.data?.summary || summaryResult.summary;
+        if (summary) {
+          setAiSummary(summary);
+        } else {
+          setAiSummary('No summary available. Please generate a summary from the contract detail page.');
+        }
+      } else {
+        setAiSummary('Summary not available. Please generate a summary from the contract detail page.');
+      }
+    } catch (error) {
+      console.error('Error fetching contract summary:', error);
+      setAiSummary('Failed to load summary. Please try again later.');
+    } finally {
+      setSummaryLoading(false);
+    }
+  };
+
+  const canDeleteContract = (contract: Contract): boolean => {
+    if (!user?.id) return false;
+    const isAdmin = membership?.role === 'org:admin';
+    return contract.created_by === user.id || isAdmin;
   };
 
   const handleCreateContract = async (contractData: {
@@ -259,8 +349,8 @@ export default function ContractsPage() {
       }
       renderItem={(contract, index, isSelected) => (
         <div 
-          className={`p-4 border-b border-gray-200 hover:bg-gray-50 ${isSelected ? 'bg-blue-50' : ''}`}
-          onClick={() => handleContractClick(contract.id)}
+          className={`p-4 border-b border-gray-200 hover:bg-gray-50 ${isSelected ? 'bg-blue-50' : ''} ${selectedContract?.id === contract.id ? 'bg-blue-50' : ''}`}
+          onClick={(e) => handleContractClick(contract.id, e)}
         >
           <div className="flex items-start justify-between">
             <div className="flex-1">
@@ -287,8 +377,21 @@ export default function ContractsPage() {
                 <p className="text-sm text-gray-500">Project: {contract.projects.name}</p>
               )}
             </div>
-            <div className="text-xs text-gray-400">
-              {new Date(contract.created_at).toLocaleDateString()}
+            <div className="flex items-center gap-2">
+              <div className="text-xs text-gray-400">
+                {new Date(contract.created_at).toLocaleDateString()}
+              </div>
+              {canDeleteContract(contract) && (
+                <button
+                  onClick={(e) => handleDeleteContract(contract.id, e)}
+                  className="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
+                  title="Delete contract"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -296,11 +399,62 @@ export default function ContractsPage() {
     />
   );
 
+  // Preview Panel - AI Summary
+  const previewPanelContent = selectedContract ? (
+    <div className="h-full flex flex-col">
+      <div className="p-4 border-b border-gray-200 bg-white">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-lg font-semibold">AI Summary</h2>
+          <button
+            onClick={() => router.push(`/contracts/${selectedContract.id}`)}
+            className="text-sm text-blue-600 hover:text-blue-800"
+          >
+            View Details →
+          </button>
+        </div>
+        <div className="text-sm text-gray-600">
+          <p className="font-medium">{selectedContract.contract_number}</p>
+          {selectedContract.title && (
+            <p className="text-gray-500">{selectedContract.title}</p>
+          )}
+        </div>
+      </div>
+      <div className="flex-1 overflow-y-auto p-4">
+        {summaryLoading ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+              <p className="text-sm text-gray-500">Loading summary...</p>
+            </div>
+          </div>
+        ) : aiSummary ? (
+          <div className="prose prose-sm max-w-none">
+            <div className="whitespace-pre-wrap text-gray-700 leading-relaxed">
+              {aiSummary}
+            </div>
+          </div>
+        ) : (
+          <div className="text-center text-gray-500 py-8">
+            <p className="mb-2">No summary available</p>
+            <p className="text-sm">Click "View Details" to generate a summary</p>
+          </div>
+        )}
+      </div>
+    </div>
+  ) : (
+    <div className="h-full flex items-center justify-center text-gray-400">
+      <div className="text-center">
+        <p className="text-sm">Select a contract to view its AI summary</p>
+      </div>
+    </div>
+  );
+
   return (
     <>
       <GmailLayout
         contextPanel={contextPanelContent}
         listView={listViewContent}
+        previewArea={previewPanelContent}
       />
       {toasts.map((toast) => (
         <Toast
