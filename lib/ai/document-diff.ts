@@ -136,3 +136,79 @@ export async function generateDiffSummaryFromUrls(
   }
 }
 
+/**
+ * Generate AI summary of a document
+ * Uses OpenAI GPT-4 to analyze and summarize the document content
+ */
+export async function generateDocumentSummary(documentText: string): Promise<string> {
+  const client = getOpenAIClient();
+  
+  if (!client) {
+    throw new Error('OpenAI API key not configured. Cannot generate document summary.');
+  }
+
+  const prompt = `You are a legal document analyst. Analyze this contract document and provide a clear, concise summary in plain English. Focus on:
+
+1. Document type and purpose
+2. Key parties involved
+3. Main terms and conditions
+4. Important dates, amounts, or deadlines
+5. Key obligations and responsibilities
+6. Any notable clauses or provisions
+
+Be concise but comprehensive. Use bullet points for clarity. If the document is incomplete or unclear, note that.
+
+Document Content:
+${documentText}
+
+Provide a clear summary of the document:`;
+
+  try {
+    const completion = await client.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a legal document analyst specializing in contract analysis and summarization.',
+        },
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+      temperature: 0.3,
+      max_tokens: 1500,
+    });
+
+    const summary = completion.choices[0]?.message?.content?.trim();
+    
+    if (!summary) {
+      throw new Error('OpenAI returned empty summary');
+    }
+
+    return summary;
+  } catch (error) {
+    logger.error('Error generating document summary:', error);
+    throw new Error(`Failed to generate document summary: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+/**
+ * Generate document summary from document URL
+ * Downloads the document, extracts text, and generates AI summary
+ */
+export async function generateDocumentSummaryFromUrl(documentUrl: string): Promise<string> {
+  try {
+    // Extract text from document
+    const documentText = await extractTextFromWordDocument(documentUrl);
+
+    // Generate AI summary
+    const summary = await generateDocumentSummary(documentText);
+    
+    return summary;
+  } catch (error) {
+    logger.error('Error generating document summary from URL:', error);
+    throw error;
+  }
+}
+

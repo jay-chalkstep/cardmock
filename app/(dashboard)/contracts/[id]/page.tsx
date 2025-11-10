@@ -65,6 +65,9 @@ export default function ContractDetailPage() {
   const [versionDiffSummaries, setVersionDiffSummaries] = useState<Record<string, string>>({});
   const [loadingSummaries, setLoadingSummaries] = useState<Record<string, boolean>>({});
   const [summaryErrors, setSummaryErrors] = useState<Record<string, string>>({});
+  const [documentSummaries, setDocumentSummaries] = useState<Record<string, string>>({});
+  const [loadingDocumentSummaries, setLoadingDocumentSummaries] = useState<Record<string, boolean>>({});
+  const [documentSummaryErrors, setDocumentSummaryErrors] = useState<Record<string, string>>({});
   
   // Email mockups state
   const [showEmailMockupEditor, setShowEmailMockupEditor] = useState(false);
@@ -103,6 +106,36 @@ export default function ContractDetailPage() {
       fetchContract();
     }
   }, [contractId, organization?.id]);
+
+  useEffect(() => {
+    if (contractId && activeTab === 'documents') {
+      fetchDocuments();
+    }
+  }, [contractId, activeTab]);
+
+  useEffect(() => {
+    if (selectedDocument?.id && activeTab === 'documents') {
+      const docId = selectedDocument.id;
+      
+      // Auto-fetch document summary when document is selected
+      if (!documentSummaries[docId] && !loadingDocumentSummaries[docId]) {
+        fetchDocumentSummary(docId);
+      }
+      
+      // Auto-fetch latest version diff summary
+      const doc = documentsWithVersions.find((d: any) => d.id === docId);
+      if (doc?.versions) {
+        const versions = doc.versions.sort((a: any, b: any) => b.version_number - a.version_number);
+        const latestVersion = versions[0];
+        if (latestVersion && latestVersion.version_number > 1) {
+          const cacheKey = `${docId}-${latestVersion.id}`;
+          if (!versionDiffSummaries[cacheKey] && !loadingSummaries[cacheKey] && !latestVersion.diff_summary) {
+            fetchVersionDiffSummary(docId, latestVersion);
+          }
+        }
+      }
+    }
+  }, [selectedDocument?.id, activeTab]);
 
   useEffect(() => {
     if (contractId && activeTab === 'documents') {
@@ -172,6 +205,54 @@ export default function ContractDetailPage() {
     } finally {
       setDocumentsLoading(false);
     }
+  };
+
+  const fetchDocumentSummary = async (docId: string) => {
+    if (documentSummaries[docId]) {
+      return documentSummaries[docId];
+    }
+
+    setLoadingDocumentSummaries((prev) => ({ ...prev, [docId]: true }));
+    setDocumentSummaryErrors((prev) => {
+      const newErrors = { ...prev };
+      delete newErrors[docId];
+      return newErrors;
+    });
+
+    try {
+      const response = await fetch(`/api/contracts/documents/${docId}/summary`, {
+        method: 'POST',
+      });
+      
+      const result = await response.json();
+      
+      if (response.ok) {
+        const summary = result.data?.summary || result.summary;
+        if (summary) {
+          setDocumentSummaries((prev) => ({ ...prev, [docId]: summary }));
+          setLoadingDocumentSummaries((prev) => {
+            const newLoading = { ...prev };
+            delete newLoading[docId];
+            return newLoading;
+          });
+          return summary;
+        }
+      } else {
+        const errorMsg = result.message || result.error || 'Failed to generate summary';
+        setDocumentSummaryErrors((prev) => ({ ...prev, [docId]: errorMsg }));
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Failed to fetch summary';
+      setDocumentSummaryErrors((prev) => ({ ...prev, [docId]: errorMsg }));
+      console.error('Error fetching document summary:', error);
+    } finally {
+      setLoadingDocumentSummaries((prev) => {
+        const newLoading = { ...prev };
+        delete newLoading[docId];
+        return newLoading;
+      });
+    }
+    return null;
   };
 
   const fetchVersionDiffSummary = async (docId: string, version: any) => {
@@ -524,7 +605,7 @@ export default function ContractDetailPage() {
       {contract.title && (
         <p className="text-sm text-gray-600 mb-4">{contract.title}</p>
       )}
-      <div className="space-y-2 text-sm">
+      <div className="space-y-2 text-sm mb-6">
         <div>
           <span className="font-medium">Status:</span>{' '}
           <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(contract.status)}`}>
@@ -547,6 +628,98 @@ export default function ContractDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Document Summaries - Show when Documents tab is active and document is selected */}
+      {activeTab === 'documents' && selectedDocument && (
+        <div className="space-y-4 border-t border-gray-200 pt-4">
+          <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+            <Sparkles size={16} className="text-blue-600" />
+            Document Summary
+          </h3>
+          
+          {/* Document Summary */}
+          {loadingDocumentSummaries[selectedDocument.id] ? (
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+              <span>Generating summary...</span>
+            </div>
+          ) : documentSummaryErrors[selectedDocument.id] ? (
+            <div className="text-sm text-red-600">
+              <p className="mb-2">{documentSummaryErrors[selectedDocument.id]}</p>
+              <button
+                onClick={() => fetchDocumentSummary(selectedDocument.id)}
+                className="text-xs text-blue-600 hover:text-blue-700 underline"
+              >
+                Retry
+              </button>
+            </div>
+          ) : documentSummaries[selectedDocument.id] ? (
+            <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
+              {documentSummaries[selectedDocument.id]}
+            </div>
+          ) : (
+            <button
+              onClick={() => fetchDocumentSummary(selectedDocument.id)}
+              className="text-xs text-blue-600 hover:text-blue-700 underline"
+            >
+              Generate Summary
+            </button>
+          )}
+
+          {/* Latest Version Changes Summary */}
+          {(() => {
+            const doc = documentsWithVersions.find((d: any) => d.id === selectedDocument.id);
+            if (!doc?.versions) return null;
+            
+            const versions = doc.versions.sort((a: any, b: any) => b.version_number - a.version_number);
+            const latestVersion = versions[0];
+            const previousVersion = versions.find((v: any) => v.version_number === latestVersion?.version_number - 1);
+            
+            if (latestVersion && latestVersion.version_number > 1 && previousVersion) {
+              const cacheKey = `${selectedDocument.id}-${latestVersion.id}`;
+              const diffSummary = versionDiffSummaries[cacheKey] || latestVersion.diff_summary;
+              const isLoading = loadingSummaries[cacheKey];
+              const error = summaryErrors[cacheKey];
+
+              return (
+                <div className="mt-4">
+                  <h4 className="text-xs font-semibold text-gray-700 mb-2">
+                    Latest Changes (v{previousVersion.version_number} → v{latestVersion.version_number})
+                  </h4>
+                  {isLoading ? (
+                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+                      <span>Generating...</span>
+                    </div>
+                  ) : error ? (
+                    <div className="text-xs text-red-600">
+                      <p className="mb-1">{error}</p>
+                      <button
+                        onClick={() => fetchVersionDiffSummary(selectedDocument.id, latestVersion)}
+                        className="text-blue-600 hover:text-blue-700 underline"
+                      >
+                        Retry
+                      </button>
+                    </div>
+                  ) : diffSummary ? (
+                    <div className="bg-blue-50 rounded-lg p-3 text-xs text-gray-700 whitespace-pre-wrap leading-relaxed">
+                      {diffSummary}
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => fetchVersionDiffSummary(selectedDocument.id, latestVersion)}
+                      className="text-xs text-blue-600 hover:text-blue-700 underline"
+                    >
+                      Generate Changes Summary
+                    </button>
+                  )}
+                </div>
+              );
+            }
+            return null;
+          })()}
+        </div>
+      )}
     </div>
   );
 
