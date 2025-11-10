@@ -67,6 +67,34 @@ FIGMA_CLIENT_SECRET=your_figma_client_secret_here
 4. You should be redirected to Figma's OAuth authorization page
 5. After authorizing, you'll be redirected back to your app
 
+## Step 4: For Figma App Reviewers
+
+If you're submitting your app for Figma review, reviewers will need to create their own accounts:
+
+### Public Sign-up Access
+1. Ensure Clerk allows public sign-ups (this should be enabled by default)
+2. Reviewers can create their own accounts at: `https://app.aiproval.com/sign-up`
+3. No test account credentials needed - reviewers use their own email addresses
+
+### Testing Instructions Template for Reviewers
+
+Include this in your Figma app submission:
+
+```
+## Access Instructions
+
+**Create Your Own Account:**
+1. Go to https://app.aiproval.com/sign-up
+2. Sign up with any email address (you can use a test email)
+3. Complete the registration process
+4. You'll be automatically logged in and can proceed with testing
+
+**Note:** Aiproval uses Clerk for authentication. You can sign up with:
+- Email and password
+- Google account
+- Other social providers (if configured)
+```
+
 ## Troubleshooting
 
 ### Error: "OAuth app with client id doesn't exist"
