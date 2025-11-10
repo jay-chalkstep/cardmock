@@ -26,6 +26,18 @@ export const dynamic = 'force-dynamic';
  *   use_saved_recipients?: boolean // Default true
  * }
  */
+// Helper function to validate email format
+function isValidEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
+// Helper function to validate UUID format
+function isValidUUID(uuid: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(uuid);
+}
+
 export async function POST(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -36,7 +48,22 @@ export async function POST(
     const { userId, orgId } = authResult;
     
     const { id } = await context.params;
-    const body = await request.json();
+
+    // Validate contract ID format
+    if (!id || !isValidUUID(id)) {
+      logger.error('Invalid contract ID format', { id });
+      return badRequestResponse('Invalid contract ID format');
+    }
+
+    // Parse and validate request body
+    let body;
+    try {
+      body = await request.json();
+    } catch (parseError) {
+      logger.error('Failed to parse request body', { error: parseError });
+      return badRequestResponse('Invalid JSON in request body');
+    }
+
     const { 
       document_id, 
       routing_method, 
@@ -50,8 +77,54 @@ export async function POST(
     logger.api(`/api/contracts/${id}/route-for-comment`, 'POST', { orgId, userId, routing_method });
 
     // Validate routing method
-    if (!routing_method || !['email', 'slack', 'both'].includes(routing_method)) {
-      return badRequestResponse('routing_method must be "email", "slack", or "both"');
+    if (!routing_method || typeof routing_method !== 'string' || !['email', 'slack', 'both'].includes(routing_method)) {
+      return badRequestResponse('routing_method is required and must be "email", "slack", or "both"');
+    }
+
+    // Validate document_id if provided
+    if (document_id !== undefined && document_id !== null) {
+      if (typeof document_id !== 'string' || !isValidUUID(document_id)) {
+        return badRequestResponse('document_id must be a valid UUID');
+      }
+    }
+
+    // Validate recipients array if provided
+    if (recipients !== undefined && recipients !== null) {
+      if (!Array.isArray(recipients)) {
+        return badRequestResponse('recipients must be an array of email addresses');
+      }
+      if (recipients.length > 0) {
+        const invalidEmails = recipients.filter(email => typeof email !== 'string' || !isValidEmail(email));
+        if (invalidEmails.length > 0) {
+          return badRequestResponse(`Invalid email addresses: ${invalidEmails.join(', ')}`);
+        }
+      }
+    }
+
+    // Validate slack_channel_id if routing method includes Slack
+    if ((routing_method === 'slack' || routing_method === 'both') && !slack_channel_id) {
+      return badRequestResponse('slack_channel_id is required when routing_method includes "slack"');
+    }
+    if (slack_channel_id && typeof slack_channel_id !== 'string') {
+      return badRequestResponse('slack_channel_id must be a string');
+    }
+
+    // Validate message if provided
+    if (message !== undefined && message !== null) {
+      if (typeof message !== 'string') {
+        return badRequestResponse('message must be a string');
+      }
+      if (message.length > 5000) {
+        return badRequestResponse('message must be 5000 characters or less');
+      }
+    }
+
+    // Validate boolean flags
+    if (typeof include_ai_summary !== 'boolean') {
+      return badRequestResponse('include_ai_summary must be a boolean');
+    }
+    if (typeof use_saved_recipients !== 'boolean') {
+      return badRequestResponse('use_saved_recipients must be a boolean');
     }
 
     // Check if contract exists and get creator info
@@ -62,7 +135,16 @@ export async function POST(
       .eq('organization_id', orgId)
       .single();
 
-    if (contractError || !contract) {
+    if (contractError) {
+      logger.error('Error fetching contract', { error: contractError, contract_id: id, orgId });
+      if (contractError.code === 'PGRST116') {
+        return notFoundResponse('Contract not found');
+      }
+      return errorResponse(contractError, 'Failed to fetch contract');
+    }
+
+    if (!contract) {
+      logger.warn('Contract not found', { contract_id: id, orgId });
       return notFoundResponse('Contract not found');
     }
 
@@ -84,9 +166,28 @@ export async function POST(
         .eq('contract_id', id)
         .single();
 
-      if (docError || !doc) {
+      if (docError) {
+        logger.error('Error fetching document', { error: docError, document_id, contract_id: id });
+        if (docError.code === 'PGRST116') {
+          return notFoundResponse('Document not found');
+        }
+        return errorResponse(docError, 'Failed to fetch document');
+      }
+
+      if (!doc) {
+        logger.warn('Document not found', { document_id, contract_id: id });
         return notFoundResponse('Document not found');
       }
+
+      // Validate document has required fields
+      if (!doc.file_url || !doc.file_name) {
+        logger.error('Document missing required fields', { document_id: doc.id, has_file_url: !!doc.file_url, has_file_name: !!doc.file_name });
+        return errorResponse(
+          new Error('Document is missing required fields (file_url or file_name)'),
+          'Document is incomplete and cannot be routed'
+        );
+      }
+
       document = doc;
     } else {
       // Get current document
@@ -97,9 +198,28 @@ export async function POST(
         .eq('is_current', true)
         .single();
 
-      if (currentDocError || !currentDoc) {
-        return notFoundResponse('No current document found for this contract');
+      if (currentDocError) {
+        logger.error('Error fetching current document', { error: currentDocError, contract_id: id });
+        if (currentDocError.code === 'PGRST116') {
+          return notFoundResponse('No current document found for this contract');
+        }
+        return errorResponse(currentDocError, 'Failed to fetch current document');
       }
+
+      if (!currentDoc) {
+        logger.warn('No current document found', { contract_id: id });
+        return notFoundResponse('No current document found for this contract. Please upload a document first.');
+      }
+
+      // Validate document has required fields
+      if (!currentDoc.file_url || !currentDoc.file_name) {
+        logger.error('Current document missing required fields', { document_id: currentDoc.id, has_file_url: !!currentDoc.file_url, has_file_name: !!currentDoc.file_name });
+        return errorResponse(
+          new Error('Current document is missing required fields (file_url or file_name)'),
+          'Current document is incomplete and cannot be routed'
+        );
+      }
+
       document = currentDoc;
     }
 
@@ -115,17 +235,24 @@ export async function POST(
         .eq('organization_id', orgId);
 
       if (recipientsError) {
-        logger.error('Error fetching saved recipients:', recipientsError);
+        logger.error('Error fetching saved recipients', { error: recipientsError, contract_id: id, orgId });
+        // Don't fail if we can't fetch saved recipients, but log it
       } else if (savedRecipients && savedRecipients.length > 0) {
-        finalRecipients = savedRecipients.map(r => ({ email: r.email, name: r.name || undefined }));
+        // Validate and filter saved recipients
+        finalRecipients = savedRecipients
+          .filter(r => r.email && isValidEmail(r.email))
+          .map(r => ({ 
+            email: r.email.trim().toLowerCase(), 
+            name: r.name ? r.name.trim() : undefined 
+          }));
       }
     }
 
     // Add any additional recipients from request
     if (recipients && Array.isArray(recipients) && recipients.length > 0) {
       const additionalRecipients = recipients
-        .filter(email => typeof email === 'string' && email.includes('@'))
-        .map(email => ({ email: email.trim() }));
+        .filter(email => typeof email === 'string' && isValidEmail(email))
+        .map(email => ({ email: email.trim().toLowerCase() }));
       
       // Merge with saved recipients, avoiding duplicates
       const existingEmails = new Set(finalRecipients.map(r => r.email.toLowerCase()));
@@ -136,42 +263,69 @@ export async function POST(
       });
     }
 
+    // Validate we have recipients for email routing
     if (finalRecipients.length === 0 && (routing_method === 'email' || routing_method === 'both')) {
-      return badRequestResponse('No recipients specified. Please add recipients or use saved recipients.');
+      logger.warn('No recipients available for email routing', { 
+        contract_id: id, 
+        use_saved_recipients, 
+        provided_recipients: recipients?.length || 0 
+      });
+      return badRequestResponse('No recipients specified. Please add recipients in the request or configure saved recipients for this contract.');
+    }
+
+    // Validate recipient count limit (prevent abuse)
+    if (finalRecipients.length > 50) {
+      return badRequestResponse('Too many recipients. Maximum 50 recipients allowed per routing.');
     }
 
     // Get AI summary if available and requested
     let aiSummary: string | null = null;
     if (include_ai_summary) {
-      // Try to get contract AI summary first
-      if (contract.ai_summary) {
-        aiSummary = contract.ai_summary;
-      } else {
-        // Try to get document diff summary
-        const { data: version } = await supabaseServer
-          .from('contract_document_versions')
-          .select('diff_summary')
-          .eq('document_id', document.id)
-          .order('version_number', { ascending: false })
-          .limit(1)
-          .single();
+      try {
+        // Try to get contract AI summary first
+        if (contract.ai_summary && typeof contract.ai_summary === 'string' && contract.ai_summary.trim().length > 0) {
+          aiSummary = contract.ai_summary.trim();
+        } else {
+          // Try to get document diff summary
+          const { data: version, error: versionError } = await supabaseServer
+            .from('contract_document_versions')
+            .select('diff_summary')
+            .eq('document_id', document.id)
+            .order('version_number', { ascending: false })
+            .limit(1)
+            .single();
 
-        if (version?.diff_summary) {
-          aiSummary = version.diff_summary;
+          if (versionError) {
+            logger.debug('Error fetching document version for AI summary', { error: versionError, document_id: document.id });
+          } else if (version?.diff_summary && typeof version.diff_summary === 'string' && version.diff_summary.trim().length > 0) {
+            aiSummary = version.diff_summary.trim();
+          }
         }
+      } catch (summaryError) {
+        logger.warn('Error fetching AI summary', { error: summaryError, contract_id: id, document_id: document.id });
+        // Continue without AI summary if there's an error
       }
     }
 
     // Get client info for email
     let clientName = 'the client';
     if (contract.client_id) {
-      const { data: client } = await supabaseServer
-        .from('clients')
-        .select('name')
-        .eq('id', contract.client_id)
-        .single();
-      if (client) {
-        clientName = client.name;
+      try {
+        const { data: client, error: clientError } = await supabaseServer
+          .from('clients')
+          .select('name')
+          .eq('id', contract.client_id)
+          .eq('organization_id', orgId)
+          .single();
+        
+        if (clientError) {
+          logger.debug('Error fetching client name', { error: clientError, client_id: contract.client_id });
+        } else if (client?.name && typeof client.name === 'string') {
+          clientName = client.name.trim();
+        }
+      } catch (clientError) {
+        logger.warn('Error fetching client info', { error: clientError, client_id: contract.client_id });
+        // Continue with default name if there's an error
       }
     }
 
@@ -456,13 +610,38 @@ export async function POST(
       }
     }
 
+    // Validate that at least one routing method succeeded
+    if (!emailSuccess && !slackSuccess) {
+      logger.error('All routing methods failed', {
+        contract_id: id,
+        routing_method,
+        email_success: emailSuccess,
+        slack_success: slackSuccess,
+      });
+      return errorResponse(
+        new Error('Failed to route contract via any method'),
+        'Failed to route contract. Please check your email and Slack configurations.'
+      );
+    }
+
+    // Return success response with details
     return successResponse({
-      routing_event: routingEvent,
+      routing_event: routingEvent || null,
       email_sent: emailSuccess,
       slack_sent: slackSuccess,
       recipients_count: finalRecipients.length,
+      message: emailSuccess && slackSuccess 
+        ? 'Contract routed successfully via email and Slack'
+        : emailSuccess 
+        ? 'Contract routed successfully via email'
+        : 'Contract routed successfully via Slack',
     });
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Unexpected error in route-for-comment endpoint', {
+      error: errorMessage,
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     return errorResponse(error, 'Failed to route contract for comment');
   }
 }
