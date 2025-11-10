@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { FileText, Download, History, Eye, ChevronRight, Clock, User, FileCheck } from 'lucide-react';
 
 interface DocumentVersion {
@@ -52,12 +52,22 @@ export default function DocumentViewer({
   const [diffSummary, setDiffSummary] = useState<string | null>(null);
   const [loadingDiff, setLoadingDiff] = useState(false);
   const [diffError, setDiffError] = useState<string | null>(null);
+  const [documentHtml, setDocumentHtml] = useState<string | null>(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
 
   useEffect(() => {
     if (document?.id) {
       fetchVersions();
+      fetchDocumentPreview();
     }
-  }, [document?.id]);
+  }, [document?.id, fetchDocumentPreview]);
+
+  useEffect(() => {
+    if (selectedVersion?.id) {
+      fetchDocumentPreview(selectedVersion.id);
+    }
+  }, [selectedVersion?.id, fetchDocumentPreview]);
 
   const fetchVersions = async () => {
     if (!document?.id) return;
@@ -100,6 +110,38 @@ export default function DocumentViewer({
       setDiffError(null);
     }
   };
+
+  const fetchDocumentPreview = useCallback(async (versionId?: string) => {
+    if (!document?.id) return;
+    setLoadingPreview(true);
+    setDocumentHtml(null);
+    setPreviewError(null);
+    try {
+      const url = versionId 
+        ? `/api/contracts/documents/${document.id}/preview?version_id=${versionId}`
+        : `/api/contracts/documents/${document.id}/preview`;
+      
+      const response = await fetch(url);
+      const result = await response.json();
+      
+      if (!response.ok) {
+        const errorMessage = result.message || result.error || 'Failed to load document preview';
+        setPreviewError(errorMessage);
+        setDocumentHtml(null);
+        return;
+      }
+      
+      setDocumentHtml(result.data?.html || result.html || null);
+      setPreviewError(null);
+    } catch (error) {
+      console.error('Error fetching document preview:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load document preview';
+      setPreviewError(errorMessage);
+      setDocumentHtml(null);
+    } finally {
+      setLoadingPreview(false);
+    }
+  }, [document?.id]);
 
   const fetchDiffSummary = async (docId: string) => {
     setLoadingDiff(true);
@@ -304,34 +346,100 @@ export default function DocumentViewer({
                 </div>
               )}
 
-              {/* Document Preview Placeholder */}
-              <div className="border border-gray-200 rounded-lg p-8 bg-gray-50 text-center">
-                <FileText size={48} className="mx-auto text-gray-400 mb-4" />
-                <p className="text-gray-600 mb-4">
-                  Document preview not available. Click download to view the file.
-                </p>
-                <button
-                  onClick={() => handleDownload(selectedVersion.file_url, selectedVersion.file_name)}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 flex items-center gap-2 mx-auto"
-                >
-                  <Download size={16} />
-                  Download Version {selectedVersion.version_number}
-                </button>
-              </div>
+              {/* Document Preview */}
+              {loadingPreview ? (
+                <div className="border border-gray-200 rounded-lg p-8 bg-gray-50 text-center">
+                  <div className="flex items-center justify-center gap-2 text-gray-600">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                    <span>Loading document preview...</span>
+                  </div>
+                </div>
+              ) : previewError ? (
+                <div className="border border-gray-200 rounded-lg p-8 bg-red-50 text-center">
+                  <p className="text-red-600 mb-4">{previewError}</p>
+                  <button
+                    onClick={() => fetchDocumentPreview(selectedVersion.id)}
+                    className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 flex items-center gap-2 mx-auto"
+                  >
+                    Retry
+                  </button>
+                </div>
+              ) : documentHtml ? (
+                <div className="border border-gray-200 rounded-lg bg-white overflow-hidden">
+                  <div className="p-6 overflow-y-auto max-h-[calc(100vh-400px)]">
+                    <div 
+                      dangerouslySetInnerHTML={{ __html: documentHtml }}
+                      className="document-content"
+                      style={{
+                        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+                        lineHeight: '1.6',
+                        color: '#333',
+                      }}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="border border-gray-200 rounded-lg p-8 bg-gray-50 text-center">
+                  <FileText size={48} className="mx-auto text-gray-400 mb-4" />
+                  <p className="text-gray-600 mb-4">
+                    Document preview not available. Click download to view the file.
+                  </p>
+                  <button
+                    onClick={() => handleDownload(selectedVersion.file_url, selectedVersion.file_name)}
+                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 flex items-center gap-2 mx-auto"
+                  >
+                    <Download size={16} />
+                    Download Version {selectedVersion.version_number}
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
-            <div className="border border-gray-200 rounded-lg p-8 bg-gray-50 text-center">
-              <FileText size={48} className="mx-auto text-gray-400 mb-4" />
-              <p className="text-gray-600 mb-4">
-                Document preview not available. Click download to view the file.
-              </p>
-              <button
-                onClick={() => handleDownload(document.file_url, document.file_name)}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 flex items-center gap-2 mx-auto"
-              >
-                <Download size={16} />
-                Download Document
-              </button>
+            <div className="border border-gray-200 rounded-lg bg-white overflow-hidden">
+              {loadingPreview ? (
+                <div className="p-8 bg-gray-50 text-center">
+                  <div className="flex items-center justify-center gap-2 text-gray-600">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                    <span>Loading document preview...</span>
+                  </div>
+                </div>
+              ) : previewError ? (
+                <div className="p-8 bg-red-50 text-center">
+                  <p className="text-red-600 mb-4">{previewError}</p>
+                  <button
+                    onClick={() => fetchDocumentPreview()}
+                    className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 flex items-center gap-2 mx-auto"
+                  >
+                    Retry
+                  </button>
+                </div>
+              ) : documentHtml ? (
+                <div className="p-6 overflow-y-auto max-h-[calc(100vh-400px)]">
+                  <div 
+                    dangerouslySetInnerHTML={{ __html: documentHtml }}
+                    className="document-content"
+                    style={{
+                      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+                      lineHeight: '1.6',
+                      color: '#333',
+                    }}
+                  />
+                </div>
+              ) : (
+                <div className="p-8 bg-gray-50 text-center">
+                  <FileText size={48} className="mx-auto text-gray-400 mb-4" />
+                  <p className="text-gray-600 mb-4">
+                    Document preview not available. Click download to view the file.
+                  </p>
+                  <button
+                    onClick={() => handleDownload(document.file_url, document.file_name)}
+                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 flex items-center gap-2 mx-auto"
+                  >
+                    <Download size={16} />
+                    Download Document
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
