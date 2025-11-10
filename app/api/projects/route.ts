@@ -32,52 +32,55 @@ export async function GET(request: NextRequest) {
     // For Client-role users: Filter projects by their assigned client via contract_id
     const userIsClient = await isClient();
     let assignedClientId: string | null = null;
+    let contractIds: string[] = [];
+    
     if (userIsClient) {
       assignedClientId = await getUserAssignedClientId();
       if (!assignedClientId) {
         // Client-role user with no client assignment - return empty array
         return successResponse({ projects: [] });
       }
-    }
-
-    // Build query
-    let query = supabaseServer
-      .from('projects')
-      .select('*')
-      .eq('organization_id', orgId)
-      .order('created_at', { ascending: false });
-
-    // Apply status filter if provided
-    if (statusFilter) {
-      query = query.eq('status', statusFilter);
-    }
-
-    const { data: projects, error } = await query;
-
-    // For Client-role users: Filter projects by contract -> client
-    let filteredProjects = projects || [];
-    if (userIsClient && assignedClientId) {
-      // Get all contracts for the assigned client
+      
+      // Get all contracts for the assigned client upfront
       const { data: contracts } = await supabaseServer
         .from('contracts')
         .select('id')
         .eq('client_id', assignedClientId)
         .eq('organization_id', orgId);
 
-      const contractIds = contracts?.map(c => c.id) || [];
-      if (contractIds.length > 0) {
-        filteredProjects = filteredProjects.filter((p: any) => 
-          p.contract_id && contractIds.includes(p.contract_id)
-        );
-      } else {
+      contractIds = contracts?.map(c => c.id) || [];
+      if (contractIds.length === 0) {
         // No contracts for this client - return empty array
-        filteredProjects = [];
+        return successResponse({ projects: [] });
       }
     }
+
+    // Build query - filter at database level for better performance
+    let query = supabaseServer
+      .from('projects')
+      .select('*')
+      .eq('organization_id', orgId);
+
+    // For Client-role users: Filter by contract_id at database level
+    if (userIsClient && contractIds.length > 0) {
+      query = query.in('contract_id', contractIds);
+    }
+
+    // Apply status filter if provided
+    if (statusFilter) {
+      query = query.eq('status', statusFilter);
+    }
+
+    query = query.order('created_at', { ascending: false });
+
+    const { data: projects, error } = await query;
 
     if (error) {
       return handleSupabaseError(error);
     }
+
+    // Ensure we have a valid array (should never be null after query, but be defensive)
+    const filteredProjects = projects || [];
 
     // Fetch mockup counts and previews for each project
     const projectsWithCounts = await Promise.all(

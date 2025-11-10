@@ -80,34 +80,8 @@ export default function ProjectsPage() {
       const result = await response.json();
       const fetchedProjects = result.data?.projects || result.projects || [];
       
-      // Verify all projects still exist (filter out any that don't)
-      const verifiedProjects = await Promise.all(
-        fetchedProjects.map(async (project: Project) => {
-          try {
-            const verifyResponse = await fetch(`/api/projects/${project.id}`);
-            if (!verifyResponse.ok) {
-              console.warn('Project no longer exists, removing from list:', {
-                projectId: project.id,
-                projectName: project.name
-              });
-              return null;
-            }
-            return project;
-          } catch (error) {
-            console.error('Error verifying project:', project.id, error);
-            return null;
-          }
-        })
-      );
-      
-      // Filter out null values (projects that don't exist)
-      const validProjects = verifiedProjects.filter((p): p is Project => p !== null);
-      
-      if (validProjects.length !== fetchedProjects.length) {
-        console.log(`Filtered out ${fetchedProjects.length - validProjects.length} non-existent projects`);
-      }
-      
-      setProjects(validProjects);
+      // Trust the API response - it should only return valid, accessible projects
+      setProjects(fetchedProjects);
     } catch (error) {
       console.error('Error fetching projects:', error);
       showToast('Failed to load projects', 'error');
