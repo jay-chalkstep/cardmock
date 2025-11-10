@@ -27,11 +27,9 @@ export async function GET(
 
     logger.api(`/api/projects/${id}`, 'GET', { orgId, projectId: id });
 
-    // For Client-role users: Check if they have access via contract_id or client_name
+    // For Client-role users: Check if they have access via client_id
     const userIsClient = await isClient();
     let assignedClientId: string | null = null;
-    let contractIds: string[] = [];
-    let clientName: string | null = null;
     
     if (userIsClient) {
       assignedClientId = await getUserAssignedClientId();
@@ -39,25 +37,6 @@ export async function GET(
         // Client-role user with no client assignment - return not found
         return notFoundResponse('Project not found');
       }
-      
-      // Get client name for matching projects with NULL contract_id
-      const { data: client } = await supabaseServer
-        .from('clients')
-        .select('name')
-        .eq('id', assignedClientId)
-        .eq('organization_id', orgId)
-        .single();
-      
-      clientName = client?.name || null;
-      
-      // Get all contracts for the assigned client
-      const { data: contracts } = await supabaseServer
-        .from('contracts')
-        .select('id')
-        .eq('client_id', assignedClientId)
-        .eq('organization_id', orgId);
-
-      contractIds = contracts?.map(c => c.id) || [];
     }
 
     // Build query - filter at database level for client users
@@ -67,18 +46,10 @@ export async function GET(
       .eq('id', id)
       .eq('organization_id', orgId);
 
-    // For Client-role users: Filter by contract_id OR client_name match
+    // For Client-role users: Filter by client_id (direct relationship)
+    // For non-client users: Show project if in organization
     if (userIsClient && assignedClientId) {
-      if (contractIds.length > 0 && clientName) {
-        // Show projects linked to contracts OR projects matching client name (with NULL contract_id)
-        query = query.or(`contract_id.in.(${contractIds.join(',')}),and(client_name.ilike.%${clientName}%,contract_id.is.null)`);
-      } else if (clientName) {
-        // No contracts but have client name - show projects matching client name
-        query = query.ilike('client_name', `%${clientName}%`);
-      } else {
-        // No contracts and no client name - return not found
-        return notFoundResponse('Project not found');
-      }
+      query = query.eq('client_id', assignedClientId);
     }
 
     const { data: project, error } = await query.single();
@@ -154,10 +125,13 @@ export async function GET(
  * Body:
  * {
  *   name?: string,
+ *   client_id?: string,
  *   client_name?: string,
  *   description?: string,
  *   status?: 'active' | 'completed' | 'archived',
- *   color?: string
+ *   color?: string,
+ *   workflow_id?: string,
+ *   contract_id?: string
  * }
  */
 export async function PATCH(
@@ -194,7 +168,7 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { name, client_name, description, status, color, workflow_id, contract_id } = body;
+    const { name, client_id, client_name, description, status, color, workflow_id, contract_id } = body;
 
     // Prepare update data
     const updateData: any = {};
@@ -210,8 +184,33 @@ export async function PATCH(
       updateData.name = name.trim();
     }
 
-    // Add client_name (can be null)
-    if (client_name !== undefined) {
+    // Handle client_id update
+    if (client_id !== undefined) {
+      // Validate client_id exists and belongs to organization
+      if (client_id === null || (typeof client_id === 'string' && client_id.trim().length === 0)) {
+        return badRequestResponse('Client ID cannot be empty');
+      }
+
+      const { data: client, error: clientError } = await supabaseServer
+        .from('clients')
+        .select('id, name')
+        .eq('id', client_id)
+        .eq('organization_id', orgId)
+        .single();
+
+      if (clientError || !client) {
+        return badRequestResponse('Client not found or does not belong to this organization');
+      }
+
+      updateData.client_id = client_id;
+      // Optionally update client_name to match client if not explicitly provided
+      if (client_name === undefined) {
+        updateData.client_name = client.name;
+      }
+    }
+
+    // Add client_name (can be null, but only if client_id is not being updated)
+    if (client_name !== undefined && client_id === undefined) {
       updateData.client_name = client_name?.trim() || null;
     }
 

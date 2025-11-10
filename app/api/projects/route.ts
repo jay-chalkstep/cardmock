@@ -29,11 +29,9 @@ export async function GET(request: NextRequest) {
 
     logger.api('/api/projects', 'GET', { orgId, statusFilter });
 
-    // For Client-role users: Filter projects by their assigned client via contract_id
+    // For Client-role users: Filter projects by their assigned client via client_id
     const userIsClient = await isClient();
     let assignedClientId: string | null = null;
-    let contractIds: string[] = [];
-    let clientName: string | null = null;
     
     if (userIsClient) {
       assignedClientId = await getUserAssignedClientId();
@@ -41,25 +39,6 @@ export async function GET(request: NextRequest) {
         // Client-role user with no client assignment - return empty array
         return successResponse({ projects: [] });
       }
-      
-      // Get client name for matching projects with NULL contract_id
-      const { data: client } = await supabaseServer
-        .from('clients')
-        .select('name')
-        .eq('id', assignedClientId)
-        .eq('organization_id', orgId)
-        .single();
-      
-      clientName = client?.name || null;
-      
-      // Get all contracts for the assigned client upfront
-      const { data: contracts } = await supabaseServer
-        .from('contracts')
-        .select('id')
-        .eq('client_id', assignedClientId)
-        .eq('organization_id', orgId);
-
-      contractIds = contracts?.map(c => c.id) || [];
     }
 
     // Build query - filter at database level for better performance
@@ -68,20 +47,10 @@ export async function GET(request: NextRequest) {
       .select('*')
       .eq('organization_id', orgId);
 
-    // For Client-role users: Filter by contract_id OR client_name match
-    // This handles cases where projects have NULL contract_id but match client name
+    // For Client-role users: Filter by client_id (direct relationship)
+    // For non-client users: Show all projects in organization
     if (userIsClient && assignedClientId) {
-      if (contractIds.length > 0 && clientName) {
-        // Show projects linked to contracts OR projects matching client name (with NULL contract_id)
-        // Use PostgREST filter syntax: field.operator.value,field.operator.value
-        query = query.or(`contract_id.in.(${contractIds.join(',')}),and(client_name.ilike.%${clientName}%,contract_id.is.null)`);
-      } else if (clientName) {
-        // No contracts but have client name - show projects matching client name
-        query = query.ilike('client_name', `%${clientName}%`);
-      } else {
-        // No contracts and no client name - return empty array
-        return successResponse({ projects: [] });
-      }
+      query = query.eq('client_id', assignedClientId);
     }
 
     // Apply status filter if provided
@@ -141,10 +110,12 @@ export async function GET(request: NextRequest) {
  * Body:
  * {
  *   name: string (required),
- *   client_name?: string (optional),
+ *   client_id: string (required),
+ *   client_name?: string (optional, display field),
  *   description?: string (optional),
  *   status?: 'active' | 'completed' | 'archived' (default: 'active'),
- *   color?: string (default: '#3B82F6')
+ *   color?: string (default: '#3B82F6'),
+ *   workflow_id?: string (optional)
  * }
  */
 export async function POST(request: NextRequest) {
@@ -154,12 +125,12 @@ export async function POST(request: NextRequest) {
     const { userId, orgId } = authResult;
 
     const body = await request.json();
-    const { name, client_name, description, status, color, workflow_id } = body;
+    const { name, client_id, client_name, description, status, color, workflow_id } = body;
 
     logger.api('/api/projects', 'POST', { orgId, userId });
 
     // Validate required fields
-    const missingFieldsCheck = checkRequiredFields(body, ['name']);
+    const missingFieldsCheck = checkRequiredFields(body, ['name', 'client_id']);
     if (missingFieldsCheck) {
       return missingFieldsCheck;
     }
@@ -172,6 +143,22 @@ export async function POST(request: NextRequest) {
     // Validate name length
     if (name.trim().length > 100) {
       return badRequestResponse('Project name must be less than 100 characters');
+    }
+
+    // Validate client_id exists and belongs to organization
+    if (typeof client_id !== 'string' || client_id.trim().length === 0) {
+      return badRequestResponse('Client ID is required');
+    }
+
+    const { data: client, error: clientError } = await supabaseServer
+      .from('clients')
+      .select('id, name')
+      .eq('id', client_id)
+      .eq('organization_id', orgId)
+      .single();
+
+    if (clientError || !client) {
+      return badRequestResponse('Client not found or does not belong to this organization');
     }
 
     // Validate status if provided
@@ -190,7 +177,8 @@ export async function POST(request: NextRequest) {
       .from('projects')
       .insert({
         name: name.trim(),
-        client_name: client_name?.trim() || null,
+        client_id: client_id, // Required - direct relationship to client
+        client_name: client_name?.trim() || client.name || null, // Optional display field, default to client name
         description: description?.trim() || null,
         status: status || 'active',
         color: color || '#3B82F6',

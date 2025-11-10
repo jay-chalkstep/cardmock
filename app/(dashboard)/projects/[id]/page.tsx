@@ -51,6 +51,7 @@ export default function ProjectDetailPage() {
 
   const handleUpdateProject = async (projectData: {
     name: string;
+    client_id?: string;
     client_name?: string;
     description?: string;
     status?: 'active' | 'completed' | 'archived';

@@ -92,6 +92,7 @@ export default function ProjectsPage() {
 
   const handleCreateProject = async (projectData: {
     name: string;
+    client_id: string;
     client_name?: string;
     description?: string;
     status?: ProjectStatus;
@@ -101,6 +102,7 @@ export default function ProjectsPage() {
     try {
       const formData = new FormData();
       formData.append('name', projectData.name);
+      formData.append('clientId', projectData.client_id);
       if (projectData.client_name) formData.append('clientName', projectData.client_name);
       if (projectData.description) formData.append('description', projectData.description);
       if (projectData.color) formData.append('color', projectData.color);

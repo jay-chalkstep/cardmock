@@ -363,12 +363,13 @@ export interface Project {
   id: string;
   organization_id: string;
   name: string;
-  client_name?: string;
+  client_id: string; // Required reference to clients table
+  client_name?: string; // Optional display field (can be derived from client relationship)
   description?: string;
   status: ProjectStatus;
   color: string; // Hex color for UI customization
   workflow_id?: string; // Optional workflow template assignment
-  contract_id?: string; // Optional contract reference
+  contract_id?: string; // Optional contract reference (contracts are just approval assets)
   created_by: string; // Clerk user ID
   created_at: string;
   updated_at: string;
