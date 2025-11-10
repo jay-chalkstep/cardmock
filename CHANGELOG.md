@@ -25,8 +25,6 @@ Complete platform integration system bringing approvals into existing design and
   - Project mapping based on Figma file organization
   - Figma metadata storage (file_id, node_ids, file_url, version_key)
   - **Figma Integration Settings Page** - Connect/disconnect Figma account ⭐️ NEW
-  - **Figma Status Badge** - Display approval status in asset lists ⭐️ NEW
-  - **Figma Metadata Display** - Show Figma file/node information ⭐️ NEW
   - **Figma Import UI** - Import frames directly from Figma files ⭐️ NEW
     - "Import from Figma" button in Library page assets tab
     - Multi-step import wizard (File Selection → Frame Selection → Import Settings)

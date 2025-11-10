@@ -89,15 +89,24 @@ export function initiateOAuthFlow(
   const config = getOAuthConfig(integrationType);
   const generatedState = state || crypto.randomUUID();
   
+  // Figma OAuth doesn't use scopes - permissions are configured in the app settings
   const params = new URLSearchParams({
     client_id: config.clientId,
     redirect_uri: config.redirectUri,
     response_type: 'code',
-    scope: config.scopes.join(' '),
     state: generatedState,
-    access_type: 'offline', // For refresh tokens
-    prompt: 'consent', // Force consent screen to get refresh token
   });
+  
+  // Add scope parameter only for non-Figma integrations
+  if (integrationType !== 'figma' && config.scopes.length > 0) {
+    params.append('scope', config.scopes.join(' '));
+  }
+  
+  // Add OAuth2-specific parameters only for Google-based integrations
+  if (integrationType === 'gmail' || integrationType === 'drive') {
+    params.append('access_type', 'offline'); // For refresh tokens
+    params.append('prompt', 'consent'); // Force consent screen to get refresh token
+  }
   
   const authorizationUrl = `${config.authorizationUrl}?${params.toString()}`;
   
