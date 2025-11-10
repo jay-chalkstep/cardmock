@@ -9,7 +9,7 @@ import Toast from '@/components/Toast';
 import { EmailMockupEditor, EmailMockupList, EmailMockupPreview } from '@/components/email-mockups';
 import { DocumentViewer } from '@/components/contracts';
 import PaymentMethodForm from '@/components/contracts/PaymentMethodForm';
-import { Upload, Download, FileText, Trash2, Plus, Eye } from 'lucide-react';
+import { Upload, Download, FileText, Trash2, Plus, Eye, Sparkles } from 'lucide-react';
 
 interface Client {
   id: string;
@@ -57,9 +57,12 @@ export default function ContractDetailPage() {
   
   // Documents state
   const [documents, setDocuments] = useState<any[]>([]);
+  const [documentsWithVersions, setDocumentsWithVersions] = useState<any[]>([]);
   const [documentsLoading, setDocumentsLoading] = useState(false);
   const [showDocumentUpload, setShowDocumentUpload] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<any | null>(null);
+  const [hoveredVersion, setHoveredVersion] = useState<{ docId: string; versionId: string } | null>(null);
+  const [versionDiffSummaries, setVersionDiffSummaries] = useState<Record<string, string>>({});
   
   // Email mockups state
   const [showEmailMockupEditor, setShowEmailMockupEditor] = useState(false);
@@ -136,13 +139,75 @@ export default function ContractDetailPage() {
       const response = await fetch(`/api/contracts/${contractId}/documents`);
       if (!response.ok) throw new Error('Failed to fetch documents');
       const result = await response.json();
-      setDocuments(result.data?.documents || result.documents || []);
+      const fetchedDocuments = result.data?.documents || result.documents || [];
+      setDocuments(fetchedDocuments);
+
+      // Fetch all versions for each document
+      const documentsWithVersionsData = await Promise.all(
+        fetchedDocuments.map(async (doc: any) => {
+          try {
+            const versionsResponse = await fetch(`/api/contracts/${contractId}/documents/${doc.id}/versions`);
+            if (versionsResponse.ok) {
+              const versionsResult = await versionsResponse.json();
+              const versions = versionsResult.data?.versions || versionsResult.versions || [];
+              return {
+                ...doc,
+                versions: versions.sort((a: any, b: any) => b.version_number - a.version_number),
+              };
+            }
+            return { ...doc, versions: [] };
+          } catch (error) {
+            console.error(`Error fetching versions for document ${doc.id}:`, error);
+            return { ...doc, versions: [] };
+          }
+        })
+      );
+
+      setDocumentsWithVersions(documentsWithVersionsData);
     } catch (error) {
       console.error('Error fetching documents:', error);
       showToast('Failed to load documents', 'error');
     } finally {
       setDocumentsLoading(false);
     }
+  };
+
+  const fetchVersionDiffSummary = async (docId: string, version: any) => {
+    const cacheKey = `${docId}-${version.id}`;
+    
+    // If we already have the summary cached, return it
+    if (versionDiffSummaries[cacheKey]) {
+      return versionDiffSummaries[cacheKey];
+    }
+
+    // If the version already has a diff_summary, use it
+    if (version.diff_summary) {
+      setVersionDiffSummaries((prev) => ({ ...prev, [cacheKey]: version.diff_summary }));
+      return version.diff_summary;
+    }
+
+    // Only fetch if version > 1 (no previous version for v1)
+    if (version.version_number <= 1) {
+      return null;
+    }
+
+    // Try to generate the diff summary
+    try {
+      const response = await fetch(`/api/contracts/documents/${docId}/diff`, {
+        method: 'POST',
+      });
+      if (response.ok) {
+        const result = await response.json();
+        const summary = result.data?.diff_summary || result.diff_summary;
+        if (summary) {
+          setVersionDiffSummaries((prev) => ({ ...prev, [cacheKey]: summary }));
+          return summary;
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching diff summary:', error);
+    }
+    return null;
   };
 
   const fetchPaymentMethods = async () => {
@@ -547,71 +612,225 @@ export default function ContractDetailPage() {
                     <p className="text-sm mt-2">Upload a Word document to get started.</p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    {documents.map((doc) => (
-                      <div
-                        key={doc.id}
-                        className="p-4 border border-gray-200 rounded-md hover:bg-gray-50 flex items-center justify-between cursor-pointer"
-                        onClick={() => setSelectedDocument(doc)}
-                      >
-                        <div className="flex items-center gap-3 flex-1">
-                          <FileText size={24} className="text-gray-400" />
-                          <div className="flex-1">
-                            <h4 className="font-medium text-gray-900">{doc.file_name}</h4>
-                            <div className="flex items-center gap-4 text-sm text-gray-500 mt-1">
-                              <span>Version {doc.version_number}</span>
-                              {doc.is_current && (
-                                <span className="px-2 py-0.5 bg-green-100 text-green-800 rounded-full text-xs">
-                                  Current
-                                </span>
-                              )}
-                              {doc.docu_sign_status && (
-                                <span className={`px-2 py-0.5 rounded-full text-xs ${
-                                  doc.docu_sign_status === 'signed' ? 'bg-blue-100 text-blue-800' :
-                                  doc.docu_sign_status === 'delivered' ? 'bg-yellow-100 text-yellow-800' :
-                                  'bg-gray-100 text-gray-800'
-                                }`}>
-                                  {doc.docu_sign_status}
-                                </span>
-                              )}
-                              <span>{new Date(doc.created_at).toLocaleDateString()}</span>
+                  <div className="space-y-4">
+                    {documentsWithVersions.length > 0 ? (
+                      documentsWithVersions.map((doc) => (
+                        <div key={doc.id} className="border border-gray-200 rounded-md overflow-hidden">
+                          {/* Document Header */}
+                          <div
+                            className="p-4 bg-white hover:bg-gray-50 flex items-center justify-between cursor-pointer"
+                            onClick={() => setSelectedDocument(doc)}
+                          >
+                            <div className="flex items-center gap-3 flex-1">
+                              <FileText size={24} className="text-gray-400" />
+                              <div className="flex-1">
+                                <h4 className="font-medium text-gray-900">{doc.file_name}</h4>
+                                <div className="flex items-center gap-4 text-sm text-gray-500 mt-1">
+                                  <span>{doc.versions?.length || 0} version{doc.versions?.length !== 1 ? 's' : ''}</span>
+                                  {doc.is_current && (
+                                    <span className="px-2 py-0.5 bg-green-100 text-green-800 rounded-full text-xs">
+                                      Current: Version {doc.version_number}
+                                    </span>
+                                  )}
+                                  {doc.docu_sign_status && (
+                                    <span className={`px-2 py-0.5 rounded-full text-xs ${
+                                      doc.docu_sign_status === 'signed' ? 'bg-blue-100 text-blue-800' :
+                                      doc.docu_sign_status === 'delivered' ? 'bg-yellow-100 text-yellow-800' :
+                                      'bg-gray-100 text-gray-800'
+                                    }`}>
+                                      {doc.docu_sign_status}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedDocument(doc);
+                                }}
+                                className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded"
+                                title="View"
+                              >
+                                <Eye size={18} />
+                              </button>
+                              <a
+                                href={doc.file_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded"
+                                title="Download"
+                              >
+                                <Download size={18} />
+                              </a>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteDocument(doc.id);
+                                }}
+                                className="p-2 text-red-600 hover:text-red-900 hover:bg-red-50 rounded"
+                                title="Delete"
+                              >
+                                <Trash2 size={18} />
+                              </button>
                             </div>
                           </div>
+
+                          {/* Version History */}
+                          {doc.versions && doc.versions.length > 0 && (
+                            <div className="border-t border-gray-200 bg-gray-50">
+                              <div className="p-2 text-xs font-medium text-gray-600 px-4">Version History</div>
+                              <div className="divide-y divide-gray-200">
+                                {doc.versions.map((version: any, index: number) => {
+                                  const cacheKey = `${doc.id}-${version.id}`;
+                                  const diffSummary = versionDiffSummaries[cacheKey] || version.diff_summary;
+                                  const isHovered = hoveredVersion?.docId === doc.id && hoveredVersion?.versionId === version.id;
+                                  
+                                  return (
+                                    <div
+                                      key={version.id}
+                                      className="relative px-4 py-3 hover:bg-white transition-colors"
+                                      onMouseEnter={async () => {
+                                        if (version.version_number > 1) {
+                                          setHoveredVersion({ docId: doc.id, versionId: version.id });
+                                          if (!diffSummary) {
+                                            await fetchVersionDiffSummary(doc.id, version);
+                                          }
+                                        }
+                                      }}
+                                      onMouseLeave={() => setHoveredVersion(null)}
+                                    >
+                                      <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3 flex-1">
+                                          <div className="flex items-center gap-2">
+                                            {version.version_number === doc.version_number && doc.is_current ? (
+                                              <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                                            ) : (
+                                              <span className="w-2 h-2 bg-gray-300 rounded-full"></span>
+                                            )}
+                                            <span className="text-sm font-medium text-gray-900">
+                                              Version {version.version_number}
+                                            </span>
+                                            {version.version_number === doc.version_number && doc.is_current && (
+                                              <span className="px-2 py-0.5 bg-green-100 text-green-800 rounded-full text-xs">
+                                                Current
+                                              </span>
+                                            )}
+                                          </div>
+                                          <span className="text-xs text-gray-500">
+                                            {new Date(version.created_at).toLocaleDateString('en-US', {
+                                              year: 'numeric',
+                                              month: 'short',
+                                              day: 'numeric',
+                                              hour: '2-digit',
+                                              minute: '2-digit',
+                                            })}
+                                          </span>
+                                          {version.version_number > 1 && (
+                                            <div className="flex items-center gap-1 text-xs text-blue-600">
+                                              <Sparkles size={12} />
+                                              <span>Hover for changes</span>
+                                            </div>
+                                          )}
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                          <a
+                                            href={version.file_url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            onClick={(e) => e.stopPropagation()}
+                                            className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded"
+                                            title="Download Version"
+                                          >
+                                            <Download size={16} />
+                                          </a>
+                                        </div>
+                                      </div>
+
+                                      {/* Hover Tooltip with Diff Summary */}
+                                      {isHovered && version.version_number > 1 && diffSummary && (
+                                        <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-white border border-gray-200 rounded-lg shadow-xl p-4 max-h-64 overflow-y-auto">
+                                          <div className="flex items-start gap-2 mb-2">
+                                            <Sparkles size={16} className="text-blue-600 mt-0.5" />
+                                            <div className="flex-1">
+                                              <h5 className="font-medium text-gray-900 text-sm mb-1">
+                                                Changes from Version {version.version_number - 1} to Version {version.version_number}
+                                              </h5>
+                                              <p className="text-xs text-gray-600 whitespace-pre-wrap leading-relaxed">
+                                                {diffSummary}
+                                              </p>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
                         </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedDocument(doc);
-                            }}
-                            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded"
-                            title="View"
-                          >
-                            <Eye size={18} />
-                          </button>
-                          <a
-                            href={doc.file_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded"
-                            title="Download"
-                          >
-                            <Download size={18} />
-                          </a>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteDocument(doc.id);
-                            }}
-                            className="p-2 text-red-600 hover:text-red-900 hover:bg-red-50 rounded"
-                            title="Delete"
-                          >
-                            <Trash2 size={18} />
-                          </button>
+                      ))
+                    ) : documents.length > 0 ? (
+                      // Fallback to old view if versions haven't loaded yet
+                      documents.map((doc) => (
+                        <div
+                          key={doc.id}
+                          className="p-4 border border-gray-200 rounded-md hover:bg-gray-50 flex items-center justify-between cursor-pointer"
+                          onClick={() => setSelectedDocument(doc)}
+                        >
+                          <div className="flex items-center gap-3 flex-1">
+                            <FileText size={24} className="text-gray-400" />
+                            <div className="flex-1">
+                              <h4 className="font-medium text-gray-900">{doc.file_name}</h4>
+                              <div className="flex items-center gap-4 text-sm text-gray-500 mt-1">
+                                <span>Version {doc.version_number}</span>
+                                {doc.is_current && (
+                                  <span className="px-2 py-0.5 bg-green-100 text-green-800 rounded-full text-xs">
+                                    Current
+                                  </span>
+                                )}
+                                <span>{new Date(doc.created_at).toLocaleDateString()}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedDocument(doc);
+                              }}
+                              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded"
+                              title="View"
+                            >
+                              <Eye size={18} />
+                            </button>
+                            <a
+                              href={doc.file_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded"
+                              title="Download"
+                            >
+                              <Download size={18} />
+                            </a>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteDocument(doc.id);
+                              }}
+                              className="p-2 text-red-600 hover:text-red-900 hover:bg-red-50 rounded"
+                              title="Delete"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))
+                    ) : null}
                   </div>
                 )}
               </div>
