@@ -83,3 +83,4 @@ Aiproval is a design approval and collaboration platform that allows users to im
 - The integration works with both private and public Figma files
 - Imported assets are stored in Aiproval and can be managed independently from the source Figma file
 
+

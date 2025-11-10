@@ -40,3 +40,4 @@ COMMENT ON COLUMN projects.client_id IS 'Required reference to clients table. Pr
 -- of projects that couldn't be automatically migrated. After all projects
 -- have been assigned, we can make it NOT NULL in a future migration.
 
+
