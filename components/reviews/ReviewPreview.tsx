@@ -34,22 +34,48 @@ export default function ReviewPreview({ mockupId, projectId, stageOrder }: Revie
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchReviewData();
-  }, [mockupId]);
+    if (projectId && mockupId) {
+      fetchReviewData();
+    }
+  }, [mockupId, projectId]);
 
   const fetchReviewData = async () => {
+    if (!projectId || !mockupId) {
+      setError('Missing project or mockup ID');
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError(null);
     try {
       // Fetch project with workflow
       const projectResponse = await fetch(`/api/projects/${projectId}`);
-      if (!projectResponse.ok) throw new Error('Failed to fetch project');
-      const { project } = await projectResponse.json();
+      if (!projectResponse.ok) {
+        const errorData = await projectResponse.json().catch(() => ({}));
+        const errorMessage = errorData.error || errorData.message || `Failed to fetch project (${projectResponse.status})`;
+        throw new Error(errorMessage);
+      }
+      const projectData = await projectResponse.json();
+      const project = projectData.data?.project || projectData.project;
+      
+      if (!project) {
+        throw new Error('Project not found in response');
+      }
 
       // Fetch mockup (simple fetch, not from projects endpoint)
       const mockupResponse = await fetch(`/api/mockups/${mockupId}`);
-      if (!mockupResponse.ok) throw new Error('Failed to fetch mockup');
-      const { mockup } = await mockupResponse.json();
+      if (!mockupResponse.ok) {
+        const errorData = await mockupResponse.json().catch(() => ({}));
+        const errorMessage = errorData.error || errorData.message || `Failed to fetch mockup (${mockupResponse.status})`;
+        throw new Error(errorMessage);
+      }
+      const mockupData = await mockupResponse.json();
+      const mockup = mockupData.data?.mockup || mockupData.mockup;
+      
+      if (!mockup) {
+        throw new Error('Mockup not found in response');
+      }
 
       // Find stage info from workflow
       const workflow = project.workflow;
@@ -64,7 +90,14 @@ export default function ReviewPreview({ mockupId, projectId, stageOrder }: Revie
       });
     } catch (err) {
       console.error('Error fetching review data:', err);
-      setError('Failed to load review details');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load review details';
+      
+      // If project not found (404), show a more helpful message
+      if (errorMessage.includes('404') || errorMessage.includes('not found')) {
+        setError('Project not found. The project may have been deleted or you may not have access to it.');
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
@@ -80,15 +113,24 @@ export default function ReviewPreview({ mockupId, projectId, stageOrder }: Revie
 
   if (error || !data) {
     return (
-      <div className="h-full flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-[var(--text-secondary)] mb-4">{error || 'No data available'}</div>
-          <button
-            onClick={fetchReviewData}
-            className="text-[var(--accent-blue)] hover:underline"
-          >
-            Try again
-          </button>
+      <div className="h-full flex items-center justify-center p-8">
+        <div className="text-center max-w-md">
+          <div className="text-[var(--text-secondary)] mb-4 text-sm">
+            {error || 'No data available'}
+          </div>
+          {error && !error.includes('not found') && (
+            <button
+              onClick={fetchReviewData}
+              className="text-[var(--accent-blue)] hover:underline text-sm"
+            >
+              Try again
+            </button>
+          )}
+          {error && error.includes('not found') && (
+            <div className="text-xs text-[var(--text-tertiary)] mt-2">
+              You can still view the mockup directly by clicking "Open Full Review" below.
+            </div>
+          )}
         </div>
       </div>
     );
@@ -124,21 +166,23 @@ export default function ReviewPreview({ mockupId, projectId, stageOrder }: Revie
         </div>
 
         {/* Project Info */}
-        <div className="flex items-center gap-3 text-sm">
-          <div className="flex items-center gap-2">
-            <div
-              className="w-3 h-3 rounded-full"
-              style={{ backgroundColor: data.project.color }}
-            />
-            <span className="text-[var(--text-secondary)]">{data.project.name}</span>
+        {data.project && (
+          <div className="flex items-center gap-3 text-sm">
+            <div className="flex items-center gap-2">
+              <div
+                className="w-3 h-3 rounded-full"
+                style={{ backgroundColor: data.project.color || '#3B82F6' }}
+              />
+              <span className="text-[var(--text-secondary)]">{data.project.name || 'Unknown Project'}</span>
+            </div>
+            {data.project.client_name && (
+              <>
+                <span className="text-[var(--text-tertiary)]">•</span>
+                <span className="text-[var(--text-secondary)]">{data.project.client_name}</span>
+              </>
+            )}
           </div>
-          {data.project.client_name && (
-            <>
-              <span className="text-[var(--text-tertiary)]">•</span>
-              <span className="text-[var(--text-secondary)]">{data.project.client_name}</span>
-            </>
-          )}
-        </div>
+        )}
 
         {/* Stage Badge */}
         <div className="mt-3">
@@ -167,7 +211,7 @@ export default function ReviewPreview({ mockupId, projectId, stageOrder }: Revie
         </div>
 
         {/* Workflow Info */}
-        {data.project.workflow && (
+        {data.project?.workflow && (
           <div className="bg-white rounded-lg p-5 border border-[var(--border-main)] mb-6">
             <div className="flex items-center gap-2 mb-3">
               <WorkflowIcon size={20} className="text-[var(--accent-purple)]" />
