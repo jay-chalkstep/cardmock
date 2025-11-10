@@ -52,16 +52,46 @@ export default function DocumentViewer({
   const [diffSummary, setDiffSummary] = useState<string | null>(null);
   const [loadingDiff, setLoadingDiff] = useState(false);
   const [diffError, setDiffError] = useState<string | null>(null);
+  const [viewerUrl, setViewerUrl] = useState<string | null>(null);
   const [documentHtml, setDocumentHtml] = useState<string | null>(null);
+  const [useFallback, setUseFallback] = useState(false);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
+  const [viewerError, setViewerError] = useState(false);
 
-  const fetchDocumentPreview = useCallback(async (versionId?: string) => {
+  const fetchDocumentPreview = useCallback(async (versionId?: string, forceFallback = false) => {
     if (!document?.id) return;
     setLoadingPreview(true);
+    setViewerUrl(null);
     setDocumentHtml(null);
     setPreviewError(null);
+    setViewerError(false);
+    
     try {
+      // If fallback is forced, fetch HTML
+      if (forceFallback) {
+        const url = versionId 
+          ? `/api/contracts/documents/${document.id}/preview?version_id=${versionId}&fallback=true`
+          : `/api/contracts/documents/${document.id}/preview?fallback=true`;
+        
+        const response = await fetch(url);
+        const result = await response.json();
+        
+        if (!response.ok) {
+          const errorMessage = result.message || result.error || 'Failed to load document preview';
+          setPreviewError(errorMessage);
+          setDocumentHtml(null);
+          return;
+        }
+        
+        setDocumentHtml(result.data?.html || result.html || null);
+        setViewerUrl(null);
+        setUseFallback(true);
+        setPreviewError(null);
+        return;
+      }
+
+      // Try Office Online viewer first
       const url = versionId 
         ? `/api/contracts/documents/${document.id}/preview?version_id=${versionId}`
         : `/api/contracts/documents/${document.id}/preview`;
@@ -72,17 +102,29 @@ export default function DocumentViewer({
       if (!response.ok) {
         const errorMessage = result.message || result.error || 'Failed to load document preview';
         setPreviewError(errorMessage);
-        setDocumentHtml(null);
+        setViewerUrl(null);
+        // Try fallback on error
+        await fetchDocumentPreview(versionId, true);
         return;
       }
       
-      setDocumentHtml(result.data?.html || result.html || null);
-      setPreviewError(null);
+      const viewerUrl = result.data?.viewerUrl || result.viewerUrl;
+      if (viewerUrl) {
+        setViewerUrl(viewerUrl);
+        setDocumentHtml(null);
+        setUseFallback(false);
+        setPreviewError(null);
+      } else {
+        // If no viewer URL, try fallback
+        await fetchDocumentPreview(versionId, true);
+      }
     } catch (error) {
       console.error('Error fetching document preview:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to load document preview';
       setPreviewError(errorMessage);
-      setDocumentHtml(null);
+      setViewerUrl(null);
+      // Try fallback on error
+      await fetchDocumentPreview(versionId, true);
     } finally {
       setLoadingPreview(false);
     }
@@ -357,15 +399,63 @@ export default function DocumentViewer({
               ) : previewError ? (
                 <div className="border border-gray-200 rounded-lg p-8 bg-red-50 text-center">
                   <p className="text-red-600 mb-4">{previewError}</p>
-                  <button
-                    onClick={() => fetchDocumentPreview(selectedVersion.id)}
-                    className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 flex items-center gap-2 mx-auto"
-                  >
-                    Retry
-                  </button>
+                  <div className="flex gap-2 justify-center">
+                    <button
+                      onClick={() => fetchDocumentPreview(selectedVersion.id)}
+                      className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 flex items-center gap-2"
+                    >
+                      Retry
+                    </button>
+                    <button
+                      onClick={() => fetchDocumentPreview(selectedVersion.id, true)}
+                      className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 flex items-center gap-2"
+                    >
+                      Use HTML Preview
+                    </button>
+                  </div>
+                </div>
+              ) : viewerUrl && !useFallback ? (
+                <div className="border border-gray-200 rounded-lg bg-white overflow-hidden">
+                  <div className="relative w-full" style={{ height: 'calc(100vh - 400px)', minHeight: '600px' }}>
+                    <iframe
+                      src={viewerUrl}
+                      className="w-full h-full border-0"
+                      title={`Document Preview - Version ${selectedVersion.version_number}`}
+                      onError={() => {
+                        setViewerError(true);
+                        fetchDocumentPreview(selectedVersion.id, true);
+                      }}
+                      onLoad={() => setViewerError(false)}
+                    />
+                    {viewerError && (
+                      <div className="absolute inset-0 bg-white flex items-center justify-center">
+                        <div className="text-center">
+                          <p className="text-gray-600 mb-4">Office Online viewer failed to load</p>
+                          <button
+                            onClick={() => fetchDocumentPreview(selectedVersion.id, true)}
+                            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                          >
+                            Use HTML Preview
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               ) : documentHtml ? (
                 <div className="border border-gray-200 rounded-lg bg-white overflow-hidden">
+                  <div className="p-4 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+                    <p className="text-sm text-gray-600">Using HTML preview (fallback mode)</p>
+                    <button
+                      onClick={() => {
+                        setUseFallback(false);
+                        fetchDocumentPreview(selectedVersion.id);
+                      }}
+                      className="px-3 py-1 text-xs font-medium text-blue-600 hover:text-blue-700"
+                    >
+                      Try Office Viewer
+                    </button>
+                  </div>
                   <div className="p-6 overflow-y-auto max-h-[calc(100vh-400px)]">
                     <div 
                       dangerouslySetInnerHTML={{ __html: documentHtml }}
@@ -406,24 +496,72 @@ export default function DocumentViewer({
               ) : previewError ? (
                 <div className="p-8 bg-red-50 text-center">
                   <p className="text-red-600 mb-4">{previewError}</p>
-                  <button
-                    onClick={() => fetchDocumentPreview()}
-                    className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 flex items-center gap-2 mx-auto"
-                  >
-                    Retry
-                  </button>
+                  <div className="flex gap-2 justify-center">
+                    <button
+                      onClick={() => fetchDocumentPreview()}
+                      className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 flex items-center gap-2"
+                    >
+                      Retry
+                    </button>
+                    <button
+                      onClick={() => fetchDocumentPreview(undefined, true)}
+                      className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 flex items-center gap-2"
+                    >
+                      Use HTML Preview
+                    </button>
+                  </div>
+                </div>
+              ) : viewerUrl && !useFallback ? (
+                <div className="relative w-full" style={{ height: 'calc(100vh - 400px)', minHeight: '600px' }}>
+                  <iframe
+                    src={viewerUrl}
+                    className="w-full h-full border-0"
+                    title={`Document Preview - ${document.file_name}`}
+                    onError={() => {
+                      setViewerError(true);
+                      fetchDocumentPreview(undefined, true);
+                    }}
+                    onLoad={() => setViewerError(false)}
+                  />
+                  {viewerError && (
+                    <div className="absolute inset-0 bg-white flex items-center justify-center">
+                      <div className="text-center">
+                        <p className="text-gray-600 mb-4">Office Online viewer failed to load</p>
+                        <button
+                          onClick={() => fetchDocumentPreview(undefined, true)}
+                          className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                        >
+                          Use HTML Preview
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : documentHtml ? (
-                <div className="p-6 overflow-y-auto max-h-[calc(100vh-400px)]">
-                  <div 
-                    dangerouslySetInnerHTML={{ __html: documentHtml }}
-                    className="document-content"
-                    style={{
-                      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-                      lineHeight: '1.6',
-                      color: '#333',
-                    }}
-                  />
+                <div>
+                  <div className="p-4 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+                    <p className="text-sm text-gray-600">Using HTML preview (fallback mode)</p>
+                    <button
+                      onClick={() => {
+                        setUseFallback(false);
+                        fetchDocumentPreview();
+                      }}
+                      className="px-3 py-1 text-xs font-medium text-blue-600 hover:text-blue-700"
+                    >
+                      Try Office Viewer
+                    </button>
+                  </div>
+                  <div className="p-6 overflow-y-auto max-h-[calc(100vh-400px)]">
+                    <div 
+                      dangerouslySetInnerHTML={{ __html: documentHtml }}
+                      className="document-content"
+                      style={{
+                        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+                        lineHeight: '1.6',
+                        color: '#333',
+                      }}
+                    />
+                  </div>
                 </div>
               ) : (
                 <div className="p-8 bg-gray-50 text-center">

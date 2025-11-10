@@ -11,9 +11,10 @@ export const dynamic = 'force-dynamic';
 /**
  * GET /api/contracts/documents/[docId]/preview
  *
- * Get HTML preview of a document
+ * Get document preview URL and fallback HTML
  * Query params:
  * - version_id?: string (optional, specific version to preview)
+ * - fallback?: boolean (optional, return HTML fallback instead of URL)
  */
 export async function GET(
   request: NextRequest,
@@ -27,8 +28,9 @@ export async function GET(
     const { docId } = await context.params;
     const { searchParams } = new URL(request.url);
     const versionId = searchParams.get('version_id');
+    const useFallback = searchParams.get('fallback') === 'true';
 
-    logger.api(`/api/contracts/documents/${docId}/preview`, 'GET', { orgId, versionId });
+    logger.api(`/api/contracts/documents/${docId}/preview`, 'GET', { orgId, versionId, useFallback });
 
     // Get document
     const { data: document } = await supabaseServer
@@ -57,40 +59,48 @@ export async function GET(
       }
     }
 
-    // Fetch the document
-    const response = await fetch(fileUrl);
-    if (!response.ok) {
-      logger.error('Failed to fetch document file:', { status: response.status, statusText: response.statusText });
-      return errorResponse(
-        new Error('Failed to fetch document file'),
-        'Unable to load document for preview. The file may not be accessible.'
-      );
+    // If fallback is requested, return HTML conversion
+    if (useFallback) {
+      try {
+        const response = await fetch(fileUrl);
+        if (!response.ok) {
+          logger.error('Failed to fetch document file:', { status: response.status, statusText: response.statusText });
+          return errorResponse(
+            new Error('Failed to fetch document file'),
+            'Unable to load document for preview. The file may not be accessible.'
+          );
+        }
+
+        const arrayBuffer = await response.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+
+        // Convert Word document to HTML using mammoth
+        const result = await mammoth.convertToHtml({ buffer });
+        const html = result.value;
+        
+        // Add basic styling for better readability
+        const styledHtml = `
+          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px;">
+            ${html}
+          </div>
+        `;
+
+        return successResponse({ html: styledHtml, fallback: true });
+      } catch (error) {
+        logger.error('Error converting document to HTML:', error);
+        return errorResponse(
+          error instanceof Error ? error : new Error('Failed to convert document'),
+          'Failed to convert document to HTML. The file may be corrupted or in an unsupported format.'
+        );
+      }
     }
 
-    const arrayBuffer = await response.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-
-    // Convert Word document to HTML using mammoth
-    let html: string;
-    try {
-      const result = await mammoth.convertToHtml({ buffer });
-      html = result.value;
-      
-      // Add basic styling for better readability
-      html = `
-        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px;">
-          ${html}
-        </div>
-      `;
-    } catch (error) {
-      logger.error('Error converting document to HTML:', error);
-      return errorResponse(
-        error instanceof Error ? error : new Error('Failed to convert document'),
-        'Failed to convert document to HTML. The file may be corrupted or in an unsupported format.'
-      );
-    }
-
-    return successResponse({ html });
+    // Return file URL for Office Online viewer
+    // Office Online viewer requires publicly accessible HTTPS URLs
+    return successResponse({ 
+      fileUrl,
+      viewerUrl: `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(fileUrl)}`
+    });
   } catch (error) {
     return errorResponse(error, 'Failed to generate document preview');
   }
