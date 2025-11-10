@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Loader2, Briefcase, Package, LayoutTemplate, Images, X } from 'lucide-react';
+import { Search, Loader2, Briefcase, Package, LayoutTemplate, Images, FileText, X } from 'lucide-react';
 
 interface SearchResult {
   id: string;
-  type: 'project' | 'brand' | 'template' | 'asset';
+  type: 'project' | 'brand' | 'template' | 'asset' | 'contract';
   title: string;
   subtitle?: string;
   url: string;
@@ -114,6 +114,8 @@ export default function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
         return <LayoutTemplate size={16} />;
       case 'asset':
         return <Images size={16} />;
+      case 'contract':
+        return <FileText size={16} />;
       default:
         return <Search size={16} />;
     }
@@ -140,7 +142,7 @@ export default function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search projects, brands, templates, assets..."
+            placeholder="Search projects, brands, templates, assets, contracts..."
             className="flex-1 outline-none text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)]"
           />
           {loading && <Loader2 size={16} className="animate-spin text-[var(--text-tertiary)]" />}
@@ -203,7 +205,7 @@ export default function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
           <div className="p-8 text-center text-[var(--text-secondary)]">
             <p>Start typing to search...</p>
             <p className="text-xs mt-2 text-[var(--text-tertiary)]">
-              Search across projects, brands, templates, and assets
+              Search across projects, brands, templates, assets, and contracts
             </p>
           </div>
         )}

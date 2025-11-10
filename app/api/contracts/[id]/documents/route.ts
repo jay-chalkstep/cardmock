@@ -5,6 +5,7 @@ import { handleSupabaseError } from '@/lib/api/error-handler';
 import { supabaseServer } from '@/lib/supabase-server';
 import { logger } from '@/lib/utils/logger';
 import { createServerAdminClient } from '@/lib/supabase/server';
+import { extractTextFromWordDocument } from '@/lib/ai/document-diff';
 
 export const dynamic = 'force-dynamic';
 
@@ -153,6 +154,19 @@ export async function POST(
       .eq('contract_id', id)
       .eq('is_current', true);
 
+    // Extract text from document for search (async, don't block upload)
+    let searchableText: string | null = null;
+    try {
+      searchableText = await extractTextFromWordDocument(urlData.publicUrl);
+      // Limit text length to prevent database issues (keep first 100k characters)
+      if (searchableText && searchableText.length > 100000) {
+        searchableText = searchableText.substring(0, 100000);
+      }
+    } catch (error) {
+      logger.warn('Failed to extract text from document for search:', error);
+      // Don't fail the upload if text extraction fails
+    }
+
     // Create document record
     const { data: document, error: docError } = await supabaseServer
       .from('contract_documents')
@@ -165,6 +179,7 @@ export async function POST(
         mime_type: file.type,
         is_current: true,
         uploaded_by: userId,
+        searchable_text: searchableText,
       })
       .select()
       .single();
