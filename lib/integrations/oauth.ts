@@ -98,8 +98,10 @@ export function initiateOAuthFlow(
   });
   
   // Add scope parameter for all integrations (including Figma)
+  // Figma uses comma-separated scopes, other providers use space-separated
   if (config.scopes.length > 0) {
-    params.append('scope', config.scopes.join(' '));
+    const scopeSeparator = integrationType === 'figma' ? ',' : ' ';
+    params.append('scope', config.scopes.join(scopeSeparator));
   }
   
   // Add OAuth2-specific parameters only for Google-based integrations
