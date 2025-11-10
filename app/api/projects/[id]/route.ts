@@ -25,7 +25,7 @@ export async function GET(
     
     const { id } = await context.params;
 
-    logger.api(`/api/projects/${id}`, 'GET', { orgId });
+    logger.api(`/api/projects/${id}`, 'GET', { orgId, projectId: id });
 
     // Fetch project with workflow and contract JOIN
     const { data: project, error } = await supabaseServer
@@ -35,9 +35,32 @@ export async function GET(
       .eq('organization_id', orgId)
       .single();
 
-    if (error || !project) {
+    if (error) {
+      logger.error('Project fetch error', {
+        projectId: id,
+        orgId,
+        error: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint
+      });
       return notFoundResponse('Project not found');
     }
+
+    if (!project) {
+      logger.warn('Project not found', {
+        projectId: id,
+        orgId,
+        message: 'Query returned no results'
+      });
+      return notFoundResponse('Project not found');
+    }
+
+    logger.info('Project fetched successfully', {
+      projectId: id,
+      orgId,
+      projectName: project.name
+    });
 
     // Fetch mockup count
     const { count } = await supabaseServer
