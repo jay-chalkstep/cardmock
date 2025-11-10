@@ -90,10 +90,37 @@ export default function ProjectDetailPage() {
     try {
       // Fetch project details
       const projectResponse = await fetch(`/api/projects/${projectId}`);
-      if (!projectResponse.ok) throw new Error('Failed to fetch project');
       const result = await projectResponse.json();
+      
+      if (!projectResponse.ok) {
+        const errorMessage = result.error || result.message || `Failed to fetch project (${projectResponse.status})`;
+        console.error('Project fetch error:', {
+          status: projectResponse.status,
+          statusText: projectResponse.statusText,
+          error: errorMessage,
+          projectId,
+          orgId: organization?.id,
+          response: result
+        });
+        throw new Error(errorMessage);
+      }
+      
       const fetchedProject = result.data?.project || result.project;
-      if (!fetchedProject) throw new Error('Project not found in response');
+      if (!fetchedProject) {
+        console.error('Project not found in response:', {
+          projectId,
+          orgId: organization?.id,
+          response: result
+        });
+        throw new Error('Project not found in response');
+      }
+      
+      console.log('✅ Project fetched successfully:', {
+        id: fetchedProject.id,
+        name: fetchedProject.name,
+        orgId: organization?.id
+      });
+      
       setProject(fetchedProject);
 
       // Fetch project mockups
