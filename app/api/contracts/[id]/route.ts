@@ -29,7 +29,7 @@ export async function GET(
 
     const { data: contract, error } = await supabaseServer
       .from('contracts')
-      .select('*, clients(*), projects(id, name)')
+      .select('*')
       .eq('id', id)
       .eq('organization_id', orgId)
       .single();
@@ -50,7 +50,38 @@ export async function GET(
       }
     }
 
-    return successResponse({ contract });
+    // Fetch related client and project separately to avoid join issues
+    let clientData = null;
+    let projectData = null;
+
+    if (contract.client_id) {
+      const { data: fetchedClient } = await supabaseServer
+        .from('clients')
+        .select('id, name, email, phone')
+        .eq('id', contract.client_id)
+        .eq('organization_id', orgId)
+        .single();
+      clientData = fetchedClient;
+    }
+
+    if (contract.project_id) {
+      const { data: fetchedProject } = await supabaseServer
+        .from('projects')
+        .select('id, name')
+        .eq('id', contract.project_id)
+        .eq('organization_id', orgId)
+        .single();
+      projectData = fetchedProject;
+    }
+
+    // Enrich contract with related data
+    const enrichedContract = {
+      ...contract,
+      clients: clientData,
+      projects: projectData,
+    };
+
+    return successResponse({ contract: enrichedContract });
   } catch (error) {
     return errorResponse(error, 'Failed to fetch contract');
   }
@@ -121,12 +152,43 @@ export async function PATCH(
       .update(updateData)
       .eq('id', id)
       .eq('organization_id', orgId)
-      .select('*, clients(*), projects(id, name)')
+      .select('*')
       .single();
 
     if (error) {
       return handleSupabaseError(error);
     }
+
+    // Fetch related client and project separately to avoid join issues
+    let clientData = null;
+    let projectData = null;
+
+    if (contract.client_id) {
+      const { data: fetchedClient } = await supabaseServer
+        .from('clients')
+        .select('id, name, email, phone')
+        .eq('id', contract.client_id)
+        .eq('organization_id', orgId)
+        .single();
+      clientData = fetchedClient;
+    }
+
+    if (contract.project_id) {
+      const { data: fetchedProject } = await supabaseServer
+        .from('projects')
+        .select('id, name')
+        .eq('id', contract.project_id)
+        .eq('organization_id', orgId)
+        .single();
+      projectData = fetchedProject;
+    }
+
+    // Enrich contract with related data
+    const enrichedContract = {
+      ...contract,
+      clients: clientData,
+      projects: projectData,
+    };
 
     // Send notifications if status changed (non-blocking)
     if (status !== undefined && oldContract && oldContract.status !== status) {
@@ -165,7 +227,7 @@ export async function PATCH(
       }
     }
 
-    return successResponse({ contract });
+    return successResponse({ contract: enrichedContract });
   } catch (error) {
     return errorResponse(error, 'Failed to update contract');
   }
