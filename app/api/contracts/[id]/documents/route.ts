@@ -111,17 +111,8 @@ export async function POST(
       return badRequestResponse('File size must be less than 10MB');
     }
 
-    // Get current version number
-    const { data: existingDocs } = await supabaseServer
-      .from('contract_documents')
-      .select('version_number')
-      .eq('contract_id', id)
-      .order('version_number', { ascending: false })
-      .limit(1);
-
-    const nextVersion = existingDocs && existingDocs.length > 0
-      ? existingDocs[0].version_number + 1
-      : 1;
+    // New documents always start at version 1
+    const nextVersion = 1;
 
     // Upload file to Supabase Storage
     const supabaseAdmin = createServerAdminClient();

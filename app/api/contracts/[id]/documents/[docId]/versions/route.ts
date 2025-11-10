@@ -164,10 +164,23 @@ export async function POST(
 
     // Watermark the current version (which will become the previous version)
     // This should happen every time a new version is uploaded
-    if (document.file_url) {
+    // Skip watermarking if file is already watermarked (check filename)
+    if (document.file_url && !document.file_url.includes('-watermarked')) {
       try {
+        logger.info('Starting watermarking process:', {
+          documentId: docId,
+          versionNumber: document.version_number,
+          fileUrl: document.file_url,
+        });
+
         // Add watermark to the current version
         const watermarkedBuffer = await addWatermarkToDocument(document.file_url);
+        
+        logger.info('Watermark added successfully, uploading watermarked file:', {
+          documentId: docId,
+          versionNumber: document.version_number,
+          bufferSize: watermarkedBuffer.length,
+        });
         
         // Create a new file path for the watermarked version
         const watermarkedFileName = `${id}/${Date.now()}-v${document.version_number}-watermarked.${fileExt}`;
@@ -182,10 +195,11 @@ export async function POST(
           });
 
         if (watermarkedError) {
-          logger.warn('Failed to upload watermarked version:', {
+          logger.error('Failed to upload watermarked version:', {
             documentId: docId,
             versionNumber: document.version_number,
             error: watermarkedError,
+            filePath: watermarkedFilePath,
           });
         } else {
           // Get public URL for watermarked version
@@ -193,13 +207,26 @@ export async function POST(
             .from('contract-documents')
             .getPublicUrl(watermarkedFilePath);
 
+          logger.info('Watermarked file uploaded, updating database:', {
+            documentId: docId,
+            versionNumber: document.version_number,
+            watermarkedUrl: watermarkedUrlData.publicUrl,
+          });
+
           // Update the current document's file URL with watermarked version
-          await supabaseServer
+          const { error: updateError } = await supabaseServer
             .from('contract_documents')
             .update({
               file_url: watermarkedUrlData.publicUrl,
             })
             .eq('id', docId);
+
+          if (updateError) {
+            logger.error('Failed to update document with watermarked URL:', {
+              documentId: docId,
+              error: updateError,
+            });
+          }
 
           // Also update the version record if it exists
           const { data: currentVersion } = await supabaseServer
@@ -210,27 +237,41 @@ export async function POST(
             .single();
 
           if (currentVersion) {
-            await supabaseServer
+            const { error: versionUpdateError } = await supabaseServer
               .from('contract_document_versions')
               .update({
                 file_url: watermarkedUrlData.publicUrl,
               })
               .eq('id', currentVersion.id);
+
+            if (versionUpdateError) {
+              logger.error('Failed to update version record with watermarked URL:', {
+                versionId: currentVersion.id,
+                error: versionUpdateError,
+              });
+            }
           }
 
-          logger.info('Watermarked current version:', {
+          logger.info('Successfully watermarked current version:', {
             documentId: docId,
             versionNumber: document.version_number,
           });
         }
       } catch (error) {
-        logger.warn('Failed to watermark current version:', {
+        logger.error('Failed to watermark current version:', {
           documentId: docId,
           versionNumber: document.version_number,
           error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
         });
         // Don't fail the upload if watermarking fails
       }
+    } else if (document.file_url && document.file_url.includes('-watermarked')) {
+      logger.info('Skipping watermarking - file already watermarked:', {
+        documentId: docId,
+        versionNumber: document.version_number,
+        fileUrl: document.file_url,
+      });
     }
 
     // Mark previous document as not current
