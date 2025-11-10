@@ -9,7 +9,7 @@ import Toast from '@/components/Toast';
 import { EmailMockupEditor, EmailMockupList, EmailMockupPreview } from '@/components/email-mockups';
 import { DocumentViewer } from '@/components/contracts';
 import PaymentMethodForm from '@/components/contracts/PaymentMethodForm';
-import { Upload, Download, FileText, Trash2, Plus, Eye, Sparkles } from 'lucide-react';
+import { Upload, Download, FileText, Trash2, Plus, Eye, Sparkles, ChevronDown, ChevronRight } from 'lucide-react';
 
 interface Client {
   id: string;
@@ -68,6 +68,10 @@ export default function ContractDetailPage() {
   const [documentSummaries, setDocumentSummaries] = useState<Record<string, string>>({});
   const [loadingDocumentSummaries, setLoadingDocumentSummaries] = useState<Record<string, boolean>>({});
   const [documentSummaryErrors, setDocumentSummaryErrors] = useState<Record<string, string>>({});
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    documentSummary: true,
+    versionChanges: true,
+  });
   
   // Email mockups state
   const [showEmailMockupEditor, setShowEmailMockupEditor] = useState(false);
@@ -633,56 +637,63 @@ export default function ContractDetailPage() {
 
       {/* Document Summaries - Show when Documents tab is active */}
       {activeTab === 'documents' && (
-        <div className="space-y-4 border-t border-gray-200 pt-4">
-          <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-            <Sparkles size={16} className="text-blue-600" />
-            Document Summary
-          </h3>
-          
+        <div className="border-t border-gray-200 pt-3">
           {selectedDocument ? (
-            <>
-              {/* Document Summary */}
-              {loadingDocumentSummaries[selectedDocument.id] ? (
-                <div className="flex items-center gap-2 text-sm text-gray-500">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                  <span>Generating summary...</span>
-                </div>
-              ) : documentSummaryErrors[selectedDocument.id] ? (
-                <div className="text-sm text-red-600">
-                  <p className="mb-2">{documentSummaryErrors[selectedDocument.id]}</p>
-                  <button
-                    onClick={() => fetchDocumentSummary(selectedDocument.id)}
-                    className="text-xs text-blue-600 hover:text-blue-700 underline"
-                  >
-                    Retry
-                  </button>
-                </div>
-              ) : documentSummaries[selectedDocument.id] ? (
-                <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
-                  {documentSummaries[selectedDocument.id]}
-                </div>
-              ) : (
-                <div className="text-sm text-gray-500">
-                  <p className="mb-2">Click "Generate Summary" to analyze this document</p>
-                  <button
-                    onClick={() => fetchDocumentSummary(selectedDocument.id)}
-                    className="text-xs text-blue-600 hover:text-blue-700 underline"
-                  >
-                    Generate Summary
-                  </button>
-                </div>
-              )}
+            <div className="space-y-2">
+              {/* Document Summary Section */}
+              <div>
+                <button
+                  onClick={() => setExpandedSections(prev => ({ ...prev, documentSummary: !prev.documentSummary }))}
+                  className="w-full flex items-center justify-between p-2 hover:bg-gray-50 rounded transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <Sparkles size={14} className="text-blue-600" />
+                    <span className="text-xs font-medium text-gray-900">Document Summary</span>
+                  </div>
+                  {expandedSections.documentSummary ? (
+                    <ChevronDown size={14} className="text-gray-400" />
+                  ) : (
+                    <ChevronRight size={14} className="text-gray-400" />
+                  )}
+                </button>
+                
+                {expandedSections.documentSummary && (
+                  <div className="px-2 pb-2">
+                    {loadingDocumentSummaries[selectedDocument.id] ? (
+                      <div className="flex items-center gap-2 py-2 text-xs text-gray-500">
+                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+                        <span>Generating...</span>
+                      </div>
+                    ) : documentSummaryErrors[selectedDocument.id] ? (
+                      <div className="py-2 text-xs text-red-600">
+                        <p className="mb-1">{documentSummaryErrors[selectedDocument.id]}</p>
+                        <button
+                          onClick={() => fetchDocumentSummary(selectedDocument.id)}
+                          className="text-blue-600 hover:text-blue-700 underline"
+                        >
+                          Retry
+                        </button>
+                      </div>
+                    ) : documentSummaries[selectedDocument.id] ? (
+                      <div className="bg-gray-50 rounded p-2.5 text-xs text-gray-700 whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto">
+                        {documentSummaries[selectedDocument.id]}
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => fetchDocumentSummary(selectedDocument.id)}
+                        className="text-xs text-blue-600 hover:text-blue-700 underline py-2"
+                      >
+                        Generate Summary
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
 
-              {/* Latest Version Changes Summary */}
+              {/* Version Changes Section */}
               {(() => {
                 const doc = documentsWithVersions.find((d: any) => d.id === selectedDocument.id);
-                if (!doc?.versions || doc.versions.length === 0) {
-                  return (
-                    <div className="mt-4 text-xs text-gray-500">
-                      No version history available
-                    </div>
-                  );
-                }
+                if (!doc?.versions || doc.versions.length === 0) return null;
                 
                 const versions = doc.versions.sort((a: any, b: any) => b.version_number - a.version_number);
                 const latestVersion = versions[0];
@@ -695,52 +706,64 @@ export default function ContractDetailPage() {
                   const error = summaryErrors[cacheKey];
 
                   return (
-                    <div className="mt-4">
-                      <h4 className="text-xs font-semibold text-gray-700 mb-2">
-                        Latest Changes (v{previousVersion.version_number} → v{latestVersion.version_number})
-                      </h4>
-                      {isLoading ? (
-                        <div className="flex items-center gap-2 text-xs text-gray-500">
-                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
-                          <span>Generating...</span>
+                    <div>
+                      <button
+                        onClick={() => setExpandedSections(prev => ({ ...prev, versionChanges: !prev.versionChanges }))}
+                        className="w-full flex items-center justify-between p-2 hover:bg-gray-50 rounded transition-colors"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Sparkles size={14} className="text-blue-600" />
+                          <span className="text-xs font-medium text-gray-900">
+                            Latest Changes (v{previousVersion.version_number} → v{latestVersion.version_number})
+                          </span>
                         </div>
-                      ) : error ? (
-                        <div className="text-xs text-red-600">
-                          <p className="mb-1">{error}</p>
-                          <button
-                            onClick={() => fetchVersionDiffSummary(selectedDocument.id, latestVersion)}
-                            className="text-blue-600 hover:text-blue-700 underline"
-                          >
-                            Retry
-                          </button>
+                        {expandedSections.versionChanges ? (
+                          <ChevronDown size={14} className="text-gray-400" />
+                        ) : (
+                          <ChevronRight size={14} className="text-gray-400" />
+                        )}
+                      </button>
+                      
+                      {expandedSections.versionChanges && (
+                        <div className="px-2 pb-2">
+                          {isLoading ? (
+                            <div className="flex items-center gap-2 py-2 text-xs text-gray-500">
+                              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+                              <span>Generating...</span>
+                            </div>
+                          ) : error ? (
+                            <div className="py-2 text-xs text-red-600">
+                              <p className="mb-1">{error}</p>
+                              <button
+                                onClick={() => fetchVersionDiffSummary(selectedDocument.id, latestVersion)}
+                                className="text-blue-600 hover:text-blue-700 underline"
+                              >
+                                Retry
+                              </button>
+                            </div>
+                          ) : diffSummary ? (
+                            <div className="bg-blue-50 rounded p-2.5 text-xs text-gray-700 whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto">
+                              {diffSummary}
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => fetchVersionDiffSummary(selectedDocument.id, latestVersion)}
+                              className="text-xs text-blue-600 hover:text-blue-700 underline py-2"
+                            >
+                              Generate Changes
+                            </button>
+                          )}
                         </div>
-                      ) : diffSummary ? (
-                        <div className="bg-blue-50 rounded-lg p-3 text-xs text-gray-700 whitespace-pre-wrap leading-relaxed">
-                          {diffSummary}
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => fetchVersionDiffSummary(selectedDocument.id, latestVersion)}
-                          className="text-xs text-blue-600 hover:text-blue-700 underline"
-                        >
-                          Generate Changes Summary
-                        </button>
                       )}
-                    </div>
-                  );
-                } else if (latestVersion && latestVersion.version_number === 1) {
-                  return (
-                    <div className="mt-4 text-xs text-gray-500">
-                      This is the first version. No changes to compare.
                     </div>
                   );
                 }
                 return null;
               })()}
-            </>
+            </div>
           ) : (
-            <div className="text-sm text-gray-500">
-              <p>Select a document to view its AI-generated summary</p>
+            <div className="pt-2 text-xs text-gray-500">
+              Select a document to view AI summaries
             </div>
           )}
         </div>
