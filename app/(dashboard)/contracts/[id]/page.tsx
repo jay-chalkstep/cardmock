@@ -119,23 +119,25 @@ export default function ContractDetailPage() {
       
       // Auto-fetch document summary when document is selected
       if (!documentSummaries[docId] && !loadingDocumentSummaries[docId]) {
+        console.log('Fetching document summary for:', docId);
         fetchDocumentSummary(docId);
       }
       
       // Auto-fetch latest version diff summary
       const doc = documentsWithVersions.find((d: any) => d.id === docId);
-      if (doc?.versions) {
+      if (doc?.versions && doc.versions.length > 0) {
         const versions = doc.versions.sort((a: any, b: any) => b.version_number - a.version_number);
         const latestVersion = versions[0];
         if (latestVersion && latestVersion.version_number > 1) {
           const cacheKey = `${docId}-${latestVersion.id}`;
           if (!versionDiffSummaries[cacheKey] && !loadingSummaries[cacheKey] && !latestVersion.diff_summary) {
+            console.log('Fetching version diff summary for:', docId, latestVersion.version_number);
             fetchVersionDiffSummary(docId, latestVersion);
           }
         }
       }
     }
-  }, [selectedDocument?.id, activeTab]);
+  }, [selectedDocument?.id, activeTab, documentsWithVersions]);
 
   useEffect(() => {
     if (contractId && activeTab === 'documents') {
@@ -629,95 +631,118 @@ export default function ContractDetailPage() {
         )}
       </div>
 
-      {/* Document Summaries - Show when Documents tab is active and document is selected */}
-      {activeTab === 'documents' && selectedDocument && (
+      {/* Document Summaries - Show when Documents tab is active */}
+      {activeTab === 'documents' && (
         <div className="space-y-4 border-t border-gray-200 pt-4">
           <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
             <Sparkles size={16} className="text-blue-600" />
             Document Summary
           </h3>
           
-          {/* Document Summary */}
-          {loadingDocumentSummaries[selectedDocument.id] ? (
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-              <span>Generating summary...</span>
-            </div>
-          ) : documentSummaryErrors[selectedDocument.id] ? (
-            <div className="text-sm text-red-600">
-              <p className="mb-2">{documentSummaryErrors[selectedDocument.id]}</p>
-              <button
-                onClick={() => fetchDocumentSummary(selectedDocument.id)}
-                className="text-xs text-blue-600 hover:text-blue-700 underline"
-              >
-                Retry
-              </button>
-            </div>
-          ) : documentSummaries[selectedDocument.id] ? (
-            <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
-              {documentSummaries[selectedDocument.id]}
-            </div>
-          ) : (
-            <button
-              onClick={() => fetchDocumentSummary(selectedDocument.id)}
-              className="text-xs text-blue-600 hover:text-blue-700 underline"
-            >
-              Generate Summary
-            </button>
-          )}
-
-          {/* Latest Version Changes Summary */}
-          {(() => {
-            const doc = documentsWithVersions.find((d: any) => d.id === selectedDocument.id);
-            if (!doc?.versions) return null;
-            
-            const versions = doc.versions.sort((a: any, b: any) => b.version_number - a.version_number);
-            const latestVersion = versions[0];
-            const previousVersion = versions.find((v: any) => v.version_number === latestVersion?.version_number - 1);
-            
-            if (latestVersion && latestVersion.version_number > 1 && previousVersion) {
-              const cacheKey = `${selectedDocument.id}-${latestVersion.id}`;
-              const diffSummary = versionDiffSummaries[cacheKey] || latestVersion.diff_summary;
-              const isLoading = loadingSummaries[cacheKey];
-              const error = summaryErrors[cacheKey];
-
-              return (
-                <div className="mt-4">
-                  <h4 className="text-xs font-semibold text-gray-700 mb-2">
-                    Latest Changes (v{previousVersion.version_number} → v{latestVersion.version_number})
-                  </h4>
-                  {isLoading ? (
-                    <div className="flex items-center gap-2 text-xs text-gray-500">
-                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
-                      <span>Generating...</span>
-                    </div>
-                  ) : error ? (
-                    <div className="text-xs text-red-600">
-                      <p className="mb-1">{error}</p>
-                      <button
-                        onClick={() => fetchVersionDiffSummary(selectedDocument.id, latestVersion)}
-                        className="text-blue-600 hover:text-blue-700 underline"
-                      >
-                        Retry
-                      </button>
-                    </div>
-                  ) : diffSummary ? (
-                    <div className="bg-blue-50 rounded-lg p-3 text-xs text-gray-700 whitespace-pre-wrap leading-relaxed">
-                      {diffSummary}
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => fetchVersionDiffSummary(selectedDocument.id, latestVersion)}
-                      className="text-xs text-blue-600 hover:text-blue-700 underline"
-                    >
-                      Generate Changes Summary
-                    </button>
-                  )}
+          {selectedDocument ? (
+            <>
+              {/* Document Summary */}
+              {loadingDocumentSummaries[selectedDocument.id] ? (
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                  <span>Generating summary...</span>
                 </div>
-              );
-            }
-            return null;
-          })()}
+              ) : documentSummaryErrors[selectedDocument.id] ? (
+                <div className="text-sm text-red-600">
+                  <p className="mb-2">{documentSummaryErrors[selectedDocument.id]}</p>
+                  <button
+                    onClick={() => fetchDocumentSummary(selectedDocument.id)}
+                    className="text-xs text-blue-600 hover:text-blue-700 underline"
+                  >
+                    Retry
+                  </button>
+                </div>
+              ) : documentSummaries[selectedDocument.id] ? (
+                <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
+                  {documentSummaries[selectedDocument.id]}
+                </div>
+              ) : (
+                <div className="text-sm text-gray-500">
+                  <p className="mb-2">Click "Generate Summary" to analyze this document</p>
+                  <button
+                    onClick={() => fetchDocumentSummary(selectedDocument.id)}
+                    className="text-xs text-blue-600 hover:text-blue-700 underline"
+                  >
+                    Generate Summary
+                  </button>
+                </div>
+              )}
+
+              {/* Latest Version Changes Summary */}
+              {(() => {
+                const doc = documentsWithVersions.find((d: any) => d.id === selectedDocument.id);
+                if (!doc?.versions || doc.versions.length === 0) {
+                  return (
+                    <div className="mt-4 text-xs text-gray-500">
+                      No version history available
+                    </div>
+                  );
+                }
+                
+                const versions = doc.versions.sort((a: any, b: any) => b.version_number - a.version_number);
+                const latestVersion = versions[0];
+                const previousVersion = versions.find((v: any) => v.version_number === latestVersion?.version_number - 1);
+                
+                if (latestVersion && latestVersion.version_number > 1 && previousVersion) {
+                  const cacheKey = `${selectedDocument.id}-${latestVersion.id}`;
+                  const diffSummary = versionDiffSummaries[cacheKey] || latestVersion.diff_summary;
+                  const isLoading = loadingSummaries[cacheKey];
+                  const error = summaryErrors[cacheKey];
+
+                  return (
+                    <div className="mt-4">
+                      <h4 className="text-xs font-semibold text-gray-700 mb-2">
+                        Latest Changes (v{previousVersion.version_number} → v{latestVersion.version_number})
+                      </h4>
+                      {isLoading ? (
+                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+                          <span>Generating...</span>
+                        </div>
+                      ) : error ? (
+                        <div className="text-xs text-red-600">
+                          <p className="mb-1">{error}</p>
+                          <button
+                            onClick={() => fetchVersionDiffSummary(selectedDocument.id, latestVersion)}
+                            className="text-blue-600 hover:text-blue-700 underline"
+                          >
+                            Retry
+                          </button>
+                        </div>
+                      ) : diffSummary ? (
+                        <div className="bg-blue-50 rounded-lg p-3 text-xs text-gray-700 whitespace-pre-wrap leading-relaxed">
+                          {diffSummary}
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => fetchVersionDiffSummary(selectedDocument.id, latestVersion)}
+                          className="text-xs text-blue-600 hover:text-blue-700 underline"
+                        >
+                          Generate Changes Summary
+                        </button>
+                      )}
+                    </div>
+                  );
+                } else if (latestVersion && latestVersion.version_number === 1) {
+                  return (
+                    <div className="mt-4 text-xs text-gray-500">
+                      This is the first version. No changes to compare.
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+            </>
+          ) : (
+            <div className="text-sm text-gray-500">
+              <p>Select a document to view its AI-generated summary</p>
+            </div>
+          )}
         </div>
       )}
     </div>
