@@ -56,7 +56,7 @@ export default function ContractDetailPage() {
 
   const [contract, setContract] = useState<Contract | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'comments'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'comments' | 'routing'>('overview');
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   
   // Documents state

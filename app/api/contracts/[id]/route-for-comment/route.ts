@@ -243,7 +243,7 @@ export async function POST(
 
         // Build Slack message
         const versionOwnerLabel = document.version_owner === 'client' ? "Client's Version" : "CDCO's Version";
-        const slackMessage = {
+        const slackMessage: any = {
           channel: slack_channel_id,
           text: `Contract ${contract.contract_number} routed for comment`,
           blocks: [

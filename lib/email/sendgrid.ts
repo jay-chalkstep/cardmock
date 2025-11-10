@@ -25,7 +25,7 @@ export interface EmailOptions {
 /**
  * Send an email using SendGrid
  */
-export async function sendEmail({ to, subject, html, text }: EmailOptions) {
+export async function sendEmail({ to, subject, html, text, attachments }: EmailOptions) {
   if (!SENDGRID_API_KEY) {
     console.warn('SendGrid API key not configured, skipping email send');
     return false;
