@@ -110,15 +110,19 @@ export async function GET(request: NextRequest) {
           )
         `)
         .in('id', mockupIds)
-        .eq('organization_id', orgId);
+        .eq('organization_id', orgId)
+        .eq('project_id', project.id); // Ensure mockups belong to this project
 
       if (mockupsError) {
         logger.warn('Error fetching mockups, continuing', { error: mockupsError, projectId: project.id });
         continue;
       }
 
+      // Filter out any mockups that don't have the correct project_id (defensive check)
+      const validMockups = (mockups || []).filter(mockup => mockup.project_id === project.id);
+
       // Build pending mockups with stage details
-      const pendingMockups: PendingMockup[] = (mockups || []).map(mockup => {
+      const pendingMockups: PendingMockup[] = validMockups.map(mockup => {
         const progress = pendingStageProgress.find(p => p.asset_id === mockup.id);
         const stage = stages.find(s => s.order === progress?.stage_order);
 
