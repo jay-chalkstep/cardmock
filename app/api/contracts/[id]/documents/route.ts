@@ -163,7 +163,9 @@ export async function POST(
         searchableText = searchableText.substring(0, 100000);
       }
     } catch (error) {
-      logger.warn('Failed to extract text from document for search:', error);
+      logger.warn('Failed to extract text from document for search:', {
+        error: error instanceof Error ? error.message : String(error),
+      });
       // Don't fail the upload if text extraction fails
     }
 
