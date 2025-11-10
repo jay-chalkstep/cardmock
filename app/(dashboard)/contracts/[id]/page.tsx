@@ -63,6 +63,8 @@ export default function ContractDetailPage() {
   const [selectedDocument, setSelectedDocument] = useState<any | null>(null);
   const [hoveredVersion, setHoveredVersion] = useState<{ docId: string; versionId: string } | null>(null);
   const [versionDiffSummaries, setVersionDiffSummaries] = useState<Record<string, string>>({});
+  const [loadingSummaries, setLoadingSummaries] = useState<Record<string, boolean>>({});
+  const [summaryErrors, setSummaryErrors] = useState<Record<string, string>>({});
   
   // Email mockups state
   const [showEmailMockupEditor, setShowEmailMockupEditor] = useState(false);
@@ -183,6 +185,11 @@ export default function ContractDetailPage() {
     // If the version already has a diff_summary, use it
     if (version.diff_summary) {
       setVersionDiffSummaries((prev) => ({ ...prev, [cacheKey]: version.diff_summary }));
+      setSummaryErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[cacheKey];
+        return newErrors;
+      });
       return version.diff_summary;
     }
 
@@ -191,25 +198,53 @@ export default function ContractDetailPage() {
       return null;
     }
 
+    // Set loading state
+    setLoadingSummaries((prev) => ({ ...prev, [cacheKey]: true }));
+    setSummaryErrors((prev) => {
+      const newErrors = { ...prev };
+      delete newErrors[cacheKey];
+      return newErrors;
+    });
+
     // Try to generate the diff summary for this specific version
     try {
       const response = await fetch(`/api/contracts/documents/${docId}/versions/${version.id}/diff`, {
         method: 'POST',
       });
+      
+      const result = await response.json();
+      
       if (response.ok) {
-        const result = await response.json();
         const summary = result.data?.diff_summary || result.diff_summary;
         if (summary) {
           setVersionDiffSummaries((prev) => ({ ...prev, [cacheKey]: summary }));
+          setLoadingSummaries((prev) => {
+            const newLoading = { ...prev };
+            delete newLoading[cacheKey];
+            return newLoading;
+          });
           return summary;
+        } else {
+          // No summary returned
+          const errorMsg = result.data?.message || result.message || 'No summary available';
+          setSummaryErrors((prev) => ({ ...prev, [cacheKey]: errorMsg }));
         }
       } else {
-        // Log error for debugging
-        const errorResult = await response.json().catch(() => ({}));
-        console.error('Error fetching diff summary:', errorResult);
+        // API returned an error
+        const errorMsg = result.message || result.error || 'Failed to generate summary';
+        setSummaryErrors((prev) => ({ ...prev, [cacheKey]: errorMsg }));
+        console.error('Error fetching diff summary:', result);
       }
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Failed to fetch summary';
+      setSummaryErrors((prev) => ({ ...prev, [cacheKey]: errorMsg }));
       console.error('Error fetching diff summary:', error);
+    } finally {
+      setLoadingSummaries((prev) => {
+        const newLoading = { ...prev };
+        delete newLoading[cacheKey];
+        return newLoading;
+      });
     }
     return null;
   };
@@ -690,6 +725,8 @@ export default function ContractDetailPage() {
                                 {doc.versions.map((version: any, index: number) => {
                                   const cacheKey = `${doc.id}-${version.id}`;
                                   const diffSummary = versionDiffSummaries[cacheKey] || version.diff_summary;
+                                  const isLoading = loadingSummaries[cacheKey];
+                                  const error = summaryErrors[cacheKey];
                                   const isHovered = hoveredVersion?.docId === doc.id && hoveredVersion?.versionId === version.id;
                                   
                                   return (
@@ -700,7 +737,7 @@ export default function ContractDetailPage() {
                                         if (version.version_number > 1) {
                                           setHoveredVersion({ docId: doc.id, versionId: version.id });
                                           // Fetch diff summary if not already available
-                                          if (!diffSummary) {
+                                          if (!diffSummary && !isLoading) {
                                             await fetchVersionDiffSummary(doc.id, version);
                                           }
                                         }
@@ -757,7 +794,25 @@ export default function ContractDetailPage() {
                                       {/* Hover Tooltip with Diff Summary */}
                                       {isHovered && version.version_number > 1 && (
                                         <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-white border border-gray-200 rounded-lg shadow-xl p-4 max-h-64 overflow-y-auto">
-                                          {diffSummary ? (
+                                          {error ? (
+                                            <div className="flex items-start gap-2">
+                                              <div className="flex-1">
+                                                <h5 className="font-medium text-gray-900 text-sm mb-1">
+                                                  Changes from Version {version.version_number - 1} to Version {version.version_number}
+                                                </h5>
+                                                <p className="text-xs text-red-600 mb-2">{error}</p>
+                                                <button
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    fetchVersionDiffSummary(doc.id, version);
+                                                  }}
+                                                  className="text-xs text-blue-600 hover:text-blue-700 underline"
+                                                >
+                                                  Retry
+                                                </button>
+                                              </div>
+                                            </div>
+                                          ) : diffSummary ? (
                                             <div className="flex items-start gap-2 mb-2">
                                               <Sparkles size={16} className="text-blue-600 mt-0.5" />
                                               <div className="flex-1">
@@ -769,10 +824,19 @@ export default function ContractDetailPage() {
                                                 </p>
                                               </div>
                                             </div>
-                                          ) : (
+                                          ) : isLoading ? (
                                             <div className="flex items-center gap-2 text-sm text-gray-500">
                                               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
                                               <span>Generating summary...</span>
+                                            </div>
+                                          ) : (
+                                            <div className="flex items-start gap-2">
+                                              <div className="flex-1">
+                                                <h5 className="font-medium text-gray-900 text-sm mb-1">
+                                                  Changes from Version {version.version_number - 1} to Version {version.version_number}
+                                                </h5>
+                                                <p className="text-xs text-gray-500">Click to view document for details</p>
+                                              </div>
                                             </div>
                                           )}
                                         </div>
