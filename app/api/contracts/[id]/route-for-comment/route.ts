@@ -180,10 +180,26 @@ export async function POST(
       }
 
       // Validate document has required fields
+      if (!doc.id) {
+        logger.error('Document missing ID', { document_id: document_id, contract_id: id });
+        return errorResponse(
+          new Error('Document is missing ID'),
+          'Document is invalid and cannot be routed'
+        );
+      }
+
       if (!doc.file_url || !doc.file_name) {
         logger.error('Document missing required fields', { document_id: doc.id, has_file_url: !!doc.file_url, has_file_name: !!doc.file_name });
         return errorResponse(
           new Error('Document is missing required fields (file_url or file_name)'),
+          'Document is incomplete and cannot be routed'
+        );
+      }
+
+      if (!doc.version_number || typeof doc.version_number !== 'number') {
+        logger.error('Document missing version_number', { document_id: doc.id, version_number: doc.version_number });
+        return errorResponse(
+          new Error('Document is missing version_number'),
           'Document is incomplete and cannot be routed'
         );
       }
@@ -212,10 +228,26 @@ export async function POST(
       }
 
       // Validate document has required fields
+      if (!currentDoc.id) {
+        logger.error('Current document missing ID', { contract_id: id });
+        return errorResponse(
+          new Error('Current document is missing ID'),
+          'Current document is invalid and cannot be routed'
+        );
+      }
+
       if (!currentDoc.file_url || !currentDoc.file_name) {
         logger.error('Current document missing required fields', { document_id: currentDoc.id, has_file_url: !!currentDoc.file_url, has_file_name: !!currentDoc.file_name });
         return errorResponse(
           new Error('Current document is missing required fields (file_url or file_name)'),
+          'Current document is incomplete and cannot be routed'
+        );
+      }
+
+      if (!currentDoc.version_number || typeof currentDoc.version_number !== 'number') {
+        logger.error('Current document missing version_number', { document_id: currentDoc.id, version_number: currentDoc.version_number });
+        return errorResponse(
+          new Error('Current document is missing version_number'),
           'Current document is incomplete and cannot be routed'
         );
       }
@@ -359,20 +391,25 @@ export async function POST(
               contract_number: contract.contract_number,
             });
 
+            // Validate document fields before sending
+            if (!document.id || !document.file_name || !document.file_url || !document.version_number) {
+              throw new Error('Document is missing required fields');
+            }
+
             await sendContractRoutedForComment({
               to_email: recipient.email,
               to_name: recipient.name || recipient.email,
               contract_number: contract.contract_number,
               contract_id: id,
-              contract_title: contract.title,
+              contract_title: contract.title || undefined,
               client_name: clientName,
               document_id: document.id,
               document_name: document.file_name,
               document_url: document.file_url,
-              version_owner: document.version_owner || 'cdco',
+              version_owner: (document.version_owner as 'cdco' | 'client') || 'cdco',
               version_number: document.version_number,
-              ai_summary: aiSummary,
-              message: message,
+              ai_summary: aiSummary || undefined,
+              message: message || undefined,
               routed_by_name: routedByName,
             });
 
@@ -499,8 +536,13 @@ export async function POST(
           );
         }
 
+        // Validate document fields before building Slack message
+        if (!document.id || !document.file_name || !document.version_number) {
+          throw new Error('Document is missing required fields for Slack routing');
+        }
+
         // Build Slack message
-        const versionOwnerLabel = document.version_owner === 'client' ? "Client's Version" : "CDCO's Version";
+        const versionOwnerLabel = (document.version_owner === 'client' ? "Client's Version" : "CDCO's Version");
         const slackMessage: any = {
           channel: slack_channel_id,
           text: `Contract ${contract.contract_number} routed for comment`,
