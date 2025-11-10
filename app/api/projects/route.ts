@@ -33,6 +33,7 @@ export async function GET(request: NextRequest) {
     const userIsClient = await isClient();
     let assignedClientId: string | null = null;
     let contractIds: string[] = [];
+    let clientName: string | null = null;
     
     if (userIsClient) {
       assignedClientId = await getUserAssignedClientId();
@@ -40,6 +41,16 @@ export async function GET(request: NextRequest) {
         // Client-role user with no client assignment - return empty array
         return successResponse({ projects: [] });
       }
+      
+      // Get client name for matching projects with NULL contract_id
+      const { data: client } = await supabaseServer
+        .from('clients')
+        .select('name')
+        .eq('id', assignedClientId)
+        .eq('organization_id', orgId)
+        .single();
+      
+      clientName = client?.name || null;
       
       // Get all contracts for the assigned client upfront
       const { data: contracts } = await supabaseServer
@@ -49,10 +60,6 @@ export async function GET(request: NextRequest) {
         .eq('organization_id', orgId);
 
       contractIds = contracts?.map(c => c.id) || [];
-      if (contractIds.length === 0) {
-        // No contracts for this client - return empty array
-        return successResponse({ projects: [] });
-      }
     }
 
     // Build query - filter at database level for better performance
@@ -61,9 +68,20 @@ export async function GET(request: NextRequest) {
       .select('*')
       .eq('organization_id', orgId);
 
-    // For Client-role users: Filter by contract_id at database level
-    if (userIsClient && contractIds.length > 0) {
-      query = query.in('contract_id', contractIds);
+    // For Client-role users: Filter by contract_id OR client_name match
+    // This handles cases where projects have NULL contract_id but match client name
+    if (userIsClient && assignedClientId) {
+      if (contractIds.length > 0 && clientName) {
+        // Show projects linked to contracts OR projects matching client name (with NULL contract_id)
+        // Use PostgREST filter syntax: field.operator.value,field.operator.value
+        query = query.or(`contract_id.in.(${contractIds.join(',')}),and(client_name.ilike.%${clientName}%,contract_id.is.null)`);
+      } else if (clientName) {
+        // No contracts but have client name - show projects matching client name
+        query = query.ilike('client_name', `%${clientName}%`);
+      } else {
+        // No contracts and no client name - return empty array
+        return successResponse({ projects: [] });
+      }
     }
 
     // Apply status filter if provided
@@ -192,3 +210,4 @@ export async function POST(request: NextRequest) {
     return errorResponse(error, 'Failed to create project');
   }
 }
+

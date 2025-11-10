@@ -27,16 +27,28 @@ export async function GET(
 
     logger.api(`/api/projects/${id}`, 'GET', { orgId, projectId: id });
 
-    // For Client-role users: Check if they have access via contract_id
+    // For Client-role users: Check if they have access via contract_id or client_name
     const userIsClient = await isClient();
+    let assignedClientId: string | null = null;
     let contractIds: string[] = [];
+    let clientName: string | null = null;
     
     if (userIsClient) {
-      const assignedClientId = await getUserAssignedClientId();
+      assignedClientId = await getUserAssignedClientId();
       if (!assignedClientId) {
         // Client-role user with no client assignment - return not found
         return notFoundResponse('Project not found');
       }
+      
+      // Get client name for matching projects with NULL contract_id
+      const { data: client } = await supabaseServer
+        .from('clients')
+        .select('name')
+        .eq('id', assignedClientId)
+        .eq('organization_id', orgId)
+        .single();
+      
+      clientName = client?.name || null;
       
       // Get all contracts for the assigned client
       const { data: contracts } = await supabaseServer
@@ -46,10 +58,6 @@ export async function GET(
         .eq('organization_id', orgId);
 
       contractIds = contracts?.map(c => c.id) || [];
-      if (contractIds.length === 0) {
-        // No contracts for this client - return not found
-        return notFoundResponse('Project not found');
-      }
     }
 
     // Build query - filter at database level for client users
@@ -59,9 +67,18 @@ export async function GET(
       .eq('id', id)
       .eq('organization_id', orgId);
 
-    // For Client-role users: Filter by contract_id at database level
-    if (userIsClient && contractIds.length > 0) {
-      query = query.in('contract_id', contractIds);
+    // For Client-role users: Filter by contract_id OR client_name match
+    if (userIsClient && assignedClientId) {
+      if (contractIds.length > 0 && clientName) {
+        // Show projects linked to contracts OR projects matching client name (with NULL contract_id)
+        query = query.or(`contract_id.in.(${contractIds.join(',')}),and(client_name.ilike.%${clientName}%,contract_id.is.null)`);
+      } else if (clientName) {
+        // No contracts but have client name - show projects matching client name
+        query = query.ilike('client_name', `%${clientName}%`);
+      } else {
+        // No contracts and no client name - return not found
+        return notFoundResponse('Project not found');
+      }
     }
 
     const { data: project, error } = await query.single();
