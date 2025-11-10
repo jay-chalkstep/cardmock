@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { getAuthContext, isAdmin } from '@/lib/api/auth';
+import { getAuthContext, isAdmin, isClient, getUserAssignedClientId } from '@/lib/api/auth';
 import { successResponse, errorResponse, badRequestResponse, notFoundResponse, forbiddenResponse } from '@/lib/api/response';
 import { handleSupabaseError } from '@/lib/api/error-handler';
 import { supabaseServer } from '@/lib/supabase-server';
@@ -27,13 +27,44 @@ export async function GET(
 
     logger.api(`/api/projects/${id}`, 'GET', { orgId, projectId: id });
 
-    // Fetch project with workflow and contract JOIN
-    const { data: project, error } = await supabaseServer
+    // For Client-role users: Check if they have access via contract_id
+    const userIsClient = await isClient();
+    let contractIds: string[] = [];
+    
+    if (userIsClient) {
+      const assignedClientId = await getUserAssignedClientId();
+      if (!assignedClientId) {
+        // Client-role user with no client assignment - return not found
+        return notFoundResponse('Project not found');
+      }
+      
+      // Get all contracts for the assigned client
+      const { data: contracts } = await supabaseServer
+        .from('contracts')
+        .select('id')
+        .eq('client_id', assignedClientId)
+        .eq('organization_id', orgId);
+
+      contractIds = contracts?.map(c => c.id) || [];
+      if (contractIds.length === 0) {
+        // No contracts for this client - return not found
+        return notFoundResponse('Project not found');
+      }
+    }
+
+    // Build query - filter at database level for client users
+    let query = supabaseServer
       .from('projects')
       .select('*, workflows(*), contract:contracts(*, client:clients(*))')
       .eq('id', id)
-      .eq('organization_id', orgId)
-      .single();
+      .eq('organization_id', orgId);
+
+    // For Client-role users: Filter by contract_id at database level
+    if (userIsClient && contractIds.length > 0) {
+      query = query.in('contract_id', contractIds);
+    }
+
+    const { data: project, error } = await query.single();
 
     if (error) {
       logger.error('Project fetch error', {

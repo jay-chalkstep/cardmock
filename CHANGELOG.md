@@ -20,6 +20,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Client-role users now filter projects at database level using `IN` query instead of JavaScript filtering
   - Reduced query complexity and improved response times
   - Early return for client users with no contracts (empty array)
+- **Fixed Project Detail Access**: Added client-role filtering to `/api/projects/[id]` endpoint
+  - Detail endpoint now applies same contract-based filtering as list endpoint
+  - Client-role users can now access projects they see in the list
+  - Prevents 404 errors when navigating to project detail pages
 - **Improved Error Handling**: Detail page already handles missing projects gracefully
   - Navigation now direct without pre-verification
   - Errors handled at appropriate level (detail page for 404s)
