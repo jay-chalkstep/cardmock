@@ -14,6 +14,12 @@ export interface EmailOptions {
   subject: string;
   html: string;
   text?: string;
+  attachments?: Array<{
+    content: string; // Base64 encoded
+    filename: string;
+    type?: string;
+    disposition?: string;
+  }>;
 }
 
 /**
@@ -26,7 +32,7 @@ export async function sendEmail({ to, subject, html, text }: EmailOptions) {
   }
 
   try {
-    await sgMail.send({
+    const msg: any = {
       to,
       from: {
         email: FROM_EMAIL,
@@ -35,7 +41,13 @@ export async function sendEmail({ to, subject, html, text }: EmailOptions) {
       subject,
       html,
       text: text || stripHtml(html)
-    });
+    };
+
+    if (attachments && attachments.length > 0) {
+      msg.attachments = attachments;
+    }
+
+    await sgMail.send(msg);
 
     console.log(`Email sent to ${to}`);
     return true;

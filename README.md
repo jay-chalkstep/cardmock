@@ -104,6 +104,17 @@ Built for teams who need more than basic file storage—Aiproval provides contex
   - Fourth panel displays AI summary when contract is selected
   - Quick preview of contract summary without navigating to detail page
   - Permission-based UI rendering
+- **Route for Comment** - Distribute contract versions to stakeholders ⭐️ NEW
+  - Route current contract versions via email or Slack
+  - Pre-configured recipient lists per contract
+  - Support for both email and Slack delivery methods
+  - Optional AI summary inclusion in routing messages
+  - Custom message support for personalized routing
+  - Document attachment in email notifications
+  - Complete routing history tracking
+  - Version owner tracking (CDCO's Version vs Client's Version)
+  - Version owner selector in document upload form
+  - Version owner badges displayed throughout UI
 - **AI Document Summaries** - AI-powered single-sentence document summaries ⭐️ ENHANCED
   - Assumes contracts are between Choice Digital (CDCO) and a counterparty
   - Focuses on document purpose and key changes
@@ -999,6 +1010,7 @@ See [CHANGELOG.md](./documentation/CHANGELOG.md) for detailed version history.
 
 ### Recent Versions
 
+- **v4.1.7** (2025-01-XX) - ✨ **NEW FEATURES** - Contracts Route for Comment - Added comprehensive contract routing functionality for stakeholder distribution via email/Slack, version owner tracking, routing history, and recipient management
 - **v4.1.6** (2025-11-10) - ✨ **NEW FEATURES** - Contracts Delete & AI Summary Panel - Added contract deletion from list page (creator/admin only), added fourth panel with AI summary preview
 - **v4.1.5** (2025-01-XX) - 🔄 **MAJOR REBUILD** - Contracts Versioning System - Complete rebuild of document versioning with unified service, fixed version number incrementing, improved watermarking
 - **v4.1.4** (2025-01-XX) - ✨ **NEW FEATURE** - Contracts Document Watermarking - Automatic watermarking of previous versions when new version uploaded

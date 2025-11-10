@@ -23,6 +23,7 @@ export interface VersioningOptions {
   file: File;
   userId: string;
   orgId: string;
+  versionOwner?: 'cdco' | 'client'; // Defaults to 'cdco'
 }
 
 /**
@@ -201,7 +202,7 @@ export async function watermarkPreviousVersions(
 export async function createNewVersion(
   options: VersioningOptions
 ): Promise<VersioningResult> {
-  const { contractId, documentId, file, userId, orgId } = options;
+  const { contractId, documentId, file, userId, orgId, versionOwner = 'cdco' } = options;
 
   if (!documentId) {
     throw new Error('Document ID is required for creating new versions');
@@ -286,6 +287,7 @@ export async function createNewVersion(
       mime_type: file.type,
       is_current: true,
       searchable_text: searchableText,
+      version_owner: versionOwner,
     })
     .eq('id', documentId)
     .select()
@@ -305,6 +307,7 @@ export async function createNewVersion(
       version_number: nextVersion,
       file_url: urlData.publicUrl,
       created_by: userId,
+      version_owner: versionOwner,
     })
     .select()
     .single();
@@ -341,7 +344,7 @@ export async function createNewVersion(
 export async function createNewDocument(
   options: Omit<VersioningOptions, 'documentId'>
 ): Promise<VersioningResult> {
-  const { contractId, file, userId, orgId } = options;
+  const { contractId, file, userId, orgId, versionOwner = 'cdco' } = options;
 
   const supabaseAdmin = createServerAdminClient();
   const fileExt = file.name.split('.').pop()?.toLowerCase() || 'docx';
@@ -402,6 +405,7 @@ export async function createNewDocument(
       is_current: true,
       uploaded_by: userId,
       searchable_text: searchableText,
+      version_owner: versionOwner,
     })
     .select()
     .single();

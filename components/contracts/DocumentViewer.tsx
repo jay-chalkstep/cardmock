@@ -29,6 +29,7 @@ interface ContractDocument {
   uploaded_by: string;
   created_at: string;
   updated_at: string;
+  version_owner?: 'cdco' | 'client';
 }
 
 interface DocumentViewerProps {
@@ -300,6 +301,13 @@ export default function DocumentViewer({
                 <h3 className="font-semibold text-gray-900">{document.file_name}</h3>
                 <div className="flex items-center gap-3 text-sm text-gray-500 mt-1">
                   <span>Version {document.version_number}</span>
+                  {document.version_owner && (
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                      document.version_owner === 'client' ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800'
+                    }`}>
+                      {document.version_owner === 'client' ? "Client's Version" : "CDCO's Version"}
+                    </span>
+                  )}
                   {document.is_current && (
                     <span className="px-2 py-0.5 bg-green-100 text-green-800 rounded-full text-xs font-medium">
                       Current

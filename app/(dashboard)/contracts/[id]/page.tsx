@@ -7,7 +7,9 @@ import { usePanelContext } from '@/lib/contexts/PanelContext';
 import GmailLayout from '@/components/layout/GmailLayout';
 import Toast from '@/components/Toast';
 import { DocumentViewer } from '@/components/contracts';
-import { Upload, Download, FileText, Trash2, Plus, Eye, Sparkles, ChevronDown, ChevronRight } from 'lucide-react';
+import RouteForCommentModal from '@/components/contracts/RouteForCommentModal';
+import RoutingHistoryPanel from '@/components/contracts/RoutingHistoryPanel';
+import { Upload, Download, FileText, Trash2, Plus, Eye, Sparkles, ChevronDown, ChevronRight, Send } from 'lucide-react';
 
 interface Client {
   id: string;
@@ -416,11 +418,15 @@ export default function ContractDetailPage() {
     }
   };
 
+  const [versionOwner, setVersionOwner] = useState<'cdco' | 'client'>('cdco');
+  const [showRouteForCommentModal, setShowRouteForCommentModal] = useState(false);
+
   const handleDocumentUpload = async (file: File) => {
     if (!contractId) return;
     try {
       const formData = new FormData();
       formData.append('file', file);
+      formData.append('version_owner', versionOwner);
 
       // If a document is selected, upload as a new version of that document
       // Otherwise, create a new document
@@ -440,6 +446,7 @@ export default function ContractDetailPage() {
 
       await fetchDocuments();
       setShowDocumentUpload(false);
+      setVersionOwner('cdco'); // Reset to default
       showToast(
         selectedDocument 
           ? 'New version uploaded successfully' 
@@ -698,6 +705,7 @@ export default function ContractDetailPage() {
   const tabs = [
     { id: 'overview', label: 'Overview' },
     { id: 'documents', label: 'Documents' },
+    { id: 'routing', label: 'Routing History' },
     { id: 'comments', label: 'Comments' },
   ];
 
@@ -927,13 +935,24 @@ export default function ContractDetailPage() {
                     >
                       ← Back to Documents
                     </button>
-                    <button
-                      onClick={() => setShowDocumentUpload(true)}
-                      className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 flex items-center gap-2"
-                    >
-                      <Upload size={16} />
-                      Upload New Version
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {selectedDocument?.is_current && (
+                        <button
+                          onClick={() => setShowRouteForCommentModal(true)}
+                          className="px-3 py-1.5 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 flex items-center gap-2"
+                        >
+                          <Send size={16} />
+                          Route for Comment
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setShowDocumentUpload(true)}
+                        className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 flex items-center gap-2"
+                      >
+                        <Upload size={16} />
+                        Upload New Version
+                      </button>
+                    </div>
                   </div>
                 </div>
                 <div className="flex-1 overflow-hidden">
@@ -1001,6 +1020,13 @@ export default function ContractDetailPage() {
                                       Current: Version {doc.version_number}
                                     </span>
                                   )}
+                                  {doc.version_owner && (
+                                    <span className={`px-2 py-0.5 rounded-full text-xs ${
+                                      doc.version_owner === 'client' ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800'
+                                    }`}>
+                                      {doc.version_owner === 'client' ? "Client's Version" : "CDCO's Version"}
+                                    </span>
+                                  )}
                                   {doc.docu_sign_status && (
                                     <span className={`px-2 py-0.5 rounded-full text-xs ${
                                       doc.docu_sign_status === 'signed' ? 'bg-blue-100 text-blue-800' :
@@ -1014,6 +1040,19 @@ export default function ContractDetailPage() {
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
+                              {doc.is_current && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedDocument(doc);
+                                    setShowRouteForCommentModal(true);
+                                  }}
+                                  className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded"
+                                  title="Route for Comment"
+                                >
+                                  <Send size={18} />
+                                </button>
+                              )}
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -1175,6 +1214,22 @@ export default function ContractDetailPage() {
             )}
           </div>
         );
+      case 'routing':
+        return (
+          <div className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Routing History</h3>
+              <button
+                onClick={() => setShowRouteForCommentModal(true)}
+                className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 flex items-center gap-2"
+              >
+                <Send size={16} />
+                Route for Comment
+              </button>
+            </div>
+            <RoutingHistoryPanel contractId={contractId} />
+          </div>
+        );
       case 'comments':
         return (
           <div className="p-6">
@@ -1273,17 +1328,49 @@ export default function ContractDetailPage() {
             <h3 className="text-lg font-semibold mb-4">
               {selectedDocument ? 'Upload New Version' : 'Upload Document'}
             </h3>
-            <input
-              type="file"
-              accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  handleDocumentUpload(file);
-                }
-              }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Version Owner</label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="version_owner"
+                      value="cdco"
+                      checked={versionOwner === 'cdco'}
+                      onChange={() => setVersionOwner('cdco')}
+                      className="text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm">CDCO's Version</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="version_owner"
+                      value="client"
+                      checked={versionOwner === 'client'}
+                      onChange={() => setVersionOwner('client')}
+                      className="text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm">Client's Version</span>
+                  </label>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Indicates whether this version represents CDCO's or the client's latest offering
+                </p>
+              </div>
+              <input
+                type="file"
+                accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    handleDocumentUpload(file);
+                  }
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
             <div className="flex gap-3 mt-4">
               <button
                 onClick={() => setShowDocumentUpload(false)}
@@ -1295,6 +1382,18 @@ export default function ContractDetailPage() {
           </div>
         </div>
       )}
+      <RouteForCommentModal
+        isOpen={showRouteForCommentModal}
+        onClose={() => setShowRouteForCommentModal(false)}
+        contractId={contractId}
+        documentId={selectedDocument?.id}
+        onSuccess={() => {
+          // Refresh routing history if on routing tab
+          if (activeTab === 'routing') {
+            // Component will auto-refresh
+          }
+        }}
+      />
     </>
   );
 }

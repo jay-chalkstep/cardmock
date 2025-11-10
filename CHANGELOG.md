@@ -7,6 +7,75 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.1.7] - 2025-01-XX
+
+### ✨ Added
+
+#### Contracts Module - Route for Comment Feature
+- **Route for Comment**: Added comprehensive contract routing functionality for stakeholder distribution
+  - Route current contract versions to stakeholders via email or Slack
+  - Pre-configured recipient lists per contract
+  - Support for both email and Slack delivery methods
+  - Optional AI summary inclusion in routing messages
+  - Custom message support for personalized routing
+  - Document attachment in email notifications
+  - Complete routing history tracking
+- **Version Owner Tracking**: Added ability to specify who owns each document version
+  - CDCO's Version vs Client's Version indicators
+  - Version owner selector in document upload form
+  - Version owner badges displayed throughout UI
+  - Version owner included in routing notifications
+- **Routing Recipients Management**: Manage recipient lists for contract routing
+  - Add/remove recipients per contract
+  - Support for email and Slack recipients
+  - Preferred delivery method per recipient
+- **Routing History**: Complete audit trail of all routing events
+  - View all routing events for a contract
+  - See who routed, when, and to whom
+  - View messages and AI summaries sent
+  - Track delivery method (email/Slack/both)
+
+### 🔄 Changed
+
+#### Contracts Module - Document Versioning
+- **Version Owner Field**: Added `version_owner` column to document tables
+  - Tracks whether version represents CDCO's or client's latest offering
+  - Defaults to 'cdco' for backward compatibility
+  - Displayed in document list and detail views
+
+### 📝 Technical Details
+
+- **Database Migration**: `38_contract_routing.sql`
+  - Added `version_owner` enum type and columns
+  - Created `contract_routing_recipients` table
+  - Created `contract_routing_events` table
+  - Added indexes and RLS policies
+- **New API Endpoints**:
+  - `POST /api/contracts/[id]/route-for-comment` - Route contract for comment
+  - `GET/POST /api/contracts/[id]/routing-recipients` - Manage recipients
+  - `DELETE /api/contracts/[id]/routing-recipients/[recipientId]` - Delete recipient
+  - `GET /api/contracts/[id]/routing-history` - Fetch routing history
+  - `GET /api/integrations/slack/channels` - Fetch Slack channels
+- **Email Integration**:
+  - Enhanced SendGrid utility to support attachments
+  - New `sendContractRoutedForComment()` function
+  - Document attachment from Supabase Storage
+  - Rich HTML email templates with version owner indicators
+- **Slack Integration**:
+  - Block Kit message formatting for contract routing
+  - Slack notification event tracking
+  - Channel selection support
+- **New Components**:
+  - `RouteForCommentModal` - Modal for routing contracts
+  - `RoutingHistoryPanel` - Display routing history
+  - `VersionOwnerSelector` - Select version owner
+- **Updated Components**:
+  - Contract detail page with routing tab and buttons
+  - Document upload form with version owner selector
+  - Document viewer with version owner badges
+
+---
+
 ## [4.1.6] - 2025-11-10
 
 ### ✨ Added

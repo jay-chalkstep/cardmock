@@ -89,9 +89,15 @@ export async function POST(
 
     const formData = await request.formData();
     const file = formData.get('file') as File;
+    const versionOwner = (formData.get('version_owner') as string) || 'cdco';
 
     if (!file) {
       return badRequestResponse('File is required');
+    }
+
+    // Validate version_owner
+    if (versionOwner !== 'cdco' && versionOwner !== 'client') {
+      return badRequestResponse('version_owner must be "cdco" or "client"');
     }
 
     // Validate file type
@@ -118,6 +124,7 @@ export async function POST(
         file,
         userId,
         orgId,
+        versionOwner: versionOwner as 'cdco' | 'client',
       });
 
       return successResponse(
