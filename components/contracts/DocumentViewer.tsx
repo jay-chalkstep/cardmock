@@ -51,6 +51,7 @@ export default function DocumentViewer({
   const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [diffSummary, setDiffSummary] = useState<string | null>(null);
   const [loadingDiff, setLoadingDiff] = useState(false);
+  const [diffError, setDiffError] = useState<string | null>(null);
 
   useEffect(() => {
     if (document?.id) {
@@ -82,6 +83,7 @@ export default function DocumentViewer({
 
   const handleVersionClick = async (version: DocumentVersion) => {
     setSelectedVersion(version);
+    setDiffError(null);
     if (onVersionSelect) {
       onVersionSelect(version);
     }
@@ -89,25 +91,49 @@ export default function DocumentViewer({
     // Fetch diff summary if available
     if (version.diff_summary) {
       setDiffSummary(version.diff_summary);
+      setDiffError(null);
     } else if (version.version_number > 1) {
-      // Try to generate diff summary
-      await fetchDiffSummary(version.id);
+      // Try to generate diff summary - use document.id, not version.id
+      await fetchDiffSummary(document.id);
     } else {
       setDiffSummary(null);
+      setDiffError(null);
     }
   };
 
-  const fetchDiffSummary = async (versionId: string) => {
+  const fetchDiffSummary = async (docId: string) => {
     setLoadingDiff(true);
+    setDiffSummary(null);
+    setDiffError(null);
     try {
-      const response = await fetch(`/api/contracts/documents/${versionId}/diff`, {
+      const response = await fetch(`/api/contracts/documents/${docId}/diff`, {
         method: 'POST',
       });
-      if (!response.ok) throw new Error('Failed to generate diff summary');
+      
       const result = await response.json();
+      
+      if (!response.ok) {
+        // Handle error response
+        const errorMessage = result.message || result.error || 'Failed to generate diff summary';
+        setDiffError(errorMessage);
+        setDiffSummary(null);
+        return;
+      }
+      
+      // Check if there's a message indicating no previous version
+      if (result.data?.message === 'No previous version to compare' || result.message === 'No previous version to compare') {
+        setDiffSummary(null);
+        setDiffError(null);
+        return;
+      }
+      
       setDiffSummary(result.data?.diff_summary || result.diff_summary || null);
+      setDiffError(null);
     } catch (error) {
       console.error('Error fetching diff summary:', error);
+      // Store error message for display
+      const errorMessage = error instanceof Error ? error.message : 'Failed to generate diff summary';
+      setDiffError(errorMessage);
       setDiffSummary(null);
     } finally {
       setLoadingDiff(false);
@@ -242,15 +268,39 @@ export default function DocumentViewer({
               </div>
 
               {/* Diff Summary */}
-              {diffSummary && (
+              {loadingDiff && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                    <p className="text-sm text-blue-700">Generating summary...</p>
+                  </div>
+                </div>
+              )}
+              {diffError && !loadingDiff && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <h4 className="font-medium text-red-900 mb-1">Failed to Generate Summary</h4>
+                      <p className="text-sm text-red-700 mb-3">{diffError}</p>
+                      <button
+                        onClick={() => fetchDiffSummary(document.id)}
+                        className="px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 flex items-center gap-2"
+                      >
+                        Retry
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {diffSummary && !loadingDiff && !diffError && (
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                   <h4 className="font-medium text-gray-900 mb-2">Changes from Previous Version</h4>
                   <p className="text-sm text-gray-700 whitespace-pre-wrap">{diffSummary}</p>
                 </div>
               )}
-              {loadingDiff && (
+              {selectedVersion && selectedVersion.version_number === 1 && !loadingDiff && (
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                  <p className="text-sm text-gray-500">Generating diff summary...</p>
+                  <p className="text-sm text-gray-500">This is the first version. No previous version to compare.</p>
                 </div>
               )}
 

@@ -179,7 +179,18 @@ export async function POST(
 
     if (versionError) {
       logger.error('Version creation error:', versionError);
-      // Don't fail the request if version record fails
+      // Don't fail the request if version record fails - document upload succeeded
+      logger.warn(`Document ${docId} updated to version ${nextVersion} but version record creation failed`, { 
+        documentId: docId, 
+        versionNumber: nextVersion,
+        error: versionError 
+      });
+    } else {
+      logger.info(`Document version created successfully`, { 
+        documentId: docId, 
+        versionId: version?.id,
+        versionNumber: nextVersion 
+      });
     }
 
     return successResponse({ document: updatedDoc, version }, 201);

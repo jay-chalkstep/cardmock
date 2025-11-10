@@ -179,18 +179,31 @@ export async function POST(
     }
 
     // Create version record
-    const { error: versionError } = await supabaseServer
+    const { data: versionRecord, error: versionError } = await supabaseServer
       .from('contract_document_versions')
       .insert({
         document_id: document.id,
         version_number: nextVersion,
         file_url: urlData.publicUrl,
         created_by: userId,
-      });
+      })
+      .select()
+      .single();
 
     if (versionError) {
       logger.error('Version creation error:', versionError);
-      // Don't fail the request if version record fails
+      // Don't fail the request if version record fails - document upload succeeded
+      logger.warn(`Document ${document.id} uploaded but version record creation failed`, { 
+        documentId: document.id, 
+        versionNumber: nextVersion,
+        error: versionError 
+      });
+    } else {
+      logger.info(`Document version created successfully`, { 
+        documentId: document.id, 
+        versionId: versionRecord?.id,
+        versionNumber: nextVersion 
+      });
     }
 
     return successResponse({ document }, 201);

@@ -198,7 +198,13 @@ export default function ContractDetailPage() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch(`/api/contracts/${contractId}/documents`, {
+      // If a document is selected, upload as a new version of that document
+      // Otherwise, create a new document
+      const endpoint = selectedDocument
+        ? `/api/contracts/${contractId}/documents/${selectedDocument.id}/versions`
+        : `/api/contracts/${contractId}/documents`;
+
+      const response = await fetch(endpoint, {
         method: 'POST',
         body: formData,
       });
@@ -210,7 +216,12 @@ export default function ContractDetailPage() {
 
       await fetchDocuments();
       setShowDocumentUpload(false);
-      showToast('Document uploaded successfully', 'success');
+      showToast(
+        selectedDocument 
+          ? 'New version uploaded successfully' 
+          : 'Document uploaded successfully', 
+        'success'
+      );
     } catch (error: any) {
       console.error('Error uploading document:', error);
       showToast(error.message || 'Failed to upload document', 'error');

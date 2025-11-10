@@ -38,17 +38,23 @@ export async function POST(
     }
 
     // Get current and previous versions
-    const { data: versions } = await supabaseServer
+    const { data: versions, error: versionsError } = await supabaseServer
       .from('contract_document_versions')
       .select('*')
       .eq('document_id', docId)
       .order('version_number', { ascending: false })
       .limit(2);
 
+    if (versionsError) {
+      logger.error('Failed to fetch versions:', versionsError);
+      return errorResponse(versionsError, 'Failed to fetch document versions');
+    }
+
     if (!versions || versions.length < 2) {
       return successResponse({ 
         message: 'No previous version to compare',
-        diff_summary: null 
+        diff_summary: null,
+        error: null
       });
     }
 
@@ -59,8 +65,18 @@ export async function POST(
     if (currentVersion.diff_summary) {
       return successResponse({ 
         diff_summary: currentVersion.diff_summary,
-        generated_at: currentVersion.diff_summary_generated_at 
+        generated_at: currentVersion.diff_summary_generated_at,
+        cached: true
       });
+    }
+
+    // Check if OpenAI API key is configured
+    if (!process.env.OPENAI_API_KEY) {
+      logger.warn('OPENAI_API_KEY not configured');
+      return errorResponse(
+        new Error('OpenAI API key not configured'),
+        'AI diff generation is not available. Please configure OPENAI_API_KEY to enable this feature.'
+      );
     }
 
     // Generate AI diff summary
@@ -73,11 +89,24 @@ export async function POST(
     } catch (error) {
       logger.error('Failed to generate AI diff summary:', error);
       
-      // Return error but don't fail the request
-      // The user can retry later
+      // Determine error type for better user messaging
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      let userMessage = 'Failed to generate AI diff summary.';
+      
+      if (errorMessage.includes('API key') || errorMessage.includes('OPENAI')) {
+        userMessage = 'OpenAI API key is invalid or not configured. Please check your configuration.';
+      } else if (errorMessage.includes('download') || errorMessage.includes('fetch')) {
+        userMessage = 'Failed to download document files. Please ensure the documents are accessible.';
+      } else if (errorMessage.includes('extract') || errorMessage.includes('mammoth')) {
+        userMessage = 'Failed to extract text from documents. The files may be corrupted or in an unsupported format.';
+      } else {
+        userMessage = 'Failed to generate diff summary. Please try again later.';
+      }
+      
+      // Return error but don't fail the request - user can retry
       return errorResponse(
         error instanceof Error ? error : new Error('Failed to generate diff summary'),
-        'Failed to generate AI diff summary. Please ensure OPENAI_API_KEY is configured and try again.'
+        userMessage
       );
     }
 
@@ -92,7 +121,12 @@ export async function POST(
 
     if (updateError) {
       logger.error('Failed to update diff summary:', updateError);
-      return errorResponse(updateError, 'Failed to save diff summary');
+      // Even if update fails, return the generated summary so user can see it
+      return successResponse({ 
+        diff_summary: diffSummary,
+        generated_at: new Date().toISOString(),
+        warning: 'Summary generated but failed to save. It may not persist.'
+      });
     }
 
     return successResponse({ 
