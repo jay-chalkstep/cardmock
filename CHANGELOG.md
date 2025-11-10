@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.1.8] - 2025-01-XX
+
+### 🔄 Changed
+
+#### Email Service - Error Handling and Logging
+- **Email Error Handling**: Improved email service error handling and logging
+  - `sendEmail` now throws errors instead of silently returning `false` when SendGrid API key is missing
+  - Added comprehensive logging throughout email sending process
+  - Better error messages with context (recipient, contract number, etc.)
+  - Per-recipient error handling in route-for-comment endpoint
+  - Detailed logging for document download and attachment creation
+  - Improved user feedback when emails fail to send
+
+### 📝 Technical Details
+
+- **Updated Files**:
+  - `lib/email/sendgrid.ts` - Added logging, throw errors instead of returning false
+  - `lib/email/contract-notifications.ts` - Added comprehensive logging and error handling
+  - `app/api/contracts/[id]/route-for-comment/route.ts` - Improved error handling with per-recipient tracking
+- **Improvements**:
+  - All email errors are now properly logged and surfaced to users
+  - Better debugging capabilities with detailed logging at each step
+  - Graceful handling of partial failures (some recipients succeed, others fail)
+
+---
+
 ## [4.1.7] - 2025-01-XX
 
 ### ✨ Added

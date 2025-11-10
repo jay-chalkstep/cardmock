@@ -187,32 +187,98 @@ export async function POST(
 
     // Route via email if requested
     let emailSuccess = false;
+    let emailErrors: string[] = [];
     if (routing_method === 'email' || routing_method === 'both') {
+      logger.info('Starting email routing', {
+        contract_id: id,
+        contract_number: contract.contract_number,
+        recipient_count: finalRecipients.length,
+        has_ai_summary: !!aiSummary,
+      });
+
       try {
         for (const recipient of finalRecipients) {
-          await sendContractRoutedForComment({
-            to_email: recipient.email,
-            to_name: recipient.name || recipient.email,
-            contract_number: contract.contract_number,
-            contract_id: id,
-            contract_title: contract.title,
-            client_name: clientName,
-            document_id: document.id,
-            document_name: document.file_name,
-            document_url: document.file_url,
-            version_owner: document.version_owner || 'cdco',
-            version_number: document.version_number,
-            ai_summary: aiSummary,
-            message: message,
-            routed_by_name: routedByName,
-          });
+          try {
+            logger.debug('Sending email to recipient', {
+              email: recipient.email,
+              name: recipient.name,
+              contract_number: contract.contract_number,
+            });
+
+            await sendContractRoutedForComment({
+              to_email: recipient.email,
+              to_name: recipient.name || recipient.email,
+              contract_number: contract.contract_number,
+              contract_id: id,
+              contract_title: contract.title,
+              client_name: clientName,
+              document_id: document.id,
+              document_name: document.file_name,
+              document_url: document.file_url,
+              version_owner: document.version_owner || 'cdco',
+              version_number: document.version_number,
+              ai_summary: aiSummary,
+              message: message,
+              routed_by_name: routedByName,
+            });
+
+            logger.info('Email sent successfully to recipient', {
+              email: recipient.email,
+              contract_number: contract.contract_number,
+            });
+          } catch (recipientError) {
+            const errorMessage = recipientError instanceof Error ? recipientError.message : 'Unknown error';
+            emailErrors.push(`${recipient.email}: ${errorMessage}`);
+            logger.error('Failed to send email to recipient', {
+              error: errorMessage,
+              email: recipient.email,
+              contract_number: contract.contract_number,
+            });
+            // Continue with other recipients even if one fails
+          }
         }
-        emailSuccess = true;
+
+        if (emailErrors.length === 0) {
+          emailSuccess = true;
+          logger.info('All emails sent successfully', {
+            contract_id: id,
+            recipient_count: finalRecipients.length,
+          });
+        } else if (emailErrors.length < finalRecipients.length) {
+          // Some succeeded, some failed
+          logger.warn('Partial email success', {
+            contract_id: id,
+            successful: finalRecipients.length - emailErrors.length,
+            failed: emailErrors.length,
+            errors: emailErrors,
+          });
+          emailSuccess = true; // Consider it successful if at least one email sent
+        } else {
+          // All failed
+          logger.error('All email sends failed', {
+            contract_id: id,
+            errors: emailErrors,
+          });
+          if (routing_method === 'email') {
+            return errorResponse(
+              new Error(`Failed to send emails to all recipients: ${emailErrors.join('; ')}`),
+              `Failed to send emails. Errors: ${emailErrors.join('; ')}`
+            );
+          }
+        }
       } catch (error) {
-        logger.error('Error sending email routing:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        logger.error('Error in email routing process', {
+          error: errorMessage,
+          contract_id: id,
+          contract_number: contract.contract_number,
+        });
         // Continue with Slack if both methods requested
         if (routing_method === 'email') {
-          return errorResponse(error, 'Failed to send email routing');
+          return errorResponse(
+            error,
+            `Failed to send email routing: ${errorMessage}`
+          );
         }
       }
     }

@@ -1,4 +1,5 @@
 import sgMail from '@sendgrid/mail';
+import { logger } from '@/lib/utils/logger';
 
 // Initialize SendGrid with API key
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY || '';
@@ -7,6 +8,9 @@ const FROM_NAME = process.env.SENDGRID_FROM_NAME || 'Asset Studio';
 
 if (SENDGRID_API_KEY) {
   sgMail.setApiKey(SENDGRID_API_KEY);
+  logger.info('SendGrid initialized with API key', { hasKey: true, fromEmail: FROM_EMAIL });
+} else {
+  logger.warn('SendGrid API key not found in environment variables');
 }
 
 export interface EmailOptions {
@@ -27,11 +31,18 @@ export interface EmailOptions {
  */
 export async function sendEmail({ to, subject, html, text, attachments }: EmailOptions) {
   if (!SENDGRID_API_KEY) {
-    console.warn('SendGrid API key not configured, skipping email send');
-    return false;
+    const error = new Error('SendGrid API key is not configured. Please set SENDGRID_API_KEY environment variable.');
+    logger.error('SendGrid API key not configured', error);
+    throw error;
   }
 
   try {
+    logger.info('Sending email via SendGrid', { 
+      to: Array.isArray(to) ? to.join(', ') : to, 
+      subject,
+      hasAttachments: attachments && attachments.length > 0 
+    });
+
     const msg: any = {
       to,
       from: {
@@ -45,15 +56,29 @@ export async function sendEmail({ to, subject, html, text, attachments }: EmailO
 
     if (attachments && attachments.length > 0) {
       msg.attachments = attachments;
+      logger.debug('Email attachments added', { count: attachments.length });
     }
 
     await sgMail.send(msg);
 
-    console.log(`Email sent to ${to}`);
+    logger.info('Email sent successfully', { 
+      to: Array.isArray(to) ? to.join(', ') : to, 
+      subject 
+    });
     return true;
   } catch (error) {
-    console.error('Failed to send email:', error);
-    throw error;
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const sendGridError = error as any;
+    
+    logger.error('Failed to send email via SendGrid', {
+      error: errorMessage,
+      to: Array.isArray(to) ? to.join(', ') : to,
+      subject,
+      sendGridCode: sendGridError?.code,
+      sendGridResponse: sendGridError?.response?.body
+    });
+    
+    throw new Error(`Failed to send email: ${errorMessage}`);
   }
 }
 

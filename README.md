@@ -1010,6 +1010,7 @@ See [CHANGELOG.md](./documentation/CHANGELOG.md) for detailed version history.
 
 ### Recent Versions
 
+- **v4.1.8** (2025-01-XX) - 🔄 **IMPROVEMENT** - Email Service Error Handling - Improved email service error handling and logging, better user feedback when emails fail
 - **v4.1.7** (2025-01-XX) - ✨ **NEW FEATURES** - Contracts Route for Comment - Added comprehensive contract routing functionality for stakeholder distribution via email/Slack, version owner tracking, routing history, and recipient management
 - **v4.1.6** (2025-11-10) - ✨ **NEW FEATURES** - Contracts Delete & AI Summary Panel - Added contract deletion from list page (creator/admin only), added fourth panel with AI summary preview
 - **v4.1.5** (2025-01-XX) - 🔄 **MAJOR REBUILD** - Contracts Versioning System - Complete rebuild of document versioning with unified service, fixed version number incrementing, improved watermarking

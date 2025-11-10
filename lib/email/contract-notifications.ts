@@ -1,5 +1,6 @@
 import { sendEmail } from './sendgrid';
 import { createNotification, createNotificationsForUsers } from '@/lib/utils/notifications';
+import { logger } from '@/lib/utils/logger';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
@@ -437,6 +438,15 @@ export async function sendContractRoutedForComment({
   message,
   routed_by_name,
 }: ContractRoutedForCommentOptions) {
+  logger.info('Preparing contract routing email', {
+    to_email,
+    contract_number,
+    document_name,
+    version_number,
+    has_ai_summary: !!ai_summary,
+    has_message: !!message,
+  });
+
   const contractUrl = `${APP_URL}/contracts/${contract_id}`;
   const versionOwnerLabel = version_owner === 'client' ? "Client's Version" : "CDCO's Version";
   const subject = `📄 Contract Routed for Comment: ${contract_number}`;
@@ -444,6 +454,7 @@ export async function sendContractRoutedForComment({
   // Download document from Supabase Storage for attachment
   let attachment: { content: string; filename: string; type: string } | null = null;
   try {
+    logger.debug('Downloading document for email attachment', { document_url, document_name });
     const response = await fetch(document_url);
     if (response.ok) {
       const arrayBuffer = await response.arrayBuffer();
@@ -455,9 +466,24 @@ export async function sendContractRoutedForComment({
         filename: document_name,
         type: mimeType,
       };
+      logger.info('Document downloaded successfully for attachment', { 
+        filename: document_name,
+        size: base64Content.length,
+        mimeType 
+      });
+    } else {
+      logger.warn('Failed to download document for attachment', { 
+        status: response.status,
+        statusText: response.statusText,
+        document_url 
+      });
     }
   } catch (error) {
-    console.error('Error downloading document for attachment:', error);
+    logger.error('Error downloading document for attachment', {
+      error: error instanceof Error ? error.message : String(error),
+      document_url,
+      document_name,
+    });
     // Continue without attachment if download fails
   }
 
@@ -617,12 +643,28 @@ export async function sendContractRoutedForComment({
     </html>
   `;
 
-  await sendEmail({
-    to: to_email,
-    subject,
-    html,
-    attachments: attachment ? [attachment] : undefined,
-  });
+  try {
+    await sendEmail({
+      to: to_email,
+      subject,
+      html,
+      attachments: attachment ? [attachment] : undefined,
+    });
+    logger.info('Contract routing email sent successfully', {
+      to_email,
+      contract_number,
+      document_name,
+    });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Failed to send contract routing email', {
+      error: errorMessage,
+      to_email,
+      contract_number,
+      document_name,
+    });
+    throw new Error(`Failed to send contract routing email to ${to_email}: ${errorMessage}`);
+  }
 }
 
 
