@@ -243,12 +243,43 @@ export async function POST(request: NextRequest) {
         organization_id: orgId,
         created_by: userId,
       })
-      .select('*, clients(*), projects(id, name)')
+      .select('*')
       .single();
 
     if (error) {
       return handleSupabaseError(error);
     }
+
+    // Fetch related client and project separately to avoid join issues
+    let clientData = null;
+    let projectData = null;
+
+    if (contract.client_id) {
+      const { data: fetchedClient } = await supabaseServer
+        .from('clients')
+        .select('id, name, email, phone')
+        .eq('id', contract.client_id)
+        .eq('organization_id', orgId)
+        .single();
+      clientData = fetchedClient;
+    }
+
+    if (contract.project_id) {
+      const { data: fetchedProject } = await supabaseServer
+        .from('projects')
+        .select('id, name')
+        .eq('id', contract.project_id)
+        .eq('organization_id', orgId)
+        .single();
+      projectData = fetchedProject;
+    }
+
+    // Enrich contract with related data
+    const enrichedContract = {
+      ...contract,
+      clients: clientData,
+      projects: projectData,
+    };
 
     // Send notifications to organization members (non-blocking)
     try {
@@ -262,7 +293,7 @@ export async function POST(request: NextRequest) {
         .filter((id): id is string => !!id && id !== userId);
 
       if (memberIds.length > 0) {
-        const clientName = (contract.clients as any)?.name || 'Unknown Client';
+        const clientName = (clientData as any)?.name || 'Unknown Client';
         const user = await client.users.getUser(userId);
         const userName = user.fullName || user.firstName || user.emailAddresses[0]?.emailAddress || 'Unknown User';
 
@@ -285,7 +316,7 @@ export async function POST(request: NextRequest) {
       // Don't fail the request if notifications fail
     }
 
-    return successResponse({ contract }, 201);
+    return successResponse({ contract: enrichedContract }, 201);
   } catch (error) {
     return errorResponse(error, 'Failed to create contract');
   }
