@@ -24,9 +24,34 @@ export default function ProjectListItem({
     }
   };
 
-  const handleGoToProject = (e: React.MouseEvent) => {
+  const handleGoToProject = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    router.push(`/projects/${project.id}`);
+    
+    // Verify project exists before navigating
+    try {
+      const response = await fetch(`/api/projects/${project.id}`);
+      if (!response.ok) {
+        const result = await response.json();
+        const errorMessage = result.error || 'Project not found';
+        console.error('Project not found:', {
+          projectId: project.id,
+          error: errorMessage,
+          status: response.status
+        });
+        
+        // Show error and refresh the page to update the project list
+        alert(`Project not found: ${project.name || project.id}\n\nThe project may have been deleted. Refreshing the project list...`);
+        window.location.reload();
+        return;
+      }
+      
+      // Project exists, navigate to it
+      router.push(`/projects/${project.id}`);
+    } catch (error) {
+      console.error('Error verifying project:', error);
+      // Still try to navigate - the detail page will handle the error
+      router.push(`/projects/${project.id}`);
+    }
   };
 
   // Status color mapping
