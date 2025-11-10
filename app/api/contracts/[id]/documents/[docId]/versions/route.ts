@@ -6,6 +6,7 @@ import { supabaseServer } from '@/lib/supabase-server';
 import { logger } from '@/lib/utils/logger';
 import { createServerAdminClient } from '@/lib/supabase/server';
 import { clerkClient } from '@clerk/nextjs/server';
+import { addWatermarkToDocument } from '@/lib/utils/watermark';
 
 export const dynamic = 'force-dynamic';
 
@@ -100,10 +101,10 @@ export async function POST(
 
     logger.api(`/api/contracts/${id}/documents/${docId}/versions`, 'POST', { orgId, userId });
 
-    // Check if document exists
+    // Check if document exists and get current file URL
     const { data: document } = await supabaseServer
       .from('contract_documents')
-      .select('id, contract_id, version_number')
+      .select('id, contract_id, version_number, file_url, file_name')
       .eq('id', docId)
       .eq('contract_id', id)
       .single();
@@ -160,6 +161,77 @@ export async function POST(
     const { data: urlData } = supabaseAdmin.storage
       .from('contract-documents')
       .getPublicUrl(filePath);
+
+    // Watermark the current version (which will become the previous version)
+    // This should happen every time a new version is uploaded
+    if (document.file_url) {
+      try {
+        // Add watermark to the current version
+        const watermarkedBuffer = await addWatermarkToDocument(document.file_url);
+        
+        // Create a new file path for the watermarked version
+        const watermarkedFileName = `${id}/${Date.now()}-v${document.version_number}-watermarked.${fileExt}`;
+        const watermarkedFilePath = `contract-documents/${watermarkedFileName}`;
+        
+        // Upload watermarked version
+        const { data: watermarkedUpload, error: watermarkedError } = await supabaseAdmin.storage
+          .from('contract-documents')
+          .upload(watermarkedFilePath, watermarkedBuffer, {
+            contentType: file.type,
+            upsert: false,
+          });
+
+        if (watermarkedError) {
+          logger.warn('Failed to upload watermarked version:', {
+            documentId: docId,
+            versionNumber: document.version_number,
+            error: watermarkedError,
+          });
+        } else {
+          // Get public URL for watermarked version
+          const { data: watermarkedUrlData } = supabaseAdmin.storage
+            .from('contract-documents')
+            .getPublicUrl(watermarkedFilePath);
+
+          // Update the current document's file URL with watermarked version
+          await supabaseServer
+            .from('contract_documents')
+            .update({
+              file_url: watermarkedUrlData.publicUrl,
+            })
+            .eq('id', docId);
+
+          // Also update the version record if it exists
+          const { data: currentVersion } = await supabaseServer
+            .from('contract_document_versions')
+            .select('id')
+            .eq('document_id', docId)
+            .eq('version_number', document.version_number)
+            .single();
+
+          if (currentVersion) {
+            await supabaseServer
+              .from('contract_document_versions')
+              .update({
+                file_url: watermarkedUrlData.publicUrl,
+              })
+              .eq('id', currentVersion.id);
+          }
+
+          logger.info('Watermarked current version:', {
+            documentId: docId,
+            versionNumber: document.version_number,
+          });
+        }
+      } catch (error) {
+        logger.warn('Failed to watermark current version:', {
+          documentId: docId,
+          versionNumber: document.version_number,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        // Don't fail the upload if watermarking fails
+      }
+    }
 
     // Mark previous document as not current
     await supabaseServer

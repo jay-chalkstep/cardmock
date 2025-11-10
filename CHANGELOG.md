@@ -7,6 +7,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.1.4] - 2025-01-XX
+
+### ✨ Added
+
+#### Contracts Module - Document Watermarking
+- **Automatic Watermarking**: Previous versions are automatically watermarked when a new version is uploaded
+  - Adds "PREVIOUS VERSION" watermark to Word documents (.docx files)
+  - Watermarking happens synchronously before marking document as not current
+  - Updates both `contract_documents` and `contract_document_versions` tables with watermarked file URLs
+  - Uses JSZip library to modify document XML structure
+  - Graceful error handling - upload succeeds even if watermarking fails
+
+### 🔄 Changed
+
+#### Contracts Module - Overview Page UI Improvements
+- **Quick View Table**: Contract details now displayed in a clean table format
+  - Two-column table with labels and values
+  - Alternating row backgrounds for better readability
+  - Includes contract number, title, description, dates, status, and type
+  - Status badges with color coding (signed, pending, draft, etc.)
+- **Summary Rendering**: Fixed AI summary display to render as plain text
+  - Removed markdown annotations that weren't rendering correctly
+  - Summary now displays as properly formatted paragraphs
+  - Each paragraph separated with appropriate spacing
+- **Changelog Formatting**: Improved changelog display with better structure
+  - Version headers are styled as bold headings
+  - Bullet points properly indented
+  - Better paragraph spacing and readability
+- **UI Consistency**: Summary and changelog sections now use card-style containers
+  - Consistent header styling with expand/collapse functionality
+  - Better visual hierarchy and spacing
+
+### 📝 Technical Details
+
+- **New Utilities**:
+  - `lib/utils/watermark.ts` - Watermark utility for adding "PREVIOUS VERSION" to Word documents
+  - Uses JSZip to modify .docx file structure
+  - Supports .docx files (with warning for .doc files)
+- **Updated Components**:
+  - `app/(dashboard)/contracts/[id]/page.tsx` - Overview page redesigned with table format
+  - `app/api/contracts/[id]/documents/[docId]/versions/route.ts` - Added watermarking on version upload
+- **Dependencies**:
+  - Added `jszip` package for Word document manipulation
+
+---
+
 ## [4.1.3] - 2025-01-XX
 
 ### ✨ Added

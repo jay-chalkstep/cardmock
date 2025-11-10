@@ -20,6 +20,7 @@
     "date-fns": "^4.1.0",
     "exceljs": "^4.4.0",
     "jsonwebtoken": "^9.0.2",
+    "jszip": "^3.10.1",
     "konva": "^10.0.2",
     "lodash": "^4.17.21",
     "lucide-react": "^0.546.0",

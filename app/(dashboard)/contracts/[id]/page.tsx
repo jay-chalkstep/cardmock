@@ -708,30 +708,65 @@ export default function ContractDetailPage() {
           <div className="p-6 space-y-6">
             <h3 className="text-lg font-semibold mb-4">Contract Overview</h3>
             
-            {/* Contract Details */}
-            <div>
-              <h4 className="font-medium mb-2">Contract Details</h4>
-              <div className="space-y-2 text-sm bg-gray-50 p-4 rounded-md">
-                <div><span className="font-medium">Contract Number:</span> {contract.contract_number}</div>
-                {contract.title && <div><span className="font-medium">Title:</span> {contract.title}</div>}
-                {contract.description && (
-                  <div><span className="font-medium">Description:</span> {contract.description}</div>
-                )}
-                {contract.start_date && (
-                  <div><span className="font-medium">Start Date:</span> {new Date(contract.start_date).toLocaleDateString()}</div>
-                )}
-                {contract.end_date && (
-                  <div><span className="font-medium">End Date:</span> {new Date(contract.end_date).toLocaleDateString()}</div>
-                )}
-              </div>
+            {/* Contract Details Table */}
+            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+              <table className="w-full">
+                <tbody className="divide-y divide-gray-200">
+                  <tr>
+                    <td className="px-4 py-3 text-sm font-medium text-gray-700 bg-gray-50 w-1/3">Contract Number</td>
+                    <td className="px-4 py-3 text-sm text-gray-900">{contract.contract_number}</td>
+                  </tr>
+                  {contract.title && (
+                    <tr>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-700 bg-gray-50">Title</td>
+                      <td className="px-4 py-3 text-sm text-gray-900">{contract.title}</td>
+                    </tr>
+                  )}
+                  {contract.description && (
+                    <tr>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-700 bg-gray-50">Description</td>
+                      <td className="px-4 py-3 text-sm text-gray-900">{contract.description}</td>
+                    </tr>
+                  )}
+                  {contract.start_date && (
+                    <tr>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-700 bg-gray-50">Start Date</td>
+                      <td className="px-4 py-3 text-sm text-gray-900">{new Date(contract.start_date).toLocaleDateString()}</td>
+                    </tr>
+                  )}
+                  {contract.end_date && (
+                    <tr>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-700 bg-gray-50">End Date</td>
+                      <td className="px-4 py-3 text-sm text-gray-900">{new Date(contract.end_date).toLocaleDateString()}</td>
+                    </tr>
+                  )}
+                  <tr>
+                    <td className="px-4 py-3 text-sm font-medium text-gray-700 bg-gray-50">Status</td>
+                    <td className="px-4 py-3 text-sm">
+                      <span className={`px-2 py-1 text-xs rounded-full ${
+                        contract.status === 'signed' ? 'bg-green-100 text-green-800' :
+                        contract.status === 'pending_signature' ? 'bg-yellow-100 text-yellow-800' :
+                        contract.status === 'draft' ? 'bg-gray-100 text-gray-800' :
+                        'bg-blue-100 text-blue-800'
+                      }`}>
+                        {contract.status.replace('_', ' ')}
+                      </span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="px-4 py-3 text-sm font-medium text-gray-700 bg-gray-50">Type</td>
+                    <td className="px-4 py-3 text-sm text-gray-900 capitalize">{contract.type}</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
 
             {/* AI Contract Summary */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
+            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+              <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Sparkles size={16} className="text-blue-600" />
-                  <h4 className="font-medium">AI Contract Summary</h4>
+                  <h4 className="font-medium text-sm">AI Contract Summary</h4>
                   {contract.ai_summary_generated_at && (
                     <span className="text-xs text-gray-500">
                       (Generated {new Date(contract.ai_summary_generated_at).toLocaleDateString()})
@@ -751,7 +786,7 @@ export default function ContractDetailPage() {
               </div>
               
               {expandedSections.contractSummary && (
-                <div className="bg-gray-50 rounded-md p-4">
+                <div className="p-4">
                   {loadingContractSummary ? (
                     <div className="flex items-center gap-2 py-4 text-sm text-gray-500">
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
@@ -768,8 +803,14 @@ export default function ContractDetailPage() {
                       </button>
                     </div>
                   ) : contract.ai_summary ? (
-                    <div className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
-                      {contract.ai_summary}
+                    <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">
+                      {contract.ai_summary.split('\n').map((paragraph, index) => (
+                        paragraph.trim() ? (
+                          <p key={index} className="mb-3 last:mb-0">
+                            {paragraph.trim()}
+                          </p>
+                        ) : null
+                      ))}
                     </div>
                   ) : (
                     <div className="py-2 text-sm text-gray-500">
@@ -787,11 +828,11 @@ export default function ContractDetailPage() {
             </div>
 
             {/* AI Changelog */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
+            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+              <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Sparkles size={16} className="text-blue-600" />
-                  <h4 className="font-medium">Version Changelog</h4>
+                  <h4 className="font-medium text-sm">Version Changelog</h4>
                   {contract.ai_changelog_generated_at && (
                     <span className="text-xs text-gray-500">
                       (Generated {new Date(contract.ai_changelog_generated_at).toLocaleDateString()})
@@ -811,7 +852,7 @@ export default function ContractDetailPage() {
               </div>
               
               {expandedSections.contractChangelog && (
-                <div className="bg-gray-50 rounded-md p-4">
+                <div className="p-4">
                   {loadingContractChangelog ? (
                     <div className="flex items-center gap-2 py-4 text-sm text-gray-500">
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
@@ -828,8 +869,34 @@ export default function ContractDetailPage() {
                       </button>
                     </div>
                   ) : contract.ai_changelog ? (
-                    <div className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed max-h-96 overflow-y-auto">
-                      {contract.ai_changelog}
+                    <div className="text-sm text-gray-700 leading-relaxed max-h-96 overflow-y-auto whitespace-pre-line">
+                      {contract.ai_changelog.split('\n').map((line, index) => {
+                        // Check if line looks like a version header (starts with "Version" or "v")
+                        if (line.trim().match(/^(Version|v\d+)/i)) {
+                          return (
+                            <h5 key={index} className="font-semibold mt-4 mb-2 first:mt-0">
+                              {line.trim()}
+                            </h5>
+                          );
+                        }
+                        // Check if line looks like a bullet point
+                        if (line.trim().startsWith('-') || line.trim().startsWith('•')) {
+                          return (
+                            <div key={index} className="ml-4 mb-1">
+                              {line.trim()}
+                            </div>
+                          );
+                        }
+                        // Regular paragraph
+                        if (line.trim()) {
+                          return (
+                            <p key={index} className="mb-2">
+                              {line.trim()}
+                            </p>
+                          );
+                        }
+                        return null;
+                      })}
                     </div>
                   ) : (
                     <div className="py-2 text-sm text-gray-500">

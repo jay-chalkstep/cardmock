@@ -87,7 +87,15 @@ Built for teams who need more than basic file storage—Aiproval provides contex
 - **Document Versioning** - Upload Word documents with automatic version control
   - Upload, view, download, and delete documents
   - Automatic version tracking with current version marking
+  - **Automatic Watermarking** - Previous versions automatically watermarked with "PREVIOUS VERSION" ⭐️ NEW
+    - Watermarking happens when a new version is uploaded
+    - Ensures previous versions are clearly marked
+    - Works with .docx files using JSZip library
 - **Version History** - Complete document version history with timestamps
+- **Overview Page** - Quick view table format with contract details ⭐️ ENHANCED
+  - Clean table layout showing all contract information at a glance
+  - Status badges with color coding
+  - Expandable AI summary and changelog sections
 - **AI Document Summaries** - AI-powered single-sentence document summaries ⭐️ ENHANCED
   - Assumes contracts are between Choice Digital (CDCO) and a counterparty
   - Focuses on document purpose and key changes
@@ -98,6 +106,7 @@ Built for teams who need more than basic file storage—Aiproval provides contex
 - **AI Contract Summary** - Comprehensive AI-generated contract summary on overview tab ⭐️ NEW
   - Analyzes all contract documents to generate comprehensive summary
   - Includes contract type, parties, terms, dates, obligations, and key clauses
+  - Properly formatted plain text display (no markdown artifacts)
   - Persistent storage in database
   - Expandable/collapsible display with generation timestamp
 - **AI Version Changelog** - Comprehensive AI-generated version changelog on overview tab ⭐️ NEW
