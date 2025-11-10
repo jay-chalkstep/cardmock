@@ -27,6 +27,13 @@ Complete platform integration system bringing approvals into existing design and
   - **Figma Integration Settings Page** - Connect/disconnect Figma account ⭐️ NEW
   - **Figma Status Badge** - Display approval status in asset lists ⭐️ NEW
   - **Figma Metadata Display** - Show Figma file/node information ⭐️ NEW
+  - **Figma Import UI** - Import frames directly from Figma files ⭐️ NEW
+    - "Import from Figma" button in Library page assets tab
+    - Multi-step import wizard (File Selection → Frame Selection → Import Settings)
+    - Browse Figma files by file key
+    - Select multiple frames to import
+    - Assign to project and folder during import
+    - Automatic frame export and asset creation
 
 - **Public Share Pages** - External reviewers without account creation
   - JWT-based secure share links with expiration
@@ -179,6 +186,10 @@ Complete platform integration system bringing approvals into existing design and
 - **Public Share Management** (`/api/assets/[id]/share`) - Create/revoke share links
 - **Public Share Analytics** (`/api/assets/share/[linkId]/analytics`) - Analytics data
 - **Figma Integration API** (`/api/integrations/figma`) - OAuth, upload, status, sync
+  - `/api/integrations/figma/files` - Fetch user's Figma files
+  - `/api/integrations/figma/files/[fileKey]` - Get frames from a Figma file
+  - `/api/integrations/figma/files/[fileKey]/frames/[nodeId]/export` - Export frame as image
+  - `/api/integrations/figma/import` - Import selected frames as assets
 - **Gmail Integration API** (`/api/integrations/gmail`) - OAuth, send-approval
 - **Slack Integration API** (`/api/integrations/slack`) - OAuth, events, commands, interactive, notify
 - **Cloud Storage API** (`/api/integrations/cloud-storage/[provider]`) - OAuth, import, sync
@@ -186,13 +197,13 @@ Complete platform integration system bringing approvals into existing design and
 - **Presentation Actions** (`/api/presentations/[id]/vote`, `/api/presentations/[id]/join`) - Voting and participation
 
 #### Components
-- **Integration Components** - FigmaConnectButton, FigmaStatusBadge, FigmaMetadataDisplay, GmailConnectButton, SlackInstallButton, CloudStorageConnectButton
+- **Integration Components** - FigmaConnectButton, FigmaStatusBadge, FigmaMetadataDisplay, FigmaImportModal, GmailConnectButton, SlackInstallButton, CloudStorageConnectButton
 - **Public Share Components** - PublicReviewCanvas, IdentityCaptureModal, PublicShareSettings, PublicShareAnalytics
 - **Presentation Components** - CreatePresentationModal, ComparisonView, PresentationMode, VotingPanel
 - **Settings Pages** - Figma integration settings page
 
 #### Utilities
-- **Integration Utilities** (`lib/integrations/`) - OAuth, webhooks, rate-limit, encryption, status
+- **Integration Utilities** (`lib/integrations/`) - OAuth, webhooks, rate-limit, encryption, status, figma
 - **Public Utilities** (`lib/public/`) - JWT, session management
 
 ### Technical
@@ -216,17 +227,21 @@ Complete platform integration system bringing approvals into existing design and
 - `lib/integrations/webhooks.ts` - Webhook signature verification
 - `lib/integrations/rate-limit.ts` - Rate limiting
 - `lib/integrations/status.ts` - Integration status tracking
+- `lib/integrations/figma.ts` - Figma API helper functions
 - `lib/public/jwt.ts` - JWT token management
 - `lib/public/session.ts` - Public session management
 - `app/(public)/share/[token]/page.tsx` - Public review page
 - `app/api/public/share/[token]/*` - Public share API routes
 - `app/api/assets/[id]/share/route.ts` - Share link management
 - `app/api/integrations/figma/*` - Figma integration API routes
+- `app/api/integrations/figma/files/*` - Figma file browsing and import routes
+- `app/api/integrations/figma/import/route.ts` - Frame import endpoint
 - `app/api/integrations/gmail/*` - Gmail integration API routes
 - `app/api/integrations/slack/*` - Slack integration API routes
 - `app/api/integrations/cloud-storage/[provider]/*` - Cloud storage API routes
 - `app/api/presentations/*` - Presentation API routes
 - `components/integrations/*` - Integration UI components
+- `components/integrations/FigmaImportModal.tsx` - Figma import wizard modal
 - `components/public/*` - Public share components
 - `components/presentation/*` - Presentation components
 - `app/(dashboard)/settings/integrations/figma/page.tsx` - Figma settings page
@@ -234,6 +249,7 @@ Complete platform integration system bringing approvals into existing design and
 #### Updated Files
 - `middleware.ts` - Added public share routes to public route matcher
 - `package.json` - Updated version to 4.1.0, added new dependencies
+- `app/(dashboard)/library/page.tsx` - Added "Import from Figma" button and modal integration
 
 ### Migration Notes
 

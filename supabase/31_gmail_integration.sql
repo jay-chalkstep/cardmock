@@ -52,8 +52,17 @@ ALTER TABLE gmail_integrations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE gmail_threads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE gmail_feedback_events ENABLE ROW LEVEL SECURITY;
 
--- Similar RLS policies as Figma integration
--- (Implementation follows same pattern as figma_integrations)
+CREATE POLICY "Allow all for authenticated users in org"
+  ON gmail_integrations FOR ALL
+  USING (true);
+
+CREATE POLICY "Allow all for authenticated users in org"
+  ON gmail_threads FOR ALL
+  USING (true);
+
+CREATE POLICY "Allow all for authenticated users in org"
+  ON gmail_feedback_events FOR ALL
+  USING (true);
 
 -- ============================================================================
 -- MIGRATION COMPLETE

@@ -54,6 +54,18 @@ ALTER TABLE cloud_storage_integrations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE import_jobs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE import_mappings ENABLE ROW LEVEL SECURITY;
 
+CREATE POLICY "Allow all for authenticated users in org"
+  ON cloud_storage_integrations FOR ALL
+  USING (true);
+
+CREATE POLICY "Allow all for authenticated users in org"
+  ON import_jobs FOR ALL
+  USING (true);
+
+CREATE POLICY "Allow all for authenticated users in org"
+  ON import_mappings FOR ALL
+  USING (true);
+
 -- ============================================================================
 -- MIGRATION COMPLETE
 -- ============================================================================

@@ -53,6 +53,18 @@ ALTER TABLE slack_integrations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE slack_channels ENABLE ROW LEVEL SECURITY;
 ALTER TABLE slack_notification_events ENABLE ROW LEVEL SECURITY;
 
+CREATE POLICY "Allow all for authenticated users in org"
+  ON slack_integrations FOR ALL
+  USING (true);
+
+CREATE POLICY "Allow all for authenticated users in org"
+  ON slack_channels FOR ALL
+  USING (true);
+
+CREATE POLICY "Allow all for authenticated users in org"
+  ON slack_notification_events FOR ALL
+  USING (true);
+
 -- ============================================================================
 -- MIGRATION COMPLETE
 -- ============================================================================

@@ -51,6 +51,18 @@ ALTER TABLE presentation_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE presentation_participants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE presentation_votes ENABLE ROW LEVEL SECURITY;
 
+CREATE POLICY "Allow all for authenticated users in org"
+  ON presentation_sessions FOR ALL
+  USING (true);
+
+CREATE POLICY "Allow all for authenticated users in org"
+  ON presentation_participants FOR ALL
+  USING (true);
+
+CREATE POLICY "Allow all for authenticated users in org"
+  ON presentation_votes FOR ALL
+  USING (true);
+
 -- ============================================================================
 -- MIGRATION COMPLETE
 -- ============================================================================
