@@ -147,9 +147,24 @@ export async function handleOAuthCallback(
     });
     
     if (!tokenResponse.ok) {
-      const error = await tokenResponse.text();
-      logger.error('OAuth token exchange failed', { integrationType, error });
-      return { success: false, error: 'Failed to exchange authorization code for tokens' };
+      const errorText = await tokenResponse.text();
+      let errorMessage = 'Failed to exchange authorization code for tokens';
+      
+      try {
+        const errorData = JSON.parse(errorText);
+        errorMessage = errorData.error_description || errorData.error || errorMessage;
+      } catch {
+        // If not JSON, use the text as-is
+        errorMessage = errorText || errorMessage;
+      }
+      
+      logger.error('OAuth token exchange failed', { 
+        integrationType, 
+        status: tokenResponse.status,
+        statusText: tokenResponse.statusText,
+        error: errorText 
+      });
+      return { success: false, error: errorMessage };
     }
     
     const tokenData = await tokenResponse.json();

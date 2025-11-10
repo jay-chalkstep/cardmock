@@ -43,7 +43,8 @@ function FigmaIntegrationContent() {
       // Remove query param
       router.replace('/settings/integrations/figma');
     } else if (error) {
-      setToast({ message: `Connection failed: ${error}`, type: 'error' });
+      const decodedError = decodeURIComponent(error);
+      setToast({ message: `Connection failed: ${decodedError}`, type: 'error' });
       router.replace('/settings/integrations/figma');
     }
   }, [router, searchParams]);

@@ -26,30 +26,35 @@ export async function GET(request: NextRequest) {
     const code = searchParams.get('code');
     const state = searchParams.get('state');
     const error = searchParams.get('error');
+    const errorDescription = searchParams.get('error_description');
     
     if (error) {
-      logger.error('Figma OAuth error', { error, userId, orgId });
-      return redirect(`/settings/integrations/figma?error=${encodeURIComponent(error)}`);
+      const errorMessage = errorDescription || error;
+      logger.error('Figma OAuth error', { error, errorDescription, userId, orgId });
+      return redirect(`/settings/integrations/figma?error=${encodeURIComponent(errorMessage)}`);
     }
     
     if (!code || !state) {
-      return badRequestResponse('Missing code or state parameter');
+      logger.error('Missing OAuth parameters', { hasCode: !!code, hasState: !!state, userId, orgId });
+      return redirect(`/settings/integrations/figma?error=${encodeURIComponent('Missing authorization code or state parameter')}`);
     }
     
-    logger.api('/api/integrations/figma/callback', 'GET', { userId, orgId });
+    logger.api('/api/integrations/figma/callback', 'GET', { userId, orgId, hasCode: !!code, hasState: !!state });
     
     const result = await handleOAuthCallback('figma', code, state, userId, orgId);
     
     if (!result.success) {
+      const errorMessage = result.error || 'OAuth connection failed';
       logger.error('Figma OAuth callback failed', { error: result.error, userId, orgId });
-      return redirect(`/settings/integrations/figma?error=${encodeURIComponent(result.error || 'OAuth failed')}`);
+      return redirect(`/settings/integrations/figma?error=${encodeURIComponent(errorMessage)}`);
     }
     
     logger.info('Figma OAuth connection successful', { userId, orgId });
     return redirect('/settings/integrations/figma?success=true');
   } catch (error) {
-    logger.error('Figma OAuth callback error', error);
-    return redirect('/settings/integrations/figma?error=unknown');
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    logger.error('Figma OAuth callback error', error, { errorMessage });
+    return redirect(`/settings/integrations/figma?error=${encodeURIComponent(errorMessage)}`);
   }
 }
 
