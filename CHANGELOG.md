@@ -34,6 +34,18 @@ Complete platform integration system bringing approvals into existing design and
     - Select multiple frames to import
     - Assign to project and folder during import
     - Automatic frame export and asset creation
+  - **Figma Status Badge** - Display approval status in asset lists ⭐️ NEW
+    - Shows Figma approval status (approved/pending/changes_requested) in asset list items
+    - Automatically fetches status for assets with Figma metadata
+  - **Figma Metadata Display** - Show Figma file/node information in asset details ⭐️ NEW
+    - Displays Figma file ID, node IDs, and file URL
+    - "Open in Figma" link to view source file
+    - Shows last modified date
+    - Appears in asset detail sidebar when Figma metadata exists
+  - **Integrations Tab in Settings** - Centralized integration management ⭐️ NEW
+    - New "Integrations" tab in Settings modal
+    - Quick access to Figma integration settings
+    - Shows "Coming Soon" for other integrations (Gmail, Slack, Drive/Dropbox)
 
 - **Public Share Pages** - External reviewers without account creation
   - JWT-based secure share links with expiration
@@ -198,6 +210,9 @@ Complete platform integration system bringing approvals into existing design and
 
 #### Components
 - **Integration Components** - FigmaConnectButton, FigmaStatusBadge, FigmaMetadataDisplay, FigmaImportModal, GmailConnectButton, SlackInstallButton, CloudStorageConnectButton
+- **UI Integration** - FigmaStatusBadge integrated into asset list items (MockupListItem)
+- **UI Integration** - FigmaMetadataDisplay integrated into asset detail sidebar (MockupDetailSidebar)
+- **UI Integration** - Integrations tab added to Settings modal (SettingsModal)
 - **Public Share Components** - PublicReviewCanvas, IdentityCaptureModal, PublicShareSettings, PublicShareAnalytics
 - **Presentation Components** - CreatePresentationModal, ComparisonView, PresentationMode, VotingPanel
 - **Settings Pages** - Figma integration settings page
@@ -250,6 +265,11 @@ Complete platform integration system bringing approvals into existing design and
 - `middleware.ts` - Added public share routes to public route matcher
 - `package.json` - Updated version to 4.1.0, added new dependencies
 - `app/(dashboard)/library/page.tsx` - Added "Import from Figma" button and modal integration
+- `app/(dashboard)/mockups/[id]/page.tsx` - Added figma_metadata to asset query
+- `components/lists/MockupListItem.tsx` - Added FigmaStatusBadge display
+- `components/mockups/MockupDetailSidebar.tsx` - Added FigmaMetadataDisplay
+- `components/settings/SettingsModal.tsx` - Added Integrations tab with Figma link
+- `lib/supabase.ts` - Added figma_metadata to CardMockup interface
 
 ### Migration Notes
 

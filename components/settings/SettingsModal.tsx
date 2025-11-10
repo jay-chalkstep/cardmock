@@ -1,17 +1,18 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Settings, User, Building2, HelpCircle, Bell, Palette } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { X, Settings, User, Building2, HelpCircle, Bell, Palette, Plug } from 'lucide-react';
 import { UserProfile, OrganizationProfile } from '@clerk/nextjs';
 import { useOrganization } from '@clerk/nextjs';
 
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  initialTab?: 'preferences' | 'account' | 'organization' | 'help';
+  initialTab?: 'preferences' | 'account' | 'organization' | 'integrations' | 'help';
 }
 
-type Tab = 'preferences' | 'account' | 'organization' | 'help';
+type Tab = 'preferences' | 'account' | 'organization' | 'integrations' | 'help';
 
 interface NotificationPreferences {
   email_approval_request: boolean;
@@ -39,6 +40,7 @@ export default function SettingsModal({
   onClose,
   initialTab = 'preferences',
 }: SettingsModalProps) {
+  const router = useRouter();
   const { membership } = useOrganization();
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const [preferences, setPreferences] = useState<UserPreferences | null>(null);
@@ -116,6 +118,7 @@ export default function SettingsModal({
     { id: 'preferences' as Tab, label: 'Preferences', icon: Bell },
     { id: 'account' as Tab, label: 'Account', icon: User },
     ...(isAdmin ? [{ id: 'organization' as Tab, label: 'Organization', icon: Building2 }] : []),
+    { id: 'integrations' as Tab, label: 'Integrations', icon: Plug },
     { id: 'help' as Tab, label: 'Help & Support', icon: HelpCircle },
   ];
 
@@ -308,6 +311,46 @@ export default function SettingsModal({
                     }}
                     routing="hash"
                   />
+                </div>
+              )}
+
+              {activeTab === 'integrations' && (
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
+                      Platform Integrations
+                    </h3>
+                    <p className="text-sm text-[var(--text-secondary)] mb-4">
+                      Connect your favorite tools to streamline your workflow.
+                    </p>
+                    <div className="space-y-3">
+                      <button
+                        onClick={() => {
+                          onClose();
+                          router.push('/settings/integrations/figma');
+                        }}
+                        className="w-full p-4 rounded-lg border border-[var(--border-main)] hover:bg-[var(--bg-hover)] transition-colors text-left"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-medium text-[var(--text-primary)]">Figma</div>
+                            <div className="text-sm text-[var(--text-secondary)] mt-1">
+                              Import frames directly from Figma and sync approval status
+                            </div>
+                          </div>
+                          <div className="text-[var(--accent-blue)]">→</div>
+                        </div>
+                      </button>
+                      <div className="p-4 rounded-lg border border-gray-200 bg-gray-50 text-sm text-gray-600">
+                        <div className="font-medium text-gray-700 mb-2">Coming Soon</div>
+                        <div className="space-y-2 mt-2">
+                          <div>• Gmail Add-on</div>
+                          <div>• Slack Integration</div>
+                          <div>• Google Drive / Dropbox Import</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
 

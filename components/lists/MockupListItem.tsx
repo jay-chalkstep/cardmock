@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CardMockup } from '@/lib/supabase';
 import { CheckSquare, Square, Star } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import FigmaStatusBadge from '@/components/integrations/FigmaStatusBadge';
 
 interface MockupListItemProps {
   mockup: CardMockup;
@@ -17,6 +18,23 @@ export default function MockupListItem({
   onToggleSelect,
 }: MockupListItemProps) {
   const [starred, setStarred] = useState(false);
+  const [figmaStatus, setFigmaStatus] = useState<'approved' | 'pending' | 'changes_requested' | null>(null);
+  
+  // Fetch Figma status if asset has Figma metadata
+  useEffect(() => {
+    if (mockup.figma_metadata) {
+      fetch(`/api/integrations/figma/status/${mockup.id}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.data?.status) {
+            setFigmaStatus(data.data.status);
+          }
+        })
+        .catch(() => {
+          // Silently fail - not all assets have Figma status
+        });
+    }
+  }, [mockup.id, mockup.figma_metadata]);
 
   const handleStarClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -86,9 +104,11 @@ export default function MockupListItem({
         </div>
       </div>
 
-      {/* Tags - Placeholder */}
+      {/* Tags - Figma Status Badge */}
       <div className="flex-shrink-0 flex gap-1">
-        {/* Tags will go here */}
+        {figmaStatus && (
+          <FigmaStatusBadge status={figmaStatus} />
+        )}
       </div>
 
       {/* Time */}

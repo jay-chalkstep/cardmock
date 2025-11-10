@@ -199,6 +199,9 @@ Built for teams who need more than basic file storage—Aiproval provides contex
 - **Figma Plugin Integration** - Send Figma frames directly for approval
   - Direct frame upload from Figma plugin
   - **Import from Figma UI** - Browse and import frames directly from Library page ⭐️ NEW
+  - **Figma Status Badge** - Display approval status in asset lists ⭐️ NEW
+  - **Figma Metadata Display** - Show Figma file/node information in asset details ⭐️ NEW
+  - **Integrations Tab** - Centralized integration management in Settings ⭐️ NEW
   - Real-time status sync (approved/pending/rejected)
   - Comment sync between Figma and Aiproval
   - Automatic version detection

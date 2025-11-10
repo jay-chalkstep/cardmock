@@ -217,6 +217,7 @@ export interface CardMockup {
   logo_y: number; // Percentage from top
   logo_scale: number; // Logo width as percentage of card width
   mockup_image_url?: string;
+  figma_metadata?: any; // Figma integration metadata (added in v4.1.0)
   created_at: string;
   updated_at: string;
   // Joined data (optional, populated when fetching with joins)
