@@ -190,10 +190,12 @@ export async function GET(request: NextRequest) {
       });
 
       // Search within contract documents' searchable_text
+      // Only search documents that have searchable_text populated
       const { data: documents, error: documentsError } = await supabase
         .from('contract_documents')
-        .select('contract_id, file_name')
+        .select('contract_id, file_name, searchable_text')
         .in('contract_id', allContractIds)
+        .not('searchable_text', 'is', null)
         .ilike('searchable_text', searchTerm)
         .eq('is_current', true)
         .limit(20);
