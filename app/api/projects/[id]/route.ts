@@ -40,9 +40,10 @@ export async function GET(
     }
 
     // Build query - filter at database level for client users
+    // Simplified query without nested JOINs to avoid RLS/foreign key issues
     let query = supabaseServer
       .from('projects')
-      .select('*, workflows(*), contract:contracts(*, client:clients(*))')
+      .select('*, workflows(*)')
       .eq('id', id)
       .eq('organization_id', orgId);
 
@@ -81,6 +82,66 @@ export async function GET(
       projectName: project.name
     });
 
+    // Fetch contract data separately if contract_id exists
+    // This avoids nested JOIN issues and RLS policy problems
+    let contractData = null;
+    if (project.contract_id) {
+      try {
+        // Fetch contract without nested JOINs
+        const { data: contract, error: contractError } = await supabaseServer
+          .from('contracts')
+          .select('*')
+          .eq('id', project.contract_id)
+          .eq('organization_id', orgId)
+          .single();
+
+        if (!contractError && contract) {
+          // Fetch client separately if contract has client_id
+          let clientData = null;
+          if (contract.client_id) {
+            try {
+              const { data: client, error: clientError } = await supabaseServer
+                .from('clients')
+                .select('id, name, email, phone')
+                .eq('id', contract.client_id)
+                .eq('organization_id', orgId)
+                .single();
+
+              if (!clientError && client) {
+                clientData = client;
+              }
+            } catch (clientErr) {
+              // Non-critical error - continue without client data
+              logger.warn('Client fetch error (non-critical)', {
+                projectId: id,
+                contractId: project.contract_id,
+                clientId: contract.client_id,
+                error: clientErr instanceof Error ? clientErr.message : String(clientErr)
+              });
+            }
+          }
+
+          contractData = {
+            ...contract,
+            client: clientData || null
+          };
+        } else {
+          logger.warn('Contract fetch failed (non-critical)', {
+            projectId: id,
+            contractId: project.contract_id,
+            error: contractError?.message
+          });
+        }
+      } catch (contractErr) {
+        // Non-critical error - continue without contract data
+        logger.warn('Contract fetch error (non-critical)', {
+          projectId: id,
+          contractId: project.contract_id,
+          error: contractErr instanceof Error ? contractErr.message : String(contractErr)
+        });
+      }
+    }
+
     // Fetch mockup count
     const { count } = await supabaseServer
       .from('assets')
@@ -99,15 +160,14 @@ export async function GET(
 
     // Rename workflows (table name) to workflow (expected by UI)
     // Supabase may return workflows as an array or object depending on the relationship
-    const { workflows, contract, ...projectData } = project;
+    const { workflows, ...projectData } = project;
     const workflowData = Array.isArray(workflows) ? workflows[0] : workflows;
-    const contractData = Array.isArray(contract) ? contract[0] : contract;
 
     return successResponse({
       project: {
         ...projectData,
         workflow: workflowData || null, // Rename to match Project interface
-        contract: contractData || null, // Include contract data
+        contract: contractData || null, // Include contract data (fetched separately)
         mockup_count: count || 0,
         mockup_previews: mockupPreviews || [],
       },
