@@ -183,7 +183,6 @@ export async function POST(
               `/mockups/${mockupId}`,
               mockupId,
               mockup.project_id || undefined,
-              undefined,
               {
                 commenter_name: fullName,
               }

@@ -202,7 +202,6 @@ export async function POST(
             `/mockups/${mockupId}`,
             mockupId,
             mockup.project_id || undefined,
-            undefined,
             {
               stage_name: nextStage.name,
               stage_order: nextStage.order,

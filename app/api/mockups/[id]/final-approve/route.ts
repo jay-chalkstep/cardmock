@@ -134,7 +134,6 @@ export async function POST(
         `/mockups/${mockupId}`,
         mockupId,
         mockup.project_id || undefined,
-        undefined,
         {
           approved_by: userName,
           project_name: project.name,
