@@ -18,7 +18,6 @@ import {
   Images,
   Package,
   Home,
-  FileText,
 } from 'lucide-react';
 import { usePanelContext } from '@/lib/contexts/PanelContext';
 
@@ -32,7 +31,6 @@ interface NavItem {
 const navItems: NavItem[] = [
   { id: 'home', name: 'Home', href: '/', icon: Home },
   { id: 'projects', name: 'Projects', href: '/projects', icon: Briefcase },
-  { id: 'contracts', name: 'Contracts', href: '/contracts', icon: FileText },
   { id: 'reviews', name: 'My Reviews', href: '/my-stage-reviews', icon: MessageSquare },
   { id: 'library', name: 'Library', href: '/library', icon: Library },
   { id: 'designer', name: 'Designer', href: '/designer', icon: Palette },
@@ -66,11 +64,6 @@ export default function NavRail() {
       return;
     }
     
-    // Handle contracts route
-    if (pathname?.startsWith('/contracts')) {
-      setActiveNav('contracts');
-      return;
-    }
     
     // Handle clients route (admin only)
     if (pathname?.startsWith('/clients')) {

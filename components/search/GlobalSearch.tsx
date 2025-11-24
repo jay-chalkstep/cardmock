@@ -6,7 +6,7 @@ import { Search, Loader2, Briefcase, Package, LayoutTemplate, Images, FileText, 
 
 interface SearchResult {
   id: string;
-  type: 'project' | 'brand' | 'template' | 'asset' | 'contract';
+  type: 'project' | 'brand' | 'template' | 'asset';
   title: string;
   subtitle?: string;
   url: string;
@@ -114,8 +114,6 @@ export default function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
         return <LayoutTemplate size={16} />;
       case 'asset':
         return <Images size={16} />;
-      case 'contract':
-        return <FileText size={16} />;
       default:
         return <Search size={16} />;
     }
@@ -142,7 +140,7 @@ export default function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search projects, brands, templates, assets, contracts..."
+            placeholder="Search projects, brands, templates, assets..."
             className="flex-1 outline-none text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)]"
           />
           {loading && <Loader2 size={16} className="animate-spin text-[var(--text-tertiary)]" />}
@@ -205,7 +203,7 @@ export default function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
           <div className="p-8 text-center text-[var(--text-secondary)]">
             <p>Start typing to search...</p>
             <p className="text-xs mt-2 text-[var(--text-tertiary)]">
-              Search across projects, brands, templates, assets, and contracts
+              Search across projects, brands, templates, and assets
             </p>
           </div>
         )}

@@ -13,12 +13,6 @@ export type NotificationType =
   | 'stage_progress'
   | 'final_approval'
   | 'changes_requested'
-  | 'contract_document_uploaded'
-  | 'contract_signature_requested'
-  | 'contract_signed'
-  | 'email_mockup_approval_requested'
-  | 'payment_method_approval_requested'
-  | 'amendment_created';
 
 export interface CreateNotificationParams {
   userId: string;
@@ -29,7 +23,6 @@ export interface CreateNotificationParams {
   linkUrl?: string;
   relatedAssetId?: string;
   relatedProjectId?: string;
-  relatedContractId?: string;
   metadata?: Record<string, any>;
 }
 
@@ -49,7 +42,6 @@ export async function createNotification(
       link_url: params.linkUrl,
       related_asset_id: params.relatedAssetId,
       related_project_id: params.relatedProjectId,
-      related_contract_id: params.relatedContractId,
       metadata: params.metadata || {},
       is_read: false,
     });
@@ -87,7 +79,6 @@ export async function createNotificationsForUsers(
   linkUrl?: string,
   relatedAssetId?: string,
   relatedProjectId?: string,
-  relatedContractId?: string,
   metadata?: Record<string, any>
 ): Promise<void> {
   const notifications = userIds.map((userId) => ({
@@ -99,7 +90,6 @@ export async function createNotificationsForUsers(
     link_url: linkUrl,
     related_asset_id: relatedAssetId,
     related_project_id: relatedProjectId,
-    related_contract_id: relatedContractId,
     metadata: metadata || {},
     is_read: false,
   }));

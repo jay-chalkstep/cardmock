@@ -23,7 +23,6 @@ import BrandCard from '@/components/brand/BrandCard';
 import BrandDetailModal from '@/components/brand/BrandDetailModal';
 import BrandPreview from '@/components/brand/BrandPreview';
 import TemplateUploadModal from '@/components/templates/TemplateUploadModal';
-import FigmaImportModal from '@/components/integrations/FigmaImportModal';
 import { Search, Plus, Loader2, Upload, Library, Package, LayoutTemplate, Images } from 'lucide-react';
 import { createFolder, renameFolder, deleteFolder } from '@/app/actions/folders';
 import { deleteAsset, moveAsset, updateAssetProject } from '@/app/actions/assets';
@@ -69,9 +68,6 @@ function LibraryPageContent() {
   const [templatesLoading, setTemplatesLoading] = useState(true);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 
-  // Figma import state
-  const [showFigmaImportModal, setShowFigmaImportModal] = useState(false);
-  const [isFigmaConnected, setIsFigmaConnected] = useState(false);
 
   // Folder state
   const [folders, setFolders] = useState<Folder[]>([]);
@@ -131,7 +127,6 @@ function LibraryPageContent() {
         fetchFolders();
         fetchAssets();
         fetchProjects();
-        checkFigmaConnection();
       } else if (activeTab === 'brands') {
         fetchBrands();
       } else if (activeTab === 'templates') {
@@ -140,20 +135,6 @@ function LibraryPageContent() {
     }
   }, [organization?.id, user?.id, activeTab]);
 
-  // Check Figma connection status
-  const checkFigmaConnection = async () => {
-    try {
-      const response = await fetch('/api/integrations/figma/status');
-      if (response.ok) {
-        const data = await response.json();
-        setIsFigmaConnected(data.data?.connected || false);
-      } else {
-        setIsFigmaConnected(false);
-      }
-    } catch (err) {
-      setIsFigmaConnected(false);
-    }
-  };
 
   // Filter assets
   useEffect(() => {
@@ -513,20 +494,6 @@ function LibraryPageContent() {
       {/* Tab-specific actions */}
       {activeTab === 'assets' && (
         <>
-          <button
-            onClick={() => {
-              if (!isFigmaConnected) {
-                showToast('Please connect Figma first in Settings → Integrations', 'error');
-                return;
-              }
-              setShowFigmaImportModal(true);
-            }}
-            className="w-full flex items-center gap-2 px-3 py-2 text-sm border border-[var(--border-main)] hover:bg-[var(--bg-hover)] rounded-lg transition-colors"
-            title={!isFigmaConnected ? 'Connect Figma in Settings → Integrations' : 'Import frames from Figma'}
-          >
-            <Images size={16} />
-            <span>Import from Figma</span>
-          </button>
           <button
             onClick={() => router.push('/designer')}
             className="w-full flex items-center gap-2 px-3 py-2 text-sm bg-[var(--accent-blue)] text-white hover:opacity-90 rounded-lg transition-opacity"
@@ -1057,18 +1024,6 @@ function LibraryPageContent() {
         />
       )}
 
-      {showFigmaImportModal && (
-        <FigmaImportModal
-          isOpen={showFigmaImportModal}
-          onClose={() => setShowFigmaImportModal(false)}
-          onImport={() => {
-            fetchAssets();
-            showToast('Figma frames imported successfully', 'success');
-          }}
-          projects={projects}
-          folders={folders}
-        />
-      )}
 
       {/* Toast Notifications */}
       <div className="fixed bottom-4 right-4 z-50 space-y-2">

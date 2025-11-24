@@ -7,7 +7,6 @@ import { Calendar, Download, Trash2 } from 'lucide-react';
 import AnnotationToolbar from '@/components/collaboration/AnnotationToolbar';
 import ApprovalStatusBanner from '@/components/approvals/ApprovalStatusBanner';
 import FinalApprovalBanner from '@/components/approvals/FinalApprovalBanner';
-import FigmaMetadataDisplay from '@/components/integrations/FigmaMetadataDisplay';
 import type { CardMockup, MockupStageProgressWithDetails, Project, Workflow, AssetApprovalSummary } from '@/lib/supabase';
 import type { AnnotationTool } from '@/app/(dashboard)/mockups/[id]/page';
 
@@ -143,10 +142,6 @@ export default function MockupDetailSidebar({
           </div>
         )}
 
-        {/* Figma Metadata Display */}
-        {mockup.figma_metadata && (
-          <FigmaMetadataDisplay metadata={mockup.figma_metadata} />
-        )}
 
         {/* Annotation Toolbar */}
         <div className="pt-4 border-t border-[var(--border-main)]">

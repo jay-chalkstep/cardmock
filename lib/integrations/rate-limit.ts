@@ -7,7 +7,6 @@ import { logger } from '@/lib/utils/logger';
 
 // Rate limit configuration per integration (requests per minute)
 const RATE_LIMITS: Record<string, { limit: number; windowMs: number }> = {
-  figma: { limit: 100, windowMs: 60 * 1000 }, // 100 requests per minute
   gmail: { limit: 20, windowMs: 60 * 1000 }, // 20 requests per minute
   slack: { limit: 50, windowMs: 60 * 1000 }, // 50 requests per minute
   drive: { limit: 100, windowMs: 60 * 1000 }, // 100 requests per minute

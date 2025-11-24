@@ -71,34 +71,6 @@ export function verifyGmailSignature(
   }
 }
 
-/**
- * Verify Figma webhook signature (if available)
- */
-export function verifyFigmaSignature(
-  payload: string,
-  signature: string
-): boolean {
-  try {
-    const secret = process.env.FIGMA_WEBHOOK_SECRET;
-    if (!secret) {
-      logger.warn('FIGMA_WEBHOOK_SECRET not configured');
-      return false;
-    }
-    
-    // Figma webhooks use HMAC-SHA256
-    const hmac = crypto.createHmac('sha256', secret);
-    hmac.update(payload);
-    const computedSignature = hmac.digest('hex');
-    
-    return crypto.timingSafeEqual(
-      Buffer.from(signature),
-      Buffer.from(computedSignature)
-    );
-  } catch (error) {
-    logger.error('Figma signature verification error', error);
-    return false;
-  }
-}
 
 /**
  * Verify generic HMAC signature

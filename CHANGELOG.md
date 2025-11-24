@@ -9,27 +9,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [4.1.8] - 2025-01-XX
 
-### 🔄 Changed
+### 🗑️ Removed
 
-#### Email Service - Error Handling and Logging
-- **Email Error Handling**: Improved email service error handling and logging
-  - `sendEmail` now throws errors instead of silently returning `false` when SendGrid API key is missing
-  - Added comprehensive logging throughout email sending process
-  - Better error messages with context (recipient, contract number, etc.)
-  - Per-recipient error handling in route-for-comment endpoint
-  - Detailed logging for document download and attachment creation
-  - Improved user feedback when emails fail to send
+#### Contract and Figma Integration Removal
+- **Contracts Module**: Removed all contract-related functionality
+  - Contract creation, management, and tracking
+  - Document versioning and routing
+  - Email mockups and payment methods
+  - Contract-project linking
+- **Figma Integration**: Removed all Figma integration features
+  - Figma plugin integration
+  - Frame import from Figma
+  - Comment and status sync
+  - Figma metadata display
 
-### 📝 Technical Details
+### ✅ Preserved
 
-- **Updated Files**:
-  - `lib/email/sendgrid.ts` - Added logging, throw errors instead of returning false
-  - `lib/email/contract-notifications.ts` - Added comprehensive logging and error handling
-  - `app/api/contracts/[id]/route-for-comment/route.ts` - Improved error handling with per-recipient tracking
-- **Improvements**:
-  - All email errors are now properly logged and surfaced to users
-  - Better debugging capabilities with detailed logging at each step
-  - Graceful handling of partial failures (some recipients succeed, others fail)
+#### Client Functionality
+- **Client Management**: All client functionality preserved
+  - Client database and CRUD operations
+  - Client hierarchy (parent/child relationships)
+  - Client-user associations
+  - Client-project relationships
+  - All `client_id` columns and relationships remain intact
+
+#### Approval Workflows
+- **Workflow System**: Fully preserved
+  - All workflow tables and stage progress tracking
+  - User-level approval system
+  - Approval notifications and email templates
+  - Stage-based reviewers and approval tracking
 
 ---
 

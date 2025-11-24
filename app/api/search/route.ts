@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 
 interface SearchResult {
   id: string;
-  type: 'project' | 'brand' | 'template' | 'asset' | 'contract';
+  type: 'project' | 'brand' | 'template' | 'asset';
   title: string;
   subtitle?: string;
   url: string;
@@ -16,8 +16,8 @@ interface SearchResult {
 
 /**
  * GET /api/search
- * Unified search across projects, brands, templates, assets, and contracts
- * Searches within document content (searchable_text) for contracts and assets
+ * Unified search across projects, brands, templates, and assets
+ * Searches within document content (searchable_text) for assets
  */
 export async function GET(request: NextRequest) {
   try {
@@ -113,26 +113,26 @@ export async function GET(request: NextRequest) {
     // Search assets (check both name, mockup_name, and searchable_text fields)
     let assetsQuery = supabase
       .from('assets')
-      .select('id, name, mockup_name, contract_id, searchable_text')
+      .select('id, name, mockup_name, searchable_text')
       .eq('organization_id', orgId)
       .or(`name.ilike.${searchTerm},mockup_name.ilike.${searchTerm},searchable_text.ilike.${searchTerm}`);
 
-    // For Client-role users: Filter assets by contract -> client
+    // For Client-role users: Filter assets by client_id via projects
     if (userIsClient) {
       const assignedClientId = await getUserAssignedClientId();
       if (assignedClientId) {
-        // Get all contracts for the assigned client
-        const { data: contracts } = await supabase
-          .from('contracts')
+        // Get all projects for the assigned client
+        const { data: projects } = await supabase
+          .from('projects')
           .select('id')
           .eq('client_id', assignedClientId)
           .eq('organization_id', orgId);
 
-        const contractIds = contracts?.map(c => c.id) || [];
-        if (contractIds.length > 0) {
-          assetsQuery = assetsQuery.in('contract_id', contractIds);
+        const projectIds = projects?.map(p => p.id) || [];
+        if (projectIds.length > 0) {
+          assetsQuery = assetsQuery.in('project_id', projectIds);
         } else {
-          // No contracts for this client - return no results
+          // No projects for this client - return no results
           assetsQuery = assetsQuery.eq('id', '00000000-0000-0000-0000-000000000000'); // Return no results
         }
       } else {
@@ -154,75 +154,8 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Search contracts (by contract number, title, description, and document content)
-    // First, get all contracts for the organization (with client filtering if needed)
-    let allContractsQuery = supabase
-      .from('contracts')
-      .select('id, contract_number, title, description, client_id')
-      .eq('organization_id', orgId);
-
-    // For Client-role users: Filter by their assigned client
-    if (userIsClient) {
-      const assignedClientId = await getUserAssignedClientId();
-      if (assignedClientId) {
-        allContractsQuery = allContractsQuery.eq('client_id', assignedClientId);
-      } else {
-        // Client-role user with no client assignment - skip contracts
-        allContractsQuery = allContractsQuery.eq('id', '00000000-0000-0000-0000-000000000000'); // Return no results
-      }
-    }
-
-    const { data: allContracts, error: allContractsError } = await allContractsQuery;
-
-    if (!allContractsError && allContracts && allContracts.length > 0) {
-      const allContractIds = allContracts.map(c => c.id);
-      const matchingContractIds = new Set<string>();
-
-      // Search contracts by metadata (contract_number, title, description)
-      allContracts.forEach((contract) => {
-        const contractNumberMatch = contract.contract_number?.toLowerCase().includes(query.toLowerCase());
-        const titleMatch = contract.title?.toLowerCase().includes(query.toLowerCase());
-        const descriptionMatch = contract.description?.toLowerCase().includes(query.toLowerCase());
-        
-        if (contractNumberMatch || titleMatch || descriptionMatch) {
-          matchingContractIds.add(contract.id);
-        }
-      });
-
-      // Search within contract documents' searchable_text
-      // Only search documents that have searchable_text populated
-      const { data: documents, error: documentsError } = await supabase
-        .from('contract_documents')
-        .select('contract_id, file_name, searchable_text')
-        .in('contract_id', allContractIds)
-        .not('searchable_text', 'is', null)
-        .ilike('searchable_text', searchTerm)
-        .eq('is_current', true)
-        .limit(20);
-
-      if (!documentsError && documents) {
-        // Add contract IDs from documents that match
-        documents.forEach((doc) => {
-          matchingContractIds.add(doc.contract_id);
-        });
-      }
-
-      // Add matching contracts to results
-      allContracts.forEach((contract) => {
-        if (matchingContractIds.has(contract.id)) {
-          results.push({
-            id: contract.id,
-            type: 'contract',
-            title: contract.contract_number,
-            subtitle: contract.title || 'Contract',
-            url: `/contracts/${contract.id}`,
-          });
-        }
-      });
-    }
-
-    // Sort results by type priority (projects, brands, contracts, assets, templates)
-    const typeOrder = { project: 0, brand: 1, contract: 2, asset: 3, template: 4 };
+    // Sort results by type priority (projects, brands, assets, templates)
+    const typeOrder = { project: 0, brand: 1, asset: 2, template: 3 };
     results.sort((a, b) => {
       const orderDiff = typeOrder[a.type] - typeOrder[b.type];
       if (orderDiff !== 0) return orderDiff;

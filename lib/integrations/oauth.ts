@@ -11,7 +11,7 @@ import { encryptCredentials, decryptCredentials } from './encryption';
 import { logger } from '@/lib/utils/logger';
 import { errorResponse, successResponse, badRequestResponse } from '@/lib/api/response';
 
-export type IntegrationType = 'figma' | 'gmail' | 'slack' | 'drive' | 'dropbox';
+export type IntegrationType = 'gmail' | 'slack' | 'drive' | 'dropbox';
 
 export interface OAuthConfig {
   clientId: string;
@@ -29,15 +29,6 @@ export function getOAuthConfig(integrationType: IntegrationType): OAuthConfig {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
   
   switch (integrationType) {
-    case 'figma':
-      return {
-        clientId: process.env.FIGMA_CLIENT_ID || '',
-        clientSecret: process.env.FIGMA_CLIENT_SECRET || '',
-        authorizationUrl: 'https://www.figma.com/oauth',
-        tokenUrl: 'https://www.figma.com/api/oauth/token',
-        redirectUri: `${baseUrl}/api/integrations/figma/callback`,
-        scopes: ['file_content:read', 'file_metadata:read'],
-      };
     case 'gmail':
       return {
         clientId: process.env.GMAIL_CLIENT_ID || '',
@@ -97,11 +88,9 @@ export function initiateOAuthFlow(
     state: generatedState,
   });
   
-  // Add scope parameter for all integrations (including Figma)
-  // Figma uses comma-separated scopes, other providers use space-separated
+  // Add scope parameter for all integrations
   if (config.scopes.length > 0) {
-    const scopeSeparator = integrationType === 'figma' ? ',' : ' ';
-    params.append('scope', config.scopes.join(scopeSeparator));
+    params.append('scope', config.scopes.join(' '));
   }
   
   // Add OAuth2-specific parameters only for Google-based integrations
@@ -344,7 +333,6 @@ export async function revokeOAuthToken(
       
       // Provider-specific revocation endpoints
       const revokeUrls: Record<IntegrationType, string> = {
-        figma: 'https://www.figma.com/api/oauth/revoke',
         gmail: 'https://oauth2.googleapis.com/revoke',
         slack: 'https://slack.com/api/auth.revoke',
         drive: 'https://oauth2.googleapis.com/revoke',

@@ -1,23 +1,19 @@
 # CardMock v4.1.0
 
-> Multi-tenant SaaS for brand asset management, collaborative mockup review, comprehensive contract management, and platform integrations
+> Multi-tenant SaaS for brand asset management, collaborative mockup review, and platform integrations
 
-A comprehensive platform for design teams, marketing departments, and agencies to search, organize, and collaborate on brand assets with real-time visual annotation, multi-stage approval workflows, project-based review management, full contract lifecycle management, and seamless integrations with Figma, Gmail, Slack, and cloud storage.
+A comprehensive platform for design teams, marketing departments, and agencies to search, organize, and collaborate on brand assets with real-time visual annotation, multi-stage approval workflows, project-based review management, and seamless integrations with Gmail, Slack, and cloud storage.
 
 ---
 
 ## 🎯 Overview
 
-**CardMock** is a full-featured brand asset management, collaboration, and contract management platform that enables teams to:
+**CardMock** is a full-featured brand asset management and collaboration platform that enables teams to:
 
 - 🔍 **Search & Save** company logos via Brandfetch API with automatic metadata extraction
 - 📁 **Organize** brand assets in personal and shared folder hierarchies
 - 📋 **Manage Projects** with client-based organization and workflow assignments
-- 📄 **Manage Contracts** - Complete contract lifecycle management with document versioning ⭐️ NEW
 - 👥 **Manage Clients** - Client database with full CRUD operations ⭐️ NEW
-- 📝 **Document Versioning** - Word document upload and version control with AI diff summaries ⭐️ NEW
-- ✉️ **Email Mockups** - Visual email template creation with client branding ⭐️ NEW
-- 💳 **Payment Methods** - Flexible payment method approval workflows ⭐️ NEW
 - 🔄 **Standardize Workflows** with reusable multi-stage approval templates
 - 🎨 **Design** professional mockups using an interactive canvas editor
 - 👥 **Collaborate** with visual annotations, comments, and structured review workflows
@@ -25,11 +21,11 @@ A comprehensive platform for design teams, marketing departments, and agencies t
 - 🔔 **Notifications** - In-app notification system for approvals, comments, and workflow updates
 - ⚙️ **Settings** - Comprehensive settings modal with preferences, account, and organization management
 - 📊 **Track** complete audit trail of edits, resolutions, and feedback history
-- 🔗 **Platform Integrations** - Seamless integrations with Figma, Gmail, Slack, Drive/Dropbox ⭐️ NEW
+- 🔗 **Platform Integrations** - Seamless integrations with Gmail, Slack, Drive/Dropbox
 - 🌐 **Public Share Pages** - Share assets with external reviewers without account creation ⭐️ NEW
 - 🎨 **Presentation Mode** - Side-by-side comparison and presentation tools for stakeholder reviews ⭐️ NEW
 
-Built for teams who need more than basic file storage—CardMock provides context-aware collaboration with visual feedback directly on mockup designs, organized by client projects with customizable approval workflows, comprehensive contract management for customer onboarding, and powerful integrations that bring approvals into existing design and communication tools.
+Built for teams who need more than basic file storage—CardMock provides context-aware collaboration with visual feedback directly on mockup designs, organized by client projects with customizable approval workflows, and powerful integrations that bring approvals into existing communication tools.
 
 ---
 
@@ -77,89 +73,19 @@ Built for teams who need more than basic file storage—CardMock provides contex
 - **Font Information** captured and stored
 - **Organization Scoping** for secure multi-tenant data isolation
 
-### Contract Management ⭐️ NEW in v4.0.0
-- **Client Management** - Full client database with contact information
+### Client Management
+- **Client Database** - Full client database with contact information
   - Client list page with search and filtering
-  - Client detail page with tabs (Overview, Contracts, Projects)
+  - Client detail page with tabs (Overview, Projects)
   - Create, edit, and delete clients
-- **Contract Creation** - Create new contracts and amendments
-- **Contract Deletion** - Delete contracts from list page (creator and admin only) ⭐️ NEW
-- **Contract Status Tracking** - Draft, pending signature, signed, amended, expired, voided
-- **Document Versioning** - Upload Word documents with automatic version control
-  - Upload, view, download, and delete documents
-  - Automatic version tracking with current version marking
-  - **Unified Versioning Service** - Centralized versioning logic ensures correct version numbering ⭐️ ENHANCED
-  - **Automatic Watermarking** - Previous versions automatically watermarked with "PREVIOUS VERSION" ⭐️ ENHANCED
-    - Watermarking happens synchronously before new version upload
-    - Improved watermark visibility (centered, rotated, larger text)
-    - Ensures previous versions are clearly marked
-    - Works with .docx files using JSZip library
-- **Version History** - Complete document version history with timestamps
-- **Overview Page** - Quick view table format with contract details ⭐️ ENHANCED
-  - Clean table layout showing all contract information at a glance
-  - Status badges with color coding
-  - Expandable AI summary and changelog sections
-- **Contracts List Page** - Enhanced with delete and AI summary preview ⭐️ NEW
-  - Delete button on each contract (visible to creator and admin only)
-  - Fourth panel displays AI summary when contract is selected
-  - Quick preview of contract summary without navigating to detail page
-  - Permission-based UI rendering
-- **Route for Comment** - Distribute contract versions to stakeholders ⭐️ NEW
-  - Route current contract versions via email or Slack
-  - Pre-configured recipient lists per contract
-  - Support for both email and Slack delivery methods
-  - Optional AI summary inclusion in routing messages
-  - Custom message support for personalized routing
-  - Document attachment in email notifications
-  - Complete routing history tracking
-  - Version owner tracking (CDCO's Version vs Client's Version)
-  - Version owner selector in document upload form
-  - Version owner badges displayed throughout UI
-- **AI Document Summaries** - AI-powered single-sentence document summaries ⭐️ ENHANCED
-  - Assumes contracts are between Choice Digital (CDCO) and a counterparty
-  - Focuses on document purpose and key changes
-  - Example: "This is an amendment to add checks to the Clearesult programs"
-- **AI Version Diff Summaries** - AI-powered single-sentence version change summaries ⭐️ ENHANCED
-  - Concise summaries of what changed between versions
-  - Examples: "This version makes changes to the limits of liability section, and removes the IP section" or "These versions appear to have no material differences"
-- **AI Contract Summary** - Comprehensive AI-generated contract summary on overview tab ⭐️ NEW
-  - Analyzes all contract documents to generate comprehensive summary
-  - Includes contract type, parties, terms, dates, obligations, and key clauses
-  - Properly formatted plain text display (no markdown artifacts)
-  - Persistent storage in database
-  - Expandable/collapsible display with generation timestamp
-- **AI Version Changelog** - Comprehensive AI-generated version changelog on overview tab ⭐️ NEW
-  - Aggregates all version-to-version changes across all documents
-  - Chronological changelog showing evolution of contract over time
-  - Persistent storage in database
-  - Expandable/collapsible display with generation timestamp
-- **DocuSign Integration** - E-signature workflow (placeholder for future implementation)
-- **Email Mockups** - Create and approve email templates with client branding
-  - Full-featured HTML editor with preview mode
-  - Variable insertion (client_name, activation_link, etc.)
-  - Client branding selector (colors, fonts, logos)
-  - Email mockup list and preview components
-- **Payment Methods** - Flexible payment method approval workflows
-  - Add, view, and delete payment methods
-  - Support for prepaid cards, checks, Amazon cards, and custom types
-- **Contract-Project Linking** - Link contracts to projects for organization
-- **Contract Detail View** - Comprehensive contract view with tabs for all related content
-  - Documents tab - Upload and manage contract documents
-  - Email Mockups tab - Create and manage email templates
-  - Payment Methods tab - Manage payment methods
-  - Assets tab - View linked assets
-  - Comments tab - Add and view contract comments (UI ready)
-- **Contract Notifications** - In-app and email notifications for contract events
-  - Notifications sent to organization members on contract creation
-  - Notifications sent on contract status changes
-  - Email notification templates ready for document uploads
+  - Client hierarchy support (parent/child relationships)
+  - Client-user associations for access control
 
 ### Project Management
 - **Client Projects** - Organize mockups by client, campaign, or initiative
 - **Project Status** - Active, Completed, or Archived status tracking
 - **Color Coding** - Custom color labels for visual organization (8 preset colors)
 - **Mockup Assignment** - Link mockups to projects for easy grouping
-- **Contract Linking** - Link projects to contracts for customer onboarding ⭐️ NEW
 - **Project Detail Pages** - Dedicated views with mockup galleries and search
 - **Thumbnail Previews** - Up to 4 mockup thumbnails on project cards
 - **Permission Controls** - Only creator or admin can edit/delete projects
@@ -239,17 +165,7 @@ Built for teams who need more than basic file storage—CardMock provides contex
 - **Real-Time Counts** on folders
 - **Search Within Folders** for scoped discovery
 
-### Platform Integrations ⭐️ NEW in v4.1.0
-- **Figma Plugin Integration** - Send Figma frames directly for approval
-  - Direct frame upload from Figma plugin
-  - **Import from Figma UI** - Browse and import frames directly from Library page ⭐️ NEW
-  - **Figma Status Badge** - Display approval status in asset lists ⭐️ NEW
-  - **Figma Metadata Display** - Show Figma file/node information in asset details ⭐️ NEW
-  - **Integrations Tab** - Centralized integration management in Settings ⭐️ NEW
-  - Real-time status sync (approved/pending/rejected)
-  - Comment sync between Figma and CardMock
-  - Automatic version detection
-  - Project mapping based on Figma file organization
+### Platform Integrations
 - **Public Share Pages** - External reviewers without accounts
   - JWT-based secure share links
   - Progressive identity capture (view → comment → approve)
@@ -308,7 +224,6 @@ Built for teams who need more than basic file storage—CardMock provides contex
 - **Email**: SendGrid 8.1.0 (review notifications)
 - **External APIs**:
   - Brandfetch (logo search)
-  - Figma API (plugin integration)
   - Gmail API (add-on integration)
   - Slack API (notifications and commands)
   - Google Drive API (import integration)
@@ -382,10 +297,6 @@ SENDGRID_FROM_EMAIL=noreply@yourdomain.com
 CLERK_WEBHOOK_SECRET=whsec_... # Get from Clerk Dashboard > Webhooks
 
 # Platform Integrations (optional)
-# Figma Integration
-FIGMA_CLIENT_ID=your_figma_client_id
-FIGMA_CLIENT_SECRET=your_figma_client_secret
-FIGMA_WEBHOOK_SECRET=your_figma_webhook_secret
 
 # Gmail Integration
 GMAIL_CLIENT_ID=your_gmail_client_id
@@ -637,10 +548,6 @@ Run these migrations **in order** in your Supabase SQL Editor:
    - Public reviewers identity capture
    - Public share analytics
 
-30. **`supabase/30_figma_integration.sql`** ⭐️ NEW in v4.1.0
-   - Figma OAuth credentials storage
-   - Figma sync events tracking
-   - Figma metadata on assets
 
 31. **`supabase/31_gmail_integration.sql`** ⭐️ NEW in v4.1.0
    - Gmail OAuth credentials storage
@@ -1018,7 +925,7 @@ See [CHANGELOG.md](./documentation/CHANGELOG.md) for detailed version history.
 - **v4.1.3** (2025-01-XX) - ✨ **NEW FEATURE** - Contracts Comprehensive AI Summaries - Comprehensive contract summaries and version changelogs on overview tab, persistent storage
 - **v4.1.2** (2025-01-XX) - 🔄 **IMPROVEMENT** - Contracts AI Summary Improvements - Tighter single-sentence summaries with CDCO context, optimized token usage
 - **v4.1.1** (2025-01-XX) - 🐛 **FIXES** - Projects Module Performance - Removed N+1 queries, optimized API endpoints, improved error handling
-- **v4.1.0** (2025-01-XX) - 🎉 **MAJOR FEATURE** - Platform Integrations - Figma plugin, public share pages, Gmail add-on, Slack integration, Drive/Dropbox import, presentation mode
+- **v4.1.0** (2025-01-XX) - 🎉 **MAJOR FEATURE** - Platform Integrations - Public share pages, Gmail add-on, Slack integration, Drive/Dropbox import, presentation mode
 - **v4.0.0** (2025-01-XX) - 🎉 **MAJOR RELEASE** - Contracts Module - Complete contract lifecycle management with document versioning, email mockups, payment methods
 - **v3.8.0** (2025-01-XX) - 🎉 **MAJOR FEATURE** - Notifications System & Settings Modal - In-app notifications with dropdown panel, comprehensive settings modal with preferences/account/org management, consolidated navigation
 - **v3.7.2** (2025-01-XX) - 🐛 **Critical Bugfixes** - Fixed annotation visibility issues by correcting coordinate transformation, and improved permission enforcement for annotations and comments

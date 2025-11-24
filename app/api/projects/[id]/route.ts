@@ -82,65 +82,6 @@ export async function GET(
       projectName: project.name
     });
 
-    // Fetch contract data separately if contract_id exists
-    // This avoids nested JOIN issues and RLS policy problems
-    let contractData = null;
-    if (project.contract_id) {
-      try {
-        // Fetch contract without nested JOINs
-        const { data: contract, error: contractError } = await supabaseServer
-          .from('contracts')
-          .select('*')
-          .eq('id', project.contract_id)
-          .eq('organization_id', orgId)
-          .single();
-
-        if (!contractError && contract) {
-          // Fetch client separately if contract has client_id
-          let clientData = null;
-          if (contract.client_id) {
-            try {
-              const { data: client, error: clientError } = await supabaseServer
-                .from('clients')
-                .select('id, name, email, phone')
-                .eq('id', contract.client_id)
-                .eq('organization_id', orgId)
-                .single();
-
-              if (!clientError && client) {
-                clientData = client;
-              }
-            } catch (clientErr) {
-              // Non-critical error - continue without client data
-              logger.warn('Client fetch error (non-critical)', {
-                projectId: id,
-                contractId: project.contract_id,
-                clientId: contract.client_id,
-                error: clientErr instanceof Error ? clientErr.message : String(clientErr)
-              });
-            }
-          }
-
-          contractData = {
-            ...contract,
-            client: clientData || null
-          };
-        } else {
-          logger.warn('Contract fetch failed (non-critical)', {
-            projectId: id,
-            contractId: project.contract_id,
-            error: contractError?.message
-          });
-        }
-      } catch (contractErr) {
-        // Non-critical error - continue without contract data
-        logger.warn('Contract fetch error (non-critical)', {
-          projectId: id,
-          contractId: project.contract_id,
-          error: contractErr instanceof Error ? contractErr.message : String(contractErr)
-        });
-      }
-    }
 
     // Fetch mockup count
     const { count } = await supabaseServer
@@ -167,7 +108,6 @@ export async function GET(
       project: {
         ...projectData,
         workflow: workflowData || null, // Rename to match Project interface
-        contract: contractData || null, // Include contract data (fetched separately)
         mockup_count: count || 0,
         mockup_previews: mockupPreviews || [],
       },
@@ -191,7 +131,6 @@ export async function GET(
  *   status?: 'active' | 'completed' | 'archived',
  *   color?: string,
  *   workflow_id?: string,
- *   contract_id?: string
  * }
  */
 export async function PATCH(
@@ -228,7 +167,7 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { name, client_id, client_name, description, status, color, workflow_id, contract_id } = body;
+    const { name, client_id, client_name, description, status, color, workflow_id } = body;
 
     // Prepare update data
     const updateData: any = {};
@@ -324,24 +263,6 @@ export async function PATCH(
       updateData.workflow_id = workflow_id;
     }
 
-    // Handle contract_id update
-    if (contract_id !== undefined) {
-      // Validate contract exists if not null
-      if (contract_id !== null) {
-        const { data: contract, error: contractError } = await supabaseServer
-          .from('contracts')
-          .select('id')
-          .eq('id', contract_id)
-          .eq('organization_id', orgId)
-          .single();
-
-        if (contractError || !contract) {
-          return notFoundResponse('Contract not found');
-        }
-      }
-
-      updateData.contract_id = contract_id;
-    }
 
     // Perform update
     const { data: updatedProject, error: updateError } = await supabaseServer

@@ -175,8 +175,7 @@ export default function MockupDetailPage({ params }: { params: { id: string } })
         .select(`
           *,
           logo:logo_variants(*),
-          template:templates(*),
-          figma_metadata
+          template:templates(*)
         `)
         .eq('id', params.id)
         .eq('organization_id', organization?.id)

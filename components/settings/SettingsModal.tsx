@@ -324,23 +324,6 @@ export default function SettingsModal({
                       Connect your favorite tools to streamline your workflow.
                     </p>
                     <div className="space-y-3">
-                      <button
-                        onClick={() => {
-                          onClose();
-                          router.push('/settings/integrations/figma');
-                        }}
-                        className="w-full p-4 rounded-lg border border-[var(--border-main)] hover:bg-[var(--bg-hover)] transition-colors text-left"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <div className="font-medium text-[var(--text-primary)]">Figma</div>
-                            <div className="text-sm text-[var(--text-secondary)] mt-1">
-                              Import frames directly from Figma and sync approval status
-                            </div>
-                          </div>
-                          <div className="text-[var(--accent-blue)]">→</div>
-                        </div>
-                      </button>
                       <div className="p-4 rounded-lg border border-gray-200 bg-gray-50 text-sm text-gray-600">
                         <div className="font-medium text-gray-700 mb-2">Coming Soon</div>
                         <div className="space-y-2 mt-2">
