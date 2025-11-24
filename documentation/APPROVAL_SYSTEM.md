@@ -423,14 +423,14 @@ This creates:
 - Enhanced existing functions
 - New enum values
 
-### 2. Configure SendGrid (if not already done)
+### 2. Configure Resend (if not already done)
 
 Set environment variables:
 
 ```env
-SENDGRID_API_KEY=SG.xxxxx
-SENDGRID_FROM_EMAIL=noreply@yourdomain.com
-SENDGRID_FROM_NAME=CardMock
+RESEND_API_KEY=re_xxxxx
+RESEND_FROM_EMAIL=noreply@yourdomain.com
+RESEND_FROM_NAME=CardMock
 ```
 
 ### 3. Verify Permissions
@@ -560,7 +560,7 @@ interface Asset {
 - Check `check_stage_approval_complete()` function
 
 ### Emails not sending
-- Verify SendGrid API key is configured
+- Verify Resend API key is configured
 - Check server logs for email errors
 - Ensure `NEXT_PUBLIC_APP_URL` is set correctly
 

@@ -32,7 +32,7 @@
    - Optional invitation message
    - Reviewer status tracking (pending → viewed → approved/changes_requested)
    - Approval/rejection with notes
-   - Email notifications via SendGrid
+   - Email notifications via Resend
 
 4. **Mockup Detail Page**
    - Three-panel layout: toolbar, canvas, sidebar
@@ -65,11 +65,11 @@
 - `app/api/comments/[id]/route.ts` - Update/delete comments (PATCH/DELETE)
 
 ### Email Integration
-- `lib/email/sendgrid.ts` - SendGrid client configuration
+- `lib/email/resend.ts` - Resend client configuration
 - `lib/email/collaboration.ts` - Review request email templates
 
 ### Modified Files (2 files)
-- `package.json` - Added @sendgrid/mail dependency
+- `package.json` - Added resend dependency
 - `app/(dashboard)/mockup-library/page.tsx` - Added "View Details" button
 
 ---
@@ -126,7 +126,7 @@
 npm install
 ```
 
-This will install the newly added `@sendgrid/mail` package.
+This will install the newly added `resend` package.
 
 ### Step 2: Run Database Migration
 
@@ -142,22 +142,22 @@ This will install the newly added `@sendgrid/mail` package.
 Add these to your `.env.local` file:
 
 ```env
-# SendGrid Email (optional but recommended)
-SENDGRID_API_KEY=SG.your_key_here
-SENDGRID_FROM_EMAIL=noreply@yourdomain.com
-SENDGRID_FROM_NAME=Asset Studio
+# Resend Email (optional but recommended)
+RESEND_API_KEY=re_your_key_here
+RESEND_FROM_EMAIL=noreply@yourdomain.com
+RESEND_FROM_NAME=Asset Studio
 
 # App URL (for email links)
 NEXT_PUBLIC_APP_URL=http://localhost:3000  # Or your production URL
 ```
 
-**SendGrid Setup** (optional for Day 1 testing):
-1. Go to https://sendgrid.com and create an account (free tier available)
-2. Create an API key with "Mail Send" permission
-3. Verify a sender email address in SendGrid settings
+**Resend Setup** (optional for Day 1 testing):
+1. Go to https://resend.com and create an account (free tier available)
+2. Create an API key with "Email Send" permission
+3. Verify a sender email address in Resend settings
 4. Add credentials to `.env.local`
 
-**Note**: If SendGrid is not configured, the app will still work but email notifications will be skipped with a console warning.
+**Note**: If Resend is not configured, the app will still work but email notifications will be skipped with a console warning.
 
 ### Step 4: Start Development Server
 
@@ -199,12 +199,12 @@ npm run dev
 6. **Expected**:
    - Modal closes
    - Reviewers appear in sidebar under "Reviewers" tab
-   - Email sent to each reviewer (if SendGrid configured)
+   - Email sent to each reviewer (if Resend configured)
 
 ### Test 4: Review as Invited User
 
 1. Log in as a different user (who was invited)
-2. Check email for review invitation (if SendGrid configured)
+2. Check email for review invitation (if Resend configured)
 3. Or manually navigate to `/mockups/{mockup-id}`
 4. Add annotations and comments
 5. Click "Approve" or "Request Changes" in reviewers section
@@ -415,10 +415,10 @@ Sarah (Creator)
 
 ### Issue: Email notifications not sending
 **Solution**:
-1. Check `SENDGRID_API_KEY` is set in `.env.local`
-2. Verify SendGrid sender email is verified
-3. Check server logs for SendGrid errors
-4. Emails will skip silently if SendGrid is not configured (intentional)
+1. Check `RESEND_API_KEY` is set in `.env.local`
+2. Verify Resend sender email is verified
+3. Check server logs for Resend errors
+4. Emails will skip silently if Resend is not configured (intentional)
 
 ### Issue: Canvas not rendering at correct size
 **Solution**: Clear browser cache. Ensure container element has proper dimensions. Check `canvasDimensions` state in MockupCanvas component.
@@ -429,7 +429,7 @@ Sarah (Creator)
 
 - **Backward Compatible**: All existing mockups work without migration. Comments and reviewers are optional features.
 - **Clerk Integration**: Uses existing Clerk auth and organization structure. No changes to auth flow.
-- **SendGrid Optional**: App works without SendGrid, but emails won't be sent.
+- **Resend Optional**: App works without Resend, but emails won't be sent.
 - **Next.js 15 Compatible**: All async params patterns implemented correctly.
 - **Real-Time Optional**: If Supabase Realtime is unavailable, manual refresh still works.
 

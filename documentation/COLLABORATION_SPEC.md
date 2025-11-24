@@ -571,7 +571,7 @@ const { count } = await supabase
 
 #### 5.1 Email Notifications (Optional for MVP)
 
-**If you have Resend/SendGrid set up, send emails for**:
+**If you have Resend set up, send emails for**:
 1. New review request
 2. New comment on your mockup
 3. Reviewer approved/requested changes
@@ -846,7 +846,7 @@ return () => {
 
 ## Questions to Answer Before Starting
 
-1. **Email Service**: Do you have Resend, SendGrid, or similar set up? Or should we skip email notifications for MVP?
+1. **Email Service**: Do you have Resend set up? Or should we skip email notifications for MVP?
 
 2. **Existing Components**: Do you already have a mockup detail page? Or are mockups currently just shown in a grid?
 

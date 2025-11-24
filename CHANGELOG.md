@@ -92,7 +92,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `GET /api/contracts/[id]/routing-history` - Fetch routing history
   - `GET /api/integrations/slack/channels` - Fetch Slack channels
 - **Email Integration**:
-  - Enhanced SendGrid utility to support attachments
+  - Enhanced Resend utility to support attachments
   - New `sendContractRoutedForComment()` function
   - Document attachment from Supabase Storage
   - Rich HTML email templates with version owner indicators
@@ -1512,7 +1512,7 @@ supabase/fix_approval_counts.sql
 
 1. Run migration 18 in Supabase
 2. Run fix_approval_counts.sql for existing assets
-3. Configure SendGrid (email notifications)
+3. Configure Resend (email notifications)
 4. Deploy to Vercel (environment variables required)
 5. Test complete approval workflow end-to-end
 
@@ -1526,7 +1526,7 @@ supabase/fix_approval_counts.sql
 ### Known Issues
 
 - Existing assets show "0 of 0 approved" until fix_approval_counts.sql is run
-- Email notifications require SendGrid API key configuration
+- Email notifications require Resend API key configuration
 - Final approval only available to project creator or org admin
 
 ---
@@ -2754,7 +2754,7 @@ This release transforms workflow templates from static configurations into a ful
   - Numbered comments linked to annotations
   - Color picker and stroke width controls
   - Review request workflow
-  - Email notifications via SendGrid
+  - Email notifications via Resend
 - **Review Workflow**
   - Request feedback from organization members
   - Review status tracking
@@ -2776,7 +2776,7 @@ This release transforms workflow templates from static configurations into a ful
 - Tailwind CSS 4
 - Supabase PostgreSQL + Storage
 - Konva.js for canvas rendering
-- SendGrid for emails
+- Resend for emails
 - 6 initial database migrations
 
 ---

@@ -140,7 +140,7 @@ Built for teams who need more than basic file storage—CardMock provides contex
 ### Review Workflow
 - **Request Feedback** from organization members
 - **Multi-Select Reviewers** with optional invitation message
-- **Email Notifications** via SendGrid
+- **Email Notifications** via Resend
 - **Review Status Tracking** (pending → viewed → approved/changes_requested)
 - **Approval/Rejection** with notes
 - **Reviewer Dashboard** showing all pending reviews
@@ -221,7 +221,7 @@ Built for teams who need more than basic file storage—CardMock provides contex
 - **Database**: Supabase PostgreSQL 2.75.0
 - **Storage**: Supabase Storage (3 buckets: logos, templates, mockups)
 - **Realtime**: Supabase Realtime (for collaboration updates)
-- **Email**: SendGrid 8.1.0 (review notifications)
+- **Email**: Resend 4.0.0 (review notifications)
 - **External APIs**:
   - Brandfetch (logo search)
   - Gmail API (add-on integration)
@@ -244,7 +244,7 @@ Built for teams who need more than basic file storage—CardMock provides contex
 - Supabase account (free tier works)
 - Clerk account (free tier works)
 - Brandfetch API key
-- SendGrid API key (optional, for email notifications)
+- Resend API key (optional, for email notifications)
 
 ### Installation
 
@@ -289,9 +289,9 @@ SUPABASE_SERVICE_ROLE_KEY=eyJhbGci... # For API routes
 # Brandfetch API (get from https://brandfetch.com)
 NEXT_PUBLIC_BRANDFETCH_API_KEY=your_brandfetch_key
 
-# SendGrid (optional, for email notifications)
-SENDGRID_API_KEY=SG.your_sendgrid_key
-SENDGRID_FROM_EMAIL=noreply@yourdomain.com
+# Resend (optional, for email notifications)
+RESEND_API_KEY=re_your_resend_key
+RESEND_FROM_EMAIL=noreply@yourdomain.com
 
 # Clerk Webhook (for user/client assignment automation)
 CLERK_WEBHOOK_SECRET=whsec_... # Get from Clerk Dashboard > Webhooks
@@ -708,7 +708,7 @@ asset-studio/
 │   │   ├── client.ts               # Browser client
 │   │   └── server.ts               # Server client (service role)
 │   ├── email/                       # Email integration
-│   │   ├── sendgrid.ts             # SendGrid config
+│   │   ├── resend.ts               # Resend config
 │   │   ├── collaboration.ts         # Collaboration email templates
 │   │   ├── stage-notifications.ts   # Stage workflow emails
 │   │   └── approval-notifications.ts # ⭐️ NEW: User-level approval emails
@@ -815,7 +815,7 @@ npm run lint       # Run ESLint
 2. Invite multiple test users
 3. Create a mockup and request feedback
 4. Test annotation tools, comments, and resolution workflow
-5. Verify email notifications (if SendGrid configured)
+5. Verify email notifications (if Resend configured)
 
 ---
 
@@ -857,8 +857,8 @@ SUPABASE_SERVICE_ROLE_KEY
 NEXT_PUBLIC_BRANDFETCH_API_KEY
 
 # Email (optional)
-SENDGRID_API_KEY
-SENDGRID_FROM_EMAIL
+RESEND_API_KEY
+RESEND_FROM_EMAIL
 ```
 
 #### Step 3: Deploy
@@ -997,7 +997,7 @@ Built with:
 - [Supabase](https://supabase.com/) for database & storage
 - [Konva.js](https://konvajs.org/) for canvas rendering
 - [Brandfetch](https://brandfetch.com/) for logo data
-- [SendGrid](https://sendgrid.com/) for email delivery
+- [Resend](https://resend.com/) for email delivery
 - [Claude Code](https://claude.com/claude-code) as AI development partner
 
 ---

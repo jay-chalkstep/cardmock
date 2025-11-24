@@ -1,4 +1,4 @@
-import { sendEmail } from './sendgrid';
+import { sendEmail } from './resend';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 

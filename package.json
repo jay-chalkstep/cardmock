@@ -11,7 +11,7 @@
   "dependencies": {
     "@clerk/nextjs": "^6.33.7",
     "@clerk/themes": "^2.4.28",
-    "@sendgrid/mail": "^8.1.0",
+    "resend": "^4.0.0",
     "@supabase/supabase-js": "^2.75.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.10",
