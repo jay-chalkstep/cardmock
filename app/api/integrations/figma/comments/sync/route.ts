@@ -1,6 +1,6 @@
 /**
  * POST /api/integrations/figma/comments/sync
- * Sync comments between Figma and Aiproval
+ * Sync comments between Figma and CardMock
  */
 
 import { NextRequest } from 'next/server';
@@ -15,7 +15,7 @@ export const dynamic = 'force-dynamic';
 
 /**
  * POST /api/integrations/figma/comments/sync
- * Sync comments bidirectionally between Figma and Aiproval
+ * Sync comments bidirectionally between Figma and CardMock
  */
 export async function POST(request: NextRequest) {
   try {
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     const { userId, orgId } = authResult;
     
     const body = await request.json();
-    const { assetId, direction = 'both' } = body; // 'figma_to_aiproval', 'aiproval_to_figma', 'both'
+    const { assetId, direction = 'both' } = body; // 'figma_to_cardmock', 'cardmock_to_figma', 'both'
     
     if (!assetId) {
       return badRequestResponse('Asset ID is required');
@@ -56,8 +56,8 @@ export async function POST(request: NextRequest) {
       figma_file_url: string;
     };
     
-    // Get Aiproval comments for this asset
-    const { data: aiprovalComments } = await supabaseServer
+    // Get CardMock comments for this asset
+    const { data: cardmockComments } = await supabaseServer
       .from('mockup_comments')
       .select('*')
       .eq('mockup_id', assetId)
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
     // TODO: Implement actual Figma API calls to sync comments
     // This is a placeholder - actual implementation would:
     // 1. Fetch comments from Figma API
-    // 2. Compare with Aiproval comments
+    // 2. Compare with CardMock comments
     // 3. Create missing comments in both systems
     // 4. Update existing comments if needed
     
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
       'figma',
       orgId,
       'comment_sync',
-      { assetId, direction, commentCount: aiprovalComments?.length || 0 },
+      { assetId, direction, commentCount: cardmockComments?.length || 0 },
       'success'
     );
     
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
     return successResponse({
       synced: true,
       direction,
-      aiprovalCommentCount: aiprovalComments?.length || 0,
+      cardmockCommentCount: cardmockComments?.length || 0,
     });
   } catch (error) {
     return errorResponse(error, 'Failed to sync Figma comments');

@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to Aiproval will be documented in this file.
+All notable changes to CardMock will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -248,7 +248,7 @@ No schema changes in this release. All features use existing tables with proper 
 
 ### 🤖 AI-Powered Features (Phase 1)
 
-This release introduces comprehensive AI capabilities to Aiproval, enabling automated visual analysis, semantic search, accessibility checking, and intelligent organization suggestions.
+This release introduces comprehensive AI capabilities to CardMock, enabling automated visual analysis, semantic search, accessibility checking, and intelligent organization suggestions.
 
 ### ✨ Added
 
@@ -696,7 +696,7 @@ Future enhancements planned for Projects:
 
 ### 🎨 UI Enhancements & Rebranding
 
-This release introduces a collapsible sidebar for maximum canvas space and rebrands the platform to **Aiproval** with an emphasis on collaboration and validation workflows.
+This release introduces a collapsible sidebar for maximum canvas space and rebrands the platform to **CardMock** with an emphasis on collaboration and validation workflows.
 
 ### ✨ Added
 
@@ -710,8 +710,8 @@ This release introduces a collapsible sidebar for maximum canvas space and rebra
 - **Dynamic Layouts**: Dashboard and root layouts adjust margins based on sidebar state
 - **Default Collapsed**: Sidebar defaults to collapsed for maximum canvas space
 
-#### Rebranding to Aiproval
-- **New Name**: Rebranded from "Asset Studio" to "Aiproval"
+#### Rebranding to CardMock
+- **New Name**: Rebranded from "Asset Studio" to "CardMock"
 - **New Tagline**: "Collaborate and Validate"
 - **Clickable Branding**: Header and sidebar branding link to homepage
 - **Updated Copy**: Emphasis on collaboration and validation workflows
@@ -731,7 +731,7 @@ This release introduces a collapsible sidebar for maximum canvas space and rebra
 - `lib/contexts/SidebarContext.tsx` - Sidebar state management with localStorage
 
 **Modified Files**:
-- `components/Header.tsx` - Aiproval branding + clickable homepage link
+- `components/Header.tsx` - CardMock branding + clickable homepage link
 - `components/SidebarSimple.tsx` - Collapsible UI logic + tooltips
 - `app/layout.tsx` - SidebarProvider wrapper
 - `app/(dashboard)/layout.tsx` - Dynamic margin logic based on sidebar state
@@ -1054,7 +1054,7 @@ Potential features for the next release:
 
 ## Project Overview
 
-**Aiproval** (formerly Asset Studio / Logo Finder) is a comprehensive collaboration and validation platform for design review and approval workflows. Built for design teams, marketing departments, and agencies who need to:
+**CardMock** (formerly Asset Studio / Logo Finder) is a comprehensive collaboration and validation platform for design review and approval workflows. Built for design teams, marketing departments, and agencies who need to:
 
 - **Search & Save**: Find company logos via Brandfetch API and save to personal library
 - **Organize**: Manage brand assets with full color and font metadata
@@ -1085,7 +1085,7 @@ Potential features for the next release:
 
 - **v2.4.0** (2025-01-25) - Workflow Templates System (Phase 2), Mockup Assignment UI, Bug Fixes
 - **v2.3.0** (2025-01-24) - Projects Feature (Phase 1) - Client Engagement Organization
-- **v2.2.0** (2025-01-24) - Collapsible Sidebar UI, Aiproval Rebranding
+- **v2.2.0** (2025-01-24) - Collapsible Sidebar UI, CardMock Rebranding
 - **v2.1.0** (2025-01-23) - Collaboration Enhancements, Visual Linking
 - **v2.0.0** (2025-01-22) - Folder Organization System, Next.js 15, Mobile UX
 - **v1.1.0** (2024-10-21) - Organization-scoped data, multi-tenancy
@@ -1106,10 +1106,10 @@ When submitting changes:
 
 ## Links
 
-- **Repository**: https://github.com/jay-chalkstep/contentpackage
-- **Issue Tracker**: https://github.com/jay-chalkstep/contentpackage/issues
+- **Repository**: https://github.com/jay-chalkstep/cardmock
+- **Issue Tracker**: https://github.com/jay-chalkstep/cardmock/issues
 - **Documentation**: See README.md and SETUP_GUIDE.md
 
 ---
 
-*Maintained by the Aiproval team*
+*Maintained by the CardMock team*

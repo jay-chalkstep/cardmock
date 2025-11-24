@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to **Aiproval** will be documented in this file.
+All notable changes to **CardMock** will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -369,7 +369,7 @@ Complete platform integration system bringing approvals into existing design and
   - OAuth 2.0 authentication with Figma
   - Direct frame upload from Figma plugin
   - Real-time status sync (approved/pending/rejected)
-  - Comment sync between Figma and Aiproval (bidirectional)
+  - Comment sync between Figma and CardMock (bidirectional)
   - Automatic version detection
   - Project mapping based on Figma file organization
   - Figma metadata storage (file_id, node_ids, file_url, version_key)
@@ -426,9 +426,9 @@ Complete platform integration system bringing approvals into existing design and
     - Comments/feedback
     - Final approvals
   - Slash commands:
-    - `/aiproval status [project]` - Check approval status
-    - `/aiproval pending` - List pending reviews
-    - `/aiproval share [mockup]` - Share for quick feedback
+    - `/cardmock status [project]` - Check approval status
+    - `/cardmock pending` - List pending reviews
+    - `/cardmock share [mockup]` - Share for quick feedback
   - Interactive message buttons (Approve/Request Changes/View Details)
   - Daily/weekly digest summaries
   - Channel-based project mapping
@@ -440,7 +440,7 @@ Complete platform integration system bringing approvals into existing design and
   - Mapping rules:
     - Level 1 folders → Clients
     - Level 2 folders → Projects
-    - Level 3+ folders → Aiproval folders
+    - Level 3+ folders → CardMock folders
     - File naming patterns → Asset metadata
     - Modified dates → Version history
   - Duplicate detection
@@ -2627,7 +2627,7 @@ This release transforms workflow templates from static configurations into a ful
 - **Collapsible Sidebar** with expand/collapse functionality
 - Sidebar state persistence using React Context
 - Mobile-responsive navigation with slide-out behavior
-- **Aiproval Rebranding**
+- **CardMock Rebranding**
   - Updated app name throughout codebase
   - Refreshed color scheme and branding
   - Updated email templates with new branding
@@ -2783,4 +2783,4 @@ This release transforms workflow templates from static configurations into a ful
 
 ---
 
-For more information, see [README.md](README.md) or visit the [GitHub repository](https://github.com/jay-chalkstep/contentpackage).
+For more information, see [README.md](README.md) or visit the [GitHub repository](https://github.com/jay-chalkstep/cardmock).

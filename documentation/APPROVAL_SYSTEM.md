@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Aiproval platform features a comprehensive user-level approval tracking system that ensures all assigned reviewers approve assets before they advance through workflow stages. This system provides granular approval tracking, progress visibility, and project owner final sign-off.
+The CardMock platform features a comprehensive user-level approval tracking system that ensures all assigned reviewers approve assets before they advance through workflow stages. This system provides granular approval tracking, progress visibility, and project owner final sign-off.
 
 ## Key Features
 
@@ -430,7 +430,7 @@ Set environment variables:
 ```env
 SENDGRID_API_KEY=SG.xxxxx
 SENDGRID_FROM_EMAIL=noreply@yourdomain.com
-SENDGRID_FROM_NAME=Aiproval
+SENDGRID_FROM_NAME=CardMock
 ```
 
 ### 3. Verify Permissions
@@ -606,4 +606,4 @@ For questions or issues with the approval system:
 
 ---
 
-Generated as part of Aiproval's user-level approval system implementation.
+Generated as part of CardMock's user-level approval system implementation.

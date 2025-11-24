@@ -8,7 +8,7 @@ import { cookies } from 'next/headers';
 import { supabaseServer } from '@/lib/supabase-server';
 import { logger } from '@/lib/utils/logger';
 
-const SESSION_COOKIE_NAME = 'aiproval_public_session';
+const SESSION_COOKIE_NAME = 'cardmock_public_session';
 const SESSION_DURATION_DAYS = 30;
 
 export interface PublicReviewerSession {

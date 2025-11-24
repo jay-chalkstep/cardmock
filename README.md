@@ -1,4 +1,4 @@
-# Aiproval v4.1.0
+# CardMock v4.1.0
 
 > Multi-tenant SaaS for brand asset management, collaborative mockup review, comprehensive contract management, and platform integrations
 
@@ -8,7 +8,7 @@ A comprehensive platform for design teams, marketing departments, and agencies t
 
 ## 🎯 Overview
 
-**Aiproval** is a full-featured brand asset management, collaboration, and contract management platform that enables teams to:
+**CardMock** is a full-featured brand asset management, collaboration, and contract management platform that enables teams to:
 
 - 🔍 **Search & Save** company logos via Brandfetch API with automatic metadata extraction
 - 📁 **Organize** brand assets in personal and shared folder hierarchies
@@ -29,7 +29,7 @@ A comprehensive platform for design teams, marketing departments, and agencies t
 - 🌐 **Public Share Pages** - Share assets with external reviewers without account creation ⭐️ NEW
 - 🎨 **Presentation Mode** - Side-by-side comparison and presentation tools for stakeholder reviews ⭐️ NEW
 
-Built for teams who need more than basic file storage—Aiproval provides context-aware collaboration with visual feedback directly on mockup designs, organized by client projects with customizable approval workflows, comprehensive contract management for customer onboarding, and powerful integrations that bring approvals into existing design and communication tools.
+Built for teams who need more than basic file storage—CardMock provides context-aware collaboration with visual feedback directly on mockup designs, organized by client projects with customizable approval workflows, comprehensive contract management for customer onboarding, and powerful integrations that bring approvals into existing design and communication tools.
 
 ---
 
@@ -247,7 +247,7 @@ Built for teams who need more than basic file storage—Aiproval provides contex
   - **Figma Metadata Display** - Show Figma file/node information in asset details ⭐️ NEW
   - **Integrations Tab** - Centralized integration management in Settings ⭐️ NEW
   - Real-time status sync (approved/pending/rejected)
-  - Comment sync between Figma and Aiproval
+  - Comment sync between Figma and CardMock
   - Automatic version detection
   - Project mapping based on Figma file organization
 - **Public Share Pages** - External reviewers without accounts
@@ -266,7 +266,7 @@ Built for teams who need more than basic file storage—Aiproval provides contex
   - Thread tracking (link emails to assets)
 - **Slack Integration** - Real-time notifications and quick actions
   - Real-time notifications for approval requests, stage progression, comments
-  - Slash commands (`/aiproval status`, `/aiproval pending`, `/aiproval share`)
+  - Slash commands (`/cardmock status`, `/cardmock pending`, `/cardmock share`)
   - Interactive message buttons (Approve/Request Changes/View Details)
   - Daily/weekly digest summaries
   - Channel-based project mapping
@@ -335,8 +335,8 @@ Built for teams who need more than basic file storage—Aiproval provides contex
 
 ```bash
 # Clone the repository
-git clone https://github.com/jay-chalkstep/contentpackage.git
-cd contentpackage
+git clone https://github.com/jay-chalkstep/cardmock.git
+cd cardmock
 
 # Install dependencies
 npm install
@@ -916,7 +916,7 @@ npm run lint       # Run ESLint
 
 ### Deploy to Vercel
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/jay-chalkstep/contentpackage)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/jay-chalkstep/cardmock)
 
 #### Step 1: Connect Repository
 1. Click the deploy button above
@@ -1069,8 +1069,8 @@ Add admin-level ability to assign client/project visibility, allowing granular c
 
 ## 🔗 Links & Resources
 
-- **Repository**: [https://github.com/jay-chalkstep/contentpackage](https://github.com/jay-chalkstep/contentpackage)
-- **Issue Tracker**: [GitHub Issues](https://github.com/jay-chalkstep/contentpackage/issues)
+- **Repository**: [https://github.com/jay-chalkstep/cardmock](https://github.com/jay-chalkstep/cardmock)
+- **Issue Tracker**: [GitHub Issues](https://github.com/jay-chalkstep/cardmock/issues)
 - **Documentation**: [./documentation](./documentation)
 - **Changelog**: [CHANGELOG.md](./documentation/CHANGELOG.md)
 
@@ -1095,4 +1095,4 @@ Built with:
 
 ---
 
-**Aiproval** - Professional brand asset management and collaborative mockup review platform
+**CardMock** - Professional brand asset management and collaborative mockup review platform

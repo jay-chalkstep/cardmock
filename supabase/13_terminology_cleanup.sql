@@ -335,4 +335,4 @@ VALUES (
 -- ============================================================================
 
 COMMENT ON SCHEMA public IS
-  'Aiproval v3.5.0 - Modernized terminology: assets (brand applications) and templates (design starting points)';
+  'CardMock v3.5.0 - Modernized terminology: assets (brand applications) and templates (design starting points)';

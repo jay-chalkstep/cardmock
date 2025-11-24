@@ -78,5 +78,5 @@ VALUES (
 -- ============================================================================
 
 COMMENT ON SCHEMA public IS
-  'Aiproval v3.7.0 - AI features removed for simplification';
+  'CardMock v3.7.0 - AI features removed for simplification';
 

@@ -61,11 +61,11 @@ export async function POST(request: NextRequest) {
           replace_original: true,
         });
       } else if (actionType === 'view') {
-        // Return link to view in Aiproval
+        // Return link to view in CardMock
         const viewUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/mockups/${assetId}`;
         return successResponse({
           response_type: 'ephemeral',
-          text: `View in Aiproval: ${viewUrl}`,
+          text: `View in CardMock: ${viewUrl}`,
         });
       }
     }

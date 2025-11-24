@@ -1,4 +1,4 @@
-# Aiproval v3.5.0 - Modernization & Consistency Overhaul Plan
+# CardMock v3.5.0 - Modernization & Consistency Overhaul Plan
 
 **Date Created:** 2025-10-28
 **Current Version:** v3.4.1
@@ -906,7 +906,7 @@ Complete terminology standardization and Next.js 15 modernization.
 
 **Create TERMINOLOGY_GUIDE.md:**
 ```markdown
-# Aiproval Terminology Guide
+# CardMock Terminology Guide
 
 This guide ensures consistent terminology across the codebase and UI.
 
@@ -1048,7 +1048,7 @@ This guide ensures consistent terminology across the codebase and UI.
 **Update package.json:**
 ```json
 {
-  "name": "aiproval",
+  "name": "cardmock",
   "version": "3.5.0",
   "description": "Brand asset management and collaborative review platform"
 }

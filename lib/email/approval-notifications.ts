@@ -158,7 +158,7 @@ export async function sendUserApprovalNotification({
       </div>
 
       <div class="footer">
-        <p>© ${new Date().getFullYear()} Aiproval. All rights reserved.</p>
+        <p>© ${new Date().getFullYear()} CardMock. All rights reserved.</p>
         <p>Powered by Choice Digital</p>
       </div>
     </body>
@@ -184,7 +184,7 @@ Your review is still pending. Please review when you have a chance.
 Review mockup here: ${mockupUrl}
 
 ---
-© ${new Date().getFullYear()} Aiproval
+© ${new Date().getFullYear()} CardMock
 Powered by Choice Digital
   `;
 
@@ -346,7 +346,7 @@ export async function sendStageCompleteNotification({
       </div>
 
       <div class="footer">
-        <p>© ${new Date().getFullYear()} Aiproval. All rights reserved.</p>
+        <p>© ${new Date().getFullYear()} CardMock. All rights reserved.</p>
         <p>Powered by Choice Digital</p>
       </div>
     </body>
@@ -370,7 +370,7 @@ All reviewers from the previous stage have approved. It's now ready for your rev
 Review mockup here: ${mockupUrl}
 
 ---
-© ${new Date().getFullYear()} Aiproval
+© ${new Date().getFullYear()} CardMock
 Powered by Choice Digital
   `;
 
@@ -531,7 +531,7 @@ export async function sendFinalApprovalNeededNotification({
       </div>
 
       <div class="footer">
-        <p>© ${new Date().getFullYear()} Aiproval. All rights reserved.</p>
+        <p>© ${new Date().getFullYear()} CardMock. All rights reserved.</p>
         <p>Powered by Choice Digital</p>
       </div>
     </body>
@@ -557,7 +557,7 @@ As the project owner, you have the final say. Please review the asset and provid
 Give final approval here: ${mockupUrl}
 
 ---
-© ${new Date().getFullYear()} Aiproval
+© ${new Date().getFullYear()} CardMock
 Powered by Choice Digital
   `;
 
@@ -729,7 +729,7 @@ export async function sendFinalApprovalCompleteNotification({
       </div>
 
       <div class="footer">
-        <p>© ${new Date().getFullYear()} Aiproval. All rights reserved.</p>
+        <p>© ${new Date().getFullYear()} CardMock. All rights reserved.</p>
         <p>Powered by Choice Digital</p>
       </div>
     </body>
@@ -760,7 +760,7 @@ View approved asset here: ${mockupUrl}
 Congratulations on completing the approval process! This asset can now be downloaded and used with confidence.
 
 ---
-© ${new Date().getFullYear()} Aiproval
+© ${new Date().getFullYear()} CardMock
 Powered by Choice Digital
   `;
 

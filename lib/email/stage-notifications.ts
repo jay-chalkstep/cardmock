@@ -133,7 +133,7 @@ export async function sendStageReviewNotification({
       </div>
 
       <div class="footer">
-        <p>© ${new Date().getFullYear()} Aiproval. All rights reserved.</p>
+        <p>© ${new Date().getFullYear()} CardMock. All rights reserved.</p>
         <p>Powered by Choice Digital</p>
       </div>
     </body>
@@ -157,7 +157,7 @@ Please review the mockup and either approve it to move forward or request change
 Review mockup here: ${mockupUrl}
 
 ---
-© ${new Date().getFullYear()} Aiproval
+© ${new Date().getFullYear()} CardMock
 Powered by Choice Digital
   `;
 
@@ -324,7 +324,7 @@ export async function sendChangesRequestedNotification({
       </div>
 
       <div class="footer">
-        <p>© ${new Date().getFullYear()} Aiproval. All rights reserved.</p>
+        <p>© ${new Date().getFullYear()} CardMock. All rights reserved.</p>
         <p>Powered by Choice Digital</p>
       </div>
     </body>
@@ -350,7 +350,7 @@ ${notes ? `Feedback: "${notes}"` : ''}
 View mockup and feedback here: ${mockupUrl}
 
 ---
-© ${new Date().getFullYear()} Aiproval
+© ${new Date().getFullYear()} CardMock
 Powered by Choice Digital
   `;
 
@@ -490,7 +490,7 @@ export async function sendAllStagesApprovedNotification({
       </div>
 
       <div class="footer">
-        <p>© ${new Date().getFullYear()} Aiproval. All rights reserved.</p>
+        <p>© ${new Date().getFullYear()} CardMock. All rights reserved.</p>
         <p>Powered by Choice Digital</p>
       </div>
     </body>
@@ -513,7 +513,7 @@ Great work! Your mockup has successfully passed through the entire approval work
 View approved mockup here: ${mockupUrl}
 
 ---
-© ${new Date().getFullYear()} Aiproval
+© ${new Date().getFullYear()} CardMock
 Powered by Choice Digital
   `;
 

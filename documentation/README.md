@@ -1,4 +1,4 @@
-# Aiproval v3.5.1
+# CardMock v3.5.1
 
 > Collaborate and Validate - Multi-tenant platform for design review and approval workflows
 
@@ -8,7 +8,7 @@ A comprehensive platform for design teams, marketing departments, and agencies t
 
 ## 🎯 Overview
 
-**Aiproval** is a full-featured collaboration and validation platform that enables teams to:
+**CardMock** is a full-featured collaboration and validation platform that enables teams to:
 
 - 🔍 **Search & Save** company logos via Brandfetch API with automatic metadata extraction
 - 📁 **Organize** brand assets in personal and shared folder hierarchies
@@ -18,7 +18,7 @@ A comprehensive platform for design teams, marketing departments, and agencies t
 - ✅ **Review & Approve** mockups with approval tracking and email notifications
 - 📊 **Track** complete audit trail of edits, resolutions, and feedback history
 
-Built for teams who need more than basic file storage—Aiproval provides context-aware collaboration with visual feedback directly on mockup designs.
+Built for teams who need more than basic file storage—CardMock provides context-aware collaboration with visual feedback directly on mockup designs.
 
 ---
 
@@ -178,8 +178,8 @@ Built for teams who need more than basic file storage—Aiproval provides contex
 
 ```bash
 # Clone the repository
-git clone https://github.com/jay-chalkstep/contentpackage.git
-cd contentpackage
+git clone https://github.com/jay-chalkstep/cardmock.git
+cd cardmock
 
 # Install dependencies
 npm install
@@ -285,7 +285,7 @@ Then run the policies from `03_storage_setup.sql` to secure them.
 
 ## 🎨 Collaboration Features Deep Dive
 
-Aiproval's collaboration system is designed for **visual feedback directly on mockup designs**.
+CardMock's collaboration system is designed for **visual feedback directly on mockup designs**.
 
 ### How It Works
 
@@ -333,7 +333,7 @@ Aiproval's collaboration system is designed for **visual feedback directly on mo
 ## 📁 Project Structure
 
 ```
-aiproval/
+cardmock/
 ├── app/                              # Next.js App Router
 │   ├── (dashboard)/                  # Dashboard layout routes
 │   │   ├── mockups/[id]/            # Mockup detail with collaboration
@@ -468,7 +468,7 @@ npm run lint       # Run ESLint
 
 ### Deploy to Vercel
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/jay-chalkstep/contentpackage)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/jay-chalkstep/cardmock)
 
 1. Connect your GitHub repository to Vercel
 2. Add all environment variables in Vercel dashboard
@@ -502,15 +502,15 @@ See [CHANGELOG.md](./documentation/CHANGELOG.md) for detailed version history.
 - **v3.4.0** (2025-01-27) - Admin reporting with CSV/Excel export, workflow reviewer avatars, Gmail layout for mockup detail
 - **v3.3.0** (2025-01-26) - Workflow system with multi-stage reviews and project integration
 - **v3.2.0** (2025-01-25) - AI-powered features: visual tagging, semantic search, accessibility analysis
-- **v2.2.0** (2025-01-24) - Collapsible sidebar UI, Aiproval rebranding, improved canvas space
+- **v2.2.0** (2025-01-24) - Collapsible sidebar UI, CardMock rebranding, improved canvas space
 - **v2.1.0** (2025-01-23) - Collaboration enhancements: zoom controls, visual linking, resolution tracking
 
 ---
 
 ## 🔗 Links & Resources
 
-- **Repository**: [https://github.com/jay-chalkstep/contentpackage](https://github.com/jay-chalkstep/contentpackage)
-- **Issue Tracker**: [GitHub Issues](https://github.com/jay-chalkstep/contentpackage/issues)
+- **Repository**: [https://github.com/jay-chalkstep/cardmock](https://github.com/jay-chalkstep/cardmock)
+- **Issue Tracker**: [GitHub Issues](https://github.com/jay-chalkstep/cardmock/issues)
 - **Documentation**: [./documentation](./documentation)
 - **Changelog**: [CHANGELOG.md](./documentation/CHANGELOG.md)
 
@@ -535,4 +535,4 @@ Built with:
 
 ---
 
-**Aiproval** - Collaborate and validate your designs with streamlined review and approval workflows
+**CardMock** - Collaborate and validate your designs with streamlined review and approval workflows

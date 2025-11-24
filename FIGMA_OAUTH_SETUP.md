@@ -5,9 +5,9 @@
 1. Go to [Figma Developer Settings](https://www.figma.com/developers/apps)
 2. Click **"Create a new app"** or **"New app"**
 3. Fill in the app details:
-   - **App name**: Aiproval (or your preferred name)
+   - **App name**: CardMock (or your preferred name)
    - **App description**: Design approval and collaboration platform
-   - **App website**: `https://app.aiproval.com` (or your production URL)
+   - **App website**: `https://app.cardmock.com` (or your production URL)
    - **App icon**: Upload an icon (optional)
 
 4. After creating the app, go to the **"OAuth scopes"** tab
@@ -22,7 +22,7 @@
 6. Go to the **"OAuth credentials"** tab
 7. Configure OAuth settings:
    - **Redirect URI**: 
-     - For production: `https://app.aiproval.com/api/integrations/figma/callback`
+     - For production: `https://app.cardmock.com/api/integrations/figma/callback`
      - For local development: `http://localhost:3000/api/integrations/figma/callback`
    - Copy your **Client ID** and **Client Secret** from this tab
 
@@ -73,7 +73,7 @@ If you're submitting your app for Figma review, reviewers will need to create th
 
 ### Public Sign-up Access
 1. Ensure Clerk allows public sign-ups (this should be enabled by default)
-2. Reviewers can create their own accounts at: `https://app.aiproval.com/sign-up`
+2. Reviewers can create their own accounts at: `https://app.cardmock.com/sign-up`
 3. No test account credentials needed - reviewers use their own email addresses
 
 ### Testing Instructions Template for Reviewers
@@ -84,12 +84,12 @@ Include this in your Figma app submission:
 ## Access Instructions
 
 **Create Your Own Account:**
-1. Go to https://app.aiproval.com/sign-up
+1. Go to https://app.cardmock.com/sign-up
 2. Sign up with any email address (you can use a test email)
 3. Complete the registration process
 4. You'll be automatically logged in and can proceed with testing
 
-**Note:** Aiproval uses Clerk for authentication. You can sign up with:
+**Note:** CardMock uses Clerk for authentication. You can sign up with:
 - Email and password
 - Google account
 - Other social providers (if configured)
@@ -108,7 +108,7 @@ Include this in your Figma app submission:
 - **Cause**: The redirect URI in your Figma app doesn't match your environment
 - **Solution**: 
   - For local: Use `http://localhost:3000/api/integrations/figma/callback`
-  - For production: Use `https://app.aiproval.com/api/integrations/figma/callback`
+  - For production: Use `https://app.cardmock.com/api/integrations/figma/callback`
   - Make sure the redirect URI in Figma matches exactly (including protocol and trailing slash)
 
 ### Error: "Invalid scopes for app"
@@ -126,6 +126,6 @@ Include this in your Figma app submission:
 
 - The redirect URI must match exactly between your Figma app settings and your environment
 - For local development, use `http://localhost:3000`
-- For production, use your actual domain (e.g., `https://app.aiproval.com`)
+- For production, use your actual domain (e.g., `https://app.cardmock.com`)
 - You can add multiple redirect URIs in Figma if you need both local and production support
 

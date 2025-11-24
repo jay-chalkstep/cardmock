@@ -38,7 +38,7 @@ export function generateShareToken(
     
     const token = jwt.sign(payload, JWT_SECRET, {
       expiresIn: `${expiresInDays}d`,
-      issuer: 'aiproval',
+      issuer: 'cardmock',
       audience: 'public-share',
     });
     
@@ -55,7 +55,7 @@ export function generateShareToken(
 export function verifyShareToken(token: string): ShareTokenPayload | null {
   try {
     const decoded = jwt.verify(token, JWT_SECRET, {
-      issuer: 'aiproval',
+      issuer: 'cardmock',
       audience: 'public-share',
     }) as ShareTokenPayload;
     

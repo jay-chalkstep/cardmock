@@ -102,7 +102,7 @@ export default function AppHeader() {
             <span className="text-white font-bold text-sm">A</span>
           </div>
           <span className="text-lg font-semibold text-[var(--text-primary)] hidden sm:inline">
-            Aiproval
+            CardMock
           </span>
         </div>
       </div>

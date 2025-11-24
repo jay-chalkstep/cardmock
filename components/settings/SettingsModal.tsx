@@ -370,7 +370,7 @@ export default function SettingsModal({
                         View Documentation
                       </a>
                       <a
-                        href="https://github.com/jay-chalkstep/contentpackage"
+                        href="https://github.com/jay-chalkstep/cardmock"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="block p-3 rounded-lg hover:bg-[var(--bg-hover)] text-[var(--accent-blue)] hover:underline"
@@ -388,7 +388,7 @@ export default function SettingsModal({
                     </p>
                     <div className="space-y-2">
                       <a
-                        href="mailto:support@aiproval.com"
+                        href="mailto:support@cardmock.com"
                         className="block p-3 rounded-lg hover:bg-[var(--bg-hover)] text-[var(--accent-blue)] hover:underline"
                       >
                         Email Support

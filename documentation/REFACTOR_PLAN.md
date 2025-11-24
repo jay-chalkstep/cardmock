@@ -1,4 +1,4 @@
-# Aiproval Refactor Plan - Current State
+# CardMock Refactor Plan - Current State
 
 **Last Updated:** 2025-11-09  
 **Current Version:** v3.7.0  

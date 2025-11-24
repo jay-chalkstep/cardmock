@@ -133,7 +133,7 @@ function FigmaIntegrationContent() {
               <div>
                 <div className="font-medium">Comment Sync</div>
                 <div className="text-sm text-gray-600">
-                  Sync comments between Figma and Aiproval
+                  Sync comments between Figma and CardMock
                 </div>
               </div>
             </li>
@@ -146,8 +146,8 @@ function FigmaIntegrationContent() {
             <h3 className="text-lg font-semibold text-blue-900 mb-2">Getting Started</h3>
             <ol className="list-decimal list-inside space-y-2 text-blue-800">
               <li>Click "Connect Figma" above to authorize the integration</li>
-              <li>Install the Aiproval Figma plugin from the Figma Community</li>
-              <li>Select frames in Figma and click "Send to Aiproval"</li>
+              <li>Install the CardMock Figma plugin from the Figma Community</li>
+              <li>Select frames in Figma and click "Send to CardMock"</li>
               <li>Choose your project and workflow in the plugin</li>
               <li>Frames will be uploaded and tracked automatically</li>
             </ol>

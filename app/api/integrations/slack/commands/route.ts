@@ -46,12 +46,12 @@ export async function POST(request: NextRequest) {
     if (!integration) {
       return successResponse({
         response_type: 'ephemeral',
-        text: 'Slack integration not found. Please install the Aiproval Slack app.',
+        text: 'Slack integration not found. Please install the CardMock Slack app.',
       });
     }
     
     // Handle different commands
-    if (command === '/aiproval') {
+    if (command === '/cardmock') {
       const parts = text.trim().split(' ');
       const subcommand = parts[0];
       
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
           // TODO: Implement project status lookup
           return successResponse({
             response_type: 'in_channel',
-            text: `Status for ${projectName || 'all projects'}: Check Aiproval dashboard for details.`,
+            text: `Status for ${projectName || 'all projects'}: Check CardMock dashboard for details.`,
           });
         
         case 'pending':
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
           // TODO: Implement pending approvals lookup
           return successResponse({
             response_type: 'ephemeral',
-            text: 'Pending approvals: Check Aiproval dashboard for details.',
+            text: 'Pending approvals: Check CardMock dashboard for details.',
           });
         
         case 'share':
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
           if (!mockupId) {
             return successResponse({
               response_type: 'ephemeral',
-              text: 'Usage: /aiproval share <mockup_id>',
+              text: 'Usage: /cardmock share <mockup_id>',
             });
           }
           // TODO: Implement mockup sharing
