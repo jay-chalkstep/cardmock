@@ -15,6 +15,10 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Experimental: Configure Edge runtime compatibility
+  experimental: {
+    serverComponentsExternalPackages: ['@clerk/nextjs'],
+  },
 };
 
 export default nextConfig;

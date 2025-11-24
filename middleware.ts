@@ -1,18 +1,8 @@
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
+import { clerkMiddleware } from '@clerk/nextjs/server';
 
-// Define public routes (sign-in, sign-up, and public share pages)
-const isPublicRoute = createRouteMatcher([
-  '/sign-in(.*)',
-  '/sign-up(.*)',
-  '/share/[token]', // Public share pages for external reviewers
-]);
-
-export default clerkMiddleware(async (auth, req) => {
-  // Protect all routes except sign-in, sign-up, and public share pages
-  if (!isPublicRoute(req)) {
-    await auth.protect();
-  }
-});
+// Minimal middleware configuration for Edge runtime compatibility
+// Route-level protection is handled in individual route handlers using auth()
+export default clerkMiddleware();
 
 export const config = {
   matcher: [
