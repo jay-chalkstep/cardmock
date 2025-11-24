@@ -15,10 +15,8 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  // Experimental: Configure Edge runtime compatibility
-  experimental: {
-    serverComponentsExternalPackages: ['@clerk/nextjs'],
-  },
+  // Don't externalize Clerk - it needs to be bundled for Edge runtime
+  // The middleware uses minimal configuration to avoid Edge runtime issues
 };
 
 export default nextConfig;
