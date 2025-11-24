@@ -4,7 +4,6 @@ import { successResponse, errorResponse, badRequestResponse, notFoundResponse, f
 import { handleSupabaseError } from '@/lib/api/error-handler';
 import { supabaseServer } from '@/lib/supabase-server';
 import { logger } from '@/lib/utils/logger';
-import { clerkClient } from '@clerk/nextjs/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,7 +49,8 @@ export async function GET(
       return handleSupabaseError(error);
     }
 
-    // Enrich with user details from Clerk
+    // Enrich with user details from Clerk (dynamic import to avoid Edge Runtime issues)
+    const { clerkClient } = await import('@clerk/nextjs/server');
     const clerk = await clerkClient();
     const enrichedAssignments = await Promise.all(
       (assignments || []).map(async (assignment) => {
@@ -131,7 +131,8 @@ export async function POST(
       return notFoundResponse('Client not found');
     }
 
-    // Verify user exists in organization via Clerk
+    // Verify user exists in organization via Clerk (dynamic import to avoid Edge Runtime issues)
+    const { clerkClient } = await import('@clerk/nextjs/server');
     const clerk = await clerkClient();
     try {
       const user = await clerk.users.getUser(user_id);

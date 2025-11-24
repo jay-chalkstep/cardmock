@@ -3,7 +3,6 @@ import { getAuthContext, isAdmin } from '@/lib/api/auth';
 import { successResponse, errorResponse, forbiddenResponse } from '@/lib/api/response';
 import { handleSupabaseError } from '@/lib/api/error-handler';
 import { supabaseServer } from '@/lib/supabase-server';
-import { clerkClient } from '@clerk/nextjs/server';
 import { logger } from '@/lib/utils/logger';
 
 // Mark as dynamic to prevent build-time evaluation
@@ -144,7 +143,8 @@ export async function GET(request: NextRequest) {
     // Get unique user IDs
     const userIds = [...new Set(projects.map(p => p.created_by))];
 
-    // Fetch user details from Clerk
+    // Fetch user details from Clerk (dynamic import to avoid Edge Runtime issues)
+    const { clerkClient } = await import('@clerk/nextjs/server');
     const client = await clerkClient();
     const userDetailsPromises = userIds.map(async (userId) => {
       try {

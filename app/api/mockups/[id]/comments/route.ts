@@ -1,5 +1,4 @@
 import { NextRequest } from 'next/server';
-import { clerkClient } from '@clerk/nextjs/server';
 import { getAuthContext } from '@/lib/api/auth';
 import { successResponse, errorResponse, badRequestResponse, notFoundResponse, forbiddenResponse } from '@/lib/api/response';
 import { handleSupabaseError, checkRequiredFields } from '@/lib/api/error-handler';
@@ -107,7 +106,8 @@ export async function POST(
       return forbiddenResponse('You do not have permission to comment on this mockup. Only the creator or assigned reviewers can add comments and annotations.');
     }
 
-    // Get user details from Clerk
+    // Get user details from Clerk (dynamic import to avoid Edge Runtime issues)
+    const { clerkClient } = await import('@clerk/nextjs/server');
     const client = await clerkClient();
     const user = await client.users.getUser(userId);
     const firstName = user.firstName || '';

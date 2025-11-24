@@ -1,7 +1,6 @@
 import { NextRequest } from 'next/server';
 import { getAuthContext } from '@/lib/api/auth';
 import { successResponse, errorResponse } from '@/lib/api/response';
-import { clerkClient } from '@clerk/nextjs/server';
 import { logger } from '@/lib/utils/logger';
 
 // Mark as dynamic to prevent build-time evaluation
@@ -33,7 +32,8 @@ export async function GET(request: NextRequest) {
 
     logger.api('/api/org/members', 'GET', { orgId, userId });
 
-    // Fetch organization membership list from Clerk
+    // Fetch organization membership list from Clerk (dynamic import to avoid Edge Runtime issues)
+    const { clerkClient } = await import('@clerk/nextjs/server');
     const client = await clerkClient();
     const { data: memberships } = await client.organizations.getOrganizationMembershipList({
       organizationId: orgId,

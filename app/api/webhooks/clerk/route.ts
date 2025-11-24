@@ -4,7 +4,6 @@ import { headers } from 'next/headers';
 import { successResponse, errorResponse, badRequestResponse } from '@/lib/api/response';
 import { supabaseServer } from '@/lib/supabase-server';
 import { logger } from '@/lib/utils/logger';
-import { clerkClient } from '@clerk/nextjs/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -177,7 +176,8 @@ async function checkAndAssignClient(userId: string, organizationId: string) {
       return;
     }
 
-    // Get user email from Clerk
+    // Get user email from Clerk (dynamic import to avoid Edge Runtime issues)
+    const { clerkClient } = await import('@clerk/nextjs/server');
     const clerk = await clerkClient();
     const user = await clerk.users.getUser(userId);
     const primaryEmail = user.emailAddresses.find(e => e.id === user.primaryEmailAddressId)?.emailAddress;
@@ -240,7 +240,8 @@ async function checkAndAssignClient(userId: string, organizationId: string) {
  */
 async function createClientAssignmentNotification(userId: string, organizationId: string) {
   try {
-    // Get user details from Clerk
+    // Get user details from Clerk (dynamic import to avoid Edge Runtime issues)
+    const { clerkClient } = await import('@clerk/nextjs/server');
     const clerk = await clerkClient();
     const user = await clerk.users.getUser(userId);
     const userName = user.fullName || user.firstName || user.emailAddresses[0]?.emailAddress || 'Unknown User';

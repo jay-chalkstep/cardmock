@@ -3,7 +3,6 @@ import { getAuthContext } from '@/lib/api/auth';
 import { successResponse, errorResponse, badRequestResponse, notFoundResponse, forbiddenResponse } from '@/lib/api/response';
 import { handleSupabaseError, checkRequiredFields } from '@/lib/api/error-handler';
 import { supabaseServer } from '@/lib/supabase-server';
-import { clerkClient } from '@clerk/nextjs/server';
 import { logger } from '@/lib/utils/logger';
 
 // Mark as dynamic to prevent build-time evaluation
@@ -79,7 +78,8 @@ export async function PATCH(
         return badRequestResponse('comment_text cannot be empty');
       }
 
-      // Get user details from Clerk
+      // Get user details from Clerk (dynamic import to avoid Edge Runtime issues)
+      const { clerkClient } = await import('@clerk/nextjs/server');
       const client = await clerkClient();
       const user = await client.users.getUser(userId);
       const firstName = user.firstName || '';
@@ -155,7 +155,8 @@ export async function DELETE(
       return forbiddenResponse('You can only delete your own comments');
     }
 
-    // Get user details from Clerk
+    // Get user details from Clerk (dynamic import to avoid Edge Runtime issues)
+    const { clerkClient } = await import('@clerk/nextjs/server');
     const client = await clerkClient();
     const user = await client.users.getUser(userId);
     const firstName = user.firstName || '';

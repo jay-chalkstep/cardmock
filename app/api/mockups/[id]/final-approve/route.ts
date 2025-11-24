@@ -3,7 +3,6 @@ import { getAuthContext, isAdmin } from '@/lib/api/auth';
 import { successResponse, errorResponse, badRequestResponse, notFoundResponse, forbiddenResponse } from '@/lib/api/response';
 import { handleSupabaseError } from '@/lib/api/error-handler';
 import { supabase } from '@/lib/supabase';
-import { clerkClient } from '@clerk/nextjs/server';
 import { createNotificationsForUsers } from '@/lib/utils/notifications';
 import { logger } from '@/lib/utils/logger';
 
@@ -75,7 +74,8 @@ export async function POST(
       return badRequestResponse(`Cannot give final approval. Current status: ${stageProgress.status}`);
     }
 
-    // Get user's name for display
+    // Get user's name for display (dynamic import to avoid Edge Runtime issues)
+    const { clerkClient } = await import('@clerk/nextjs/server');
     const client = await clerkClient();
     const user = await client.users.getUser(userId);
     const userName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.emailAddresses[0]?.emailAddress || 'Unknown User';

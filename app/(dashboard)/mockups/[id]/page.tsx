@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react';
 import { useOrganization, useUser } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import { supabase, CardMockup } from '@/lib/supabase';
@@ -61,7 +61,8 @@ export interface Comment {
 
 export type AnnotationTool = 'select' | 'pin' | 'arrow' | 'circle' | 'rect' | 'freehand' | 'text';
 
-export default function MockupDetailPage({ params }: { params: { id: string } }) {
+export default function MockupDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const router = useRouter();
   const { organization, isLoaded: orgLoaded } = useOrganization();
   const { user } = useUser();
@@ -159,10 +160,10 @@ export default function MockupDetailPage({ params }: { params: { id: string } })
       // Note: Realtime subscriptions removed due to RLS blocking with Clerk Auth
       // Using polling fallback instead
     }
-  }, [params.id, orgLoaded, organization?.id, user?.id]);
+  }, [id, orgLoaded, organization?.id, user?.id]);
 
   const fetchMockupData = async () => {
-    console.log(`\n=== FETCH MOCKUP DATA (ID: ${params.id}) ===`);
+    console.log(`\n=== FETCH MOCKUP DATA (ID: ${id}) ===`);
     console.log('Organization ID:', organization?.id);
     console.log('User ID:', user?.id);
 
@@ -177,7 +178,7 @@ export default function MockupDetailPage({ params }: { params: { id: string } })
           logo:logo_variants(*),
           template:templates(*)
         `)
-        .eq('id', params.id)
+        .eq('id', id)
         .eq('organization_id', organization?.id)
         .single();
 
@@ -251,10 +252,10 @@ export default function MockupDetailPage({ params }: { params: { id: string } })
   };
 
   const fetchComments = async () => {
-    console.log(`\n=== FETCH COMMENTS (ID: ${params.id}) ===`);
+    console.log(`\n=== FETCH COMMENTS (ID: ${id}) ===`);
 
     try {
-      const url = `/api/mockups/${params.id}/comments`;
+      const url = `/api/mockups/${id}/comments`;
       console.log('Fetching from:', url);
 
       const response = await fetch(url);
@@ -279,10 +280,10 @@ export default function MockupDetailPage({ params }: { params: { id: string } })
   };
 
   const fetchStageProgress = async () => {
-    console.log(`\n=== FETCH STAGE PROGRESS (ID: ${params.id}) ===`);
+    console.log(`\n=== FETCH STAGE PROGRESS (ID: ${id}) ===`);
 
     try {
-      const url = `/api/mockups/${params.id}/stage-progress`;
+      const url = `/api/mockups/${id}/stage-progress`;
       console.log('Fetching from:', url);
 
       const response = await fetch(url);
@@ -326,10 +327,10 @@ export default function MockupDetailPage({ params }: { params: { id: string } })
   };
 
   const fetchApprovals = async () => {
-    console.log(`\n=== FETCH APPROVALS (ID: ${params.id}) ===`);
+    console.log(`\n=== FETCH APPROVALS (ID: ${id}) ===`);
 
     try {
-      const url = `/api/mockups/${params.id}/approvals`;
+      const url = `/api/mockups/${id}/approvals`;
       console.log('Fetching from:', url);
 
       const response = await fetch(url);
@@ -389,7 +390,7 @@ export default function MockupDetailPage({ params }: { params: { id: string } })
 
     setIsProcessingApproval(true);
     try {
-      const response = await fetch(`/api/mockups/${params.id}/approve`, {
+      const response = await fetch(`/api/mockups/${id}/approve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ notes: '' })
@@ -424,7 +425,7 @@ export default function MockupDetailPage({ params }: { params: { id: string } })
   const handleFinalApprove = async (notes?: string) => {
     setIsProcessingApproval(true);
     try {
-      const response = await fetch(`/api/mockups/${params.id}/final-approve`, {
+      const response = await fetch(`/api/mockups/${id}/final-approve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ notes: notes || '' })
@@ -458,7 +459,7 @@ export default function MockupDetailPage({ params }: { params: { id: string } })
     }
 
     try {
-      const response = await fetch(`/api/mockups/${params.id}`, {
+      const response = await fetch(`/api/mockups/${id}`, {
         method: 'DELETE',
       });
 
@@ -551,7 +552,7 @@ export default function MockupDetailPage({ params }: { params: { id: string } })
   // Preview Panel - Use MockupDetailPreviewPanel component
   const previewContent = (
     <MockupDetailPreviewPanel
-      mockupId={params.id}
+      mockupId={id}
       comments={comments}
       currentUserId={user?.id || ''}
       isCreator={isCreator}

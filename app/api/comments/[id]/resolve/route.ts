@@ -3,7 +3,6 @@ import { getAuthContext } from '@/lib/api/auth';
 import { successResponse, errorResponse, badRequestResponse, notFoundResponse } from '@/lib/api/response';
 import { handleSupabaseError } from '@/lib/api/error-handler';
 import { supabaseServer } from '@/lib/supabase-server';
-import { clerkClient } from '@clerk/nextjs/server';
 import { logger } from '@/lib/utils/logger';
 
 // Mark as dynamic to prevent build-time evaluation
@@ -52,7 +51,8 @@ export async function POST(
       return badRequestResponse('Comment is already resolved');
     }
 
-    // Get user details from Clerk
+    // Get user details from Clerk (dynamic import to avoid Edge Runtime issues)
+    const { clerkClient } = await import('@clerk/nextjs/server');
     const client = await clerkClient();
     const user = await client.users.getUser(userId);
     const firstName = user.firstName || '';
