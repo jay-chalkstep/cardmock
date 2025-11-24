@@ -15,8 +15,6 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  // Configure for server-side package handling
-  serverExternalPackages: ['@clerk/nextjs', '@clerk/shared'],
 };
 
 export default nextConfig;
