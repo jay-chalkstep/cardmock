@@ -896,25 +896,14 @@ npm run lint       # Run ESLint
 - **Resend**: `RESEND_API_KEY` (All Environments)
 
 **Required Variables** (see full list above):
-```
-# Authentication
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
-CLERK_SECRET_KEY
-NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
-NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+**Current Vercel Configuration** (as of v4.1.0):
+- **Clerk** (All Environments): `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`
+- **Supabase** (Production): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_JWT_SECRET`
+- **Postgres** (Production): `POSTGRES_URL`, `POSTGRES_PRISMA_URL`, `POSTGRES_URL_NON_POOLING`, `POSTGRES_USER`, `POSTGRES_HOST`, `POSTGRES_PASSWORD`, `POSTGRES_DATABASE`
+- **Resend** (All Environments): `RESEND_API_KEY`
+- **Other**: `NEXT_PUBLIC_BRANDFETCH_API_KEY`, `CLERK_WEBHOOK_SECRET`, etc.
 
-# Database
-NEXT_PUBLIC_SUPABASE_URL
-NEXT_PUBLIC_SUPABASE_ANON_KEY
-SUPABASE_SERVICE_ROLE_KEY
-
-# APIs
-NEXT_PUBLIC_BRANDFETCH_API_KEY
-
-# Email (optional)
-RESEND_API_KEY
-RESEND_FROM_EMAIL
-```
+See the **Environment Variables** section above for the complete list with descriptions.
 
 #### Step 3: Deploy
 - Vercel will automatically build and deploy your application
