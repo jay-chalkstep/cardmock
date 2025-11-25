@@ -1,11 +1,10 @@
 import { NextRequest } from 'next/server';
-import { getAuthContext } from '@/lib/api/auth';
+import { getUserAuthContext } from '@/lib/api/auth';
 import { successResponse, errorResponse } from '@/lib/api/response';
 import { handleSupabaseError } from '@/lib/api/error-handler';
 import { supabaseServer } from '@/lib/supabase-server';
 import { logger } from '@/lib/utils/logger';
 
-// Mark as dynamic to prevent build-time evaluation
 export const dynamic = 'force-dynamic';
 
 /**
@@ -15,9 +14,12 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(request: NextRequest) {
   try {
-    const authResult = await getAuthContext();
-    if (authResult instanceof Response) return authResult;
-    const { userId, orgId } = authResult;
+    const { userId, orgId } = await getUserAuthContext();
+
+    // If user is not in an org, return 0 notifications
+    if (!orgId) {
+      return successResponse({ count: 0 });
+    }
 
     logger.api('/api/notifications/unread-count', 'GET', { orgId, userId });
 
@@ -32,11 +34,7 @@ export async function GET(request: NextRequest) {
       return handleSupabaseError(error);
     }
 
-    const unreadCount = count || 0;
-
-    logger.info('Unread count fetched successfully', { userId, unreadCount });
-
-    return successResponse({ count: unreadCount });
+    return successResponse({ count: count || 0 });
   } catch (error) {
     return errorResponse(error, 'Failed to fetch unread count');
   }

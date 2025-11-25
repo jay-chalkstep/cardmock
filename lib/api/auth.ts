@@ -15,20 +15,25 @@ export interface AuthContext {
   orgId: string;
 }
 
+export interface UserAuthContext {
+  userId: string;
+  orgId: string | null;
+}
+
 /**
  * Get authenticated user context for API routes
- * Throws StandardError if not authenticated
+ * Requires both userId and orgId - use for most routes
  */
 export async function getAuthContext(): Promise<AuthContext> {
   try {
     const { userId, orgId } = await auth();
 
     if (!userId) {
-      throw createError('Unauthorized: No user ID found', 401, 'UNAUTHORIZED');
+      throw createError('Unauthorized', 401, 'UNAUTHORIZED');
     }
 
     if (!orgId) {
-      throw createError('Unauthorized: No organization ID found', 401, 'UNAUTHORIZED');
+      throw createError('Organization required', 401, 'UNAUTHORIZED');
     }
 
     return { userId, orgId };
@@ -39,6 +44,30 @@ export async function getAuthContext(): Promise<AuthContext> {
     throw createError('Authentication failed', 401, 'UNAUTHORIZED', error);
   }
 }
+
+/**
+ * Get authenticated user context without requiring organization
+ * Use for routes that work without org context (e.g., notifications)
+ */
+export async function getUserAuthContext(): Promise<UserAuthContext> {
+  try {
+    const { userId, orgId } = await auth();
+
+    if (!userId) {
+      throw createError('Unauthorized', 401, 'UNAUTHORIZED');
+    }
+
+    return { userId, orgId: orgId || null };
+  } catch (error) {
+    if (error instanceof Error && 'statusCode' in error) {
+      throw error;
+    }
+    throw createError('Authentication failed', 401, 'UNAUTHORIZED', error);
+  }
+}
+
+// Alias for backwards compatibility
+export const getOrgAuthContext = getAuthContext;
 
 /**
  * Get authenticated user context or return null
@@ -54,7 +83,7 @@ export async function getAuthContextOptional(): Promise<AuthContext | null> {
 
 /**
  * Require authentication and return context, or return error response
- * Use in API route handlers
+ * Use in API route handlers - requires org context
  */
 export async function requireAuth(): Promise<AuthContext | NextResponse> {
   try {
@@ -68,6 +97,9 @@ export async function requireAuth(): Promise<AuthContext | NextResponse> {
     );
   }
 }
+
+// Alias for backwards compatibility
+export const requireOrgAuth = requireAuth;
 
 /**
  * Check if user is admin
@@ -192,19 +224,19 @@ export async function getUserAssignedClientId(userId?: string, orgId?: string): 
 
 /**
  * Get the full client object assigned to the current user
- * Returns null if no client is assigned
+ * Returns null if no client is assigned or if user is not in an org
  */
 export async function getUserAssignedClient(userId?: string, orgId?: string): Promise<Client | null> {
   try {
     let finalUserId = userId;
     let finalOrgId = orgId;
-    
+
     if (!finalUserId || !finalOrgId) {
-      const authContext = await getAuthContext();
+      const authContext = await getOrgAuthContext();
       finalUserId = finalUserId || authContext.userId;
       finalOrgId = finalOrgId || authContext.orgId;
     }
-    
+
     const { data: assignment } = await supabaseServer
       .from('client_users')
       .select('*, client:clients(*)')

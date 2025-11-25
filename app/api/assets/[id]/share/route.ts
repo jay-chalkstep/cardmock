@@ -6,7 +6,7 @@
 
 import crypto from 'crypto';
 import { NextRequest } from 'next/server';
-import { getAuthContext } from '@/lib/api/auth';
+import { getOrgAuthContext } from '@/lib/api/auth';
 import { successResponse, errorResponse, badRequestResponse, notFoundResponse } from '@/lib/api/response';
 import { handleSupabaseError } from '@/lib/api/error-handler';
 import { supabaseServer } from '@/lib/supabase-server';
@@ -25,9 +25,7 @@ export async function POST(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const authResult = await getAuthContext();
-    if (authResult instanceof Response) return authResult;
-    const { userId, orgId } = authResult;
+const { userId, orgId } = await getOrgAuthContext();
     
     const { id } = await context.params;
     const body = await request.json();
@@ -139,9 +137,7 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const authResult = await getAuthContext();
-    if (authResult instanceof Response) return authResult;
-    const { userId, orgId } = authResult;
+const { userId, orgId } = await getOrgAuthContext();
     
     const { id } = await context.params;
     
