@@ -9,13 +9,12 @@ import {
 } from 'lucide-react';
 import Toast from '@/components/Toast';
 import MockupCanvas from '@/components/collaboration/MockupCanvas';
-import StageActionModal from '@/components/projects/StageActionModal';
 import GmailLayout from '@/components/layout/GmailLayout';
 import PreviewArea from '@/components/preview/PreviewArea';
 import { usePanelContext } from '@/lib/contexts/PanelContext';
 import MockupDetailSidebar from '@/components/mockups/MockupDetailSidebar';
 import MockupDetailPreviewPanel from '@/components/mockups/MockupDetailPreviewPanel';
-import type { MockupStageProgressWithDetails, Project, Workflow, AssetApprovalSummary, ApprovalProgress } from '@/lib/supabase';
+import type { MockupStageProgressWithDetails, Project, Workflow } from '@/lib/supabase';
 
 interface ToastMessage {
   message: string;
@@ -86,7 +85,6 @@ export default function MockupDetailPage({ params }: { params: Promise<{ id: str
 
   // Modal state
   const [showExportMenu, setShowExportMenu] = useState(false);
-  const [showStageActionModal, setShowStageActionModal] = useState(false);
 
   // Stage progress state
   const [stageProgress, setStageProgress] = useState<MockupStageProgressWithDetails[]>([]);
@@ -96,15 +94,6 @@ export default function MockupDetailPage({ params }: { params: Promise<{ id: str
   // Toast notifications
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
-  // Right panel tab state
-  const [rightPanelTab, setRightPanelTab] = useState<'comments' | 'approvals'>('comments');
-
-  // Approval state
-  const [approvalSummary, setApprovalSummary] = useState<AssetApprovalSummary | null>(null);
-  const [isCurrentUserReviewer, setIsCurrentUserReviewer] = useState(false);
-  const [hasCurrentUserApproved, setHasCurrentUserApproved] = useState(false);
-  const [isProcessingApproval, setIsProcessingApproval] = useState(false);
-  
   // Reviewer status for annotation permissions
   const [isReviewer, setIsReviewer] = useState(false);
 
@@ -156,7 +145,6 @@ export default function MockupDetailPage({ params }: { params: Promise<{ id: str
       fetchMockupData();
       fetchComments();
       fetchStageProgress();
-      fetchApprovals();
       // Note: Realtime subscriptions removed due to RLS blocking with Clerk Auth
       // Using polling fallback instead
     }
@@ -326,132 +314,11 @@ export default function MockupDetailPage({ params }: { params: Promise<{ id: str
     }
   };
 
-  const fetchApprovals = async () => {
-    console.log(`\n=== FETCH APPROVALS (ID: ${id}) ===`);
-
-    try {
-      const url = `/api/mockups/${id}/approvals`;
-      console.log('Fetching from:', url);
-
-      const response = await fetch(url);
-      console.log('Response status:', response.status, response.statusText);
-
-      if (!response.ok) {
-        console.error('❌ Response not OK');
-        const errorText = await response.text();
-        console.error('Error response:', errorText);
-        throw new Error(`Failed to fetch approvals: ${response.status}`);
-      }
-
-      const data: AssetApprovalSummary = await response.json();
-
-      // Count total approvals across all stages
-      const totalApprovals = Object.values(data.approvals_by_stage || {})
-        .reduce((sum, stageApprovals) => sum + stageApprovals.length, 0);
-
-      console.log('✅ Approvals fetched:', {
-        totalApprovals,
-        stages: Object.keys(data.approvals_by_stage || {}).length,
-        hasFinalApproval: !!data.final_approval,
-      });
-
-      setApprovalSummary(data);
-
-      // Check if current user is reviewer for current stage
-      if (currentStageProgress && user?.id) {
-        const currentStageApprovals = data.approvals_by_stage[currentStageProgress.stage_order] || [];
-        const userApproval = currentStageApprovals.find(a => a.user_id === user.id);
-        setHasCurrentUserApproved(!!userApproval && userApproval.action === 'approve');
-
-        // Check if user is assigned reviewer by checking if they have any progress entry
-        const progressForStage = data.progress_summary[currentStageProgress.stage_order];
-        setIsCurrentUserReviewer(progressForStage?.approvals_required > 0);
-        console.log('Current user reviewer status:', {
-          isReviewer: progressForStage?.approvals_required > 0,
-          hasApproved: !!userApproval && userApproval.action === 'approve',
-        });
-      }
-
-      console.log('=== END FETCH APPROVALS ===\n');
-    } catch (error) {
-      console.error('❌ Error fetching approvals:', error);
-      console.error('Error details:', error);
-    }
-  };
-
   // Comment creation handler - refetches to update UI
   const handleCommentCreate = async () => {
     // Refetch comments after creation to show new comment immediately
     await fetchComments();
   };
-
-  const handleApprove = async () => {
-    if (!currentStageProgress) return;
-
-    setIsProcessingApproval(true);
-    try {
-      const response = await fetch(`/api/mockups/${id}/approve`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notes: '' })
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to approve');
-      }
-
-      const { message } = await response.json();
-      showToast(message, 'success');
-
-      // Refetch all data
-      await Promise.all([
-        fetchStageProgress(),
-        fetchApprovals()
-      ]);
-    } catch (error) {
-      console.error('Error approving:', error);
-      showToast(error instanceof Error ? error.message : 'Failed to approve', 'error');
-    } finally {
-      setIsProcessingApproval(false);
-    }
-  };
-
-  const handleRequestChanges = () => {
-    // Open the existing StageActionModal for request changes
-    setShowStageActionModal(true);
-  };
-
-  const handleFinalApprove = async (notes?: string) => {
-    setIsProcessingApproval(true);
-    try {
-      const response = await fetch(`/api/mockups/${id}/final-approve`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notes: notes || '' })
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to give final approval');
-      }
-
-      showToast('Final approval recorded successfully!', 'success');
-
-      // Refetch all data
-      await Promise.all([
-        fetchMockupData(),
-        fetchStageProgress(),
-        fetchApprovals()
-      ]);
-    } catch (error) {
-      console.error('Error giving final approval:', error);
-      showToast(error instanceof Error ? error.message : 'Failed to give final approval', 'error');
-    } finally {
-      setIsProcessingApproval(false);
-    }
-  };
-
 
   const handleDeleteMockup = async () => {
     if (!confirm('Are you sure you want to delete this mockup? This action cannot be undone.')) {
@@ -502,10 +369,6 @@ export default function MockupDetailPage({ params }: { params: Promise<{ id: str
       currentStageProgress={currentStageProgress}
       workflow={workflow}
       project={project}
-      approvalSummary={approvalSummary}
-      isCurrentUserReviewer={isCurrentUserReviewer}
-      hasCurrentUserApproved={hasCurrentUserApproved}
-      currentUserId={user?.id || ''}
       activeTool={activeTool}
       onToolChange={setActiveTool}
       strokeColor={strokeColor}
@@ -522,10 +385,6 @@ export default function MockupDetailPage({ params }: { params: Promise<{ id: str
       isCreator={isCreator}
       canAnnotate={canAnnotate}
       onDelete={handleDeleteMockup}
-      onApprove={handleApprove}
-      onRequestChanges={handleRequestChanges}
-      onFinalApprove={handleFinalApprove}
-      isProcessingApproval={isProcessingApproval}
     />
   );
 
@@ -559,10 +418,6 @@ export default function MockupDetailPage({ params }: { params: Promise<{ id: str
       onCommentUpdate={fetchComments}
       onCommentHover={setHoveredCommentId}
       hoveredCommentId={hoveredCommentId}
-      approvalSummary={approvalSummary}
-      workflow={workflow}
-      rightPanelTab={rightPanelTab}
-      onTabChange={setRightPanelTab}
     />
   );
 
@@ -575,25 +430,6 @@ export default function MockupDetailPage({ params }: { params: Promise<{ id: str
         listViewWidth="flex"
         previewWidth="fixed"
       />
-
-      {/* Modals */}
-      {/* Stage Action Modal */}
-      {showStageActionModal && currentStageProgress && workflow && project && mockup && (
-        <StageActionModal
-          mockup={mockup}
-          project={project}
-          stageOrder={currentStageProgress.stage_order}
-          stageName={currentStageProgress.stage_name || `Stage ${currentStageProgress.stage_order}`}
-          stageColor={currentStageProgress.stage_color || 'blue'}
-          onClose={() => setShowStageActionModal(false)}
-          onActionComplete={() => {
-            fetchStageProgress();
-            setShowStageActionModal(false);
-            showToast('Stage action completed successfully', 'success');
-          }}
-        />
-      )}
-
 
       {/* Toast Notifications */}
       <div className="fixed bottom-4 right-4 z-50 space-y-2">

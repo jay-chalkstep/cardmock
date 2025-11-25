@@ -1,13 +1,11 @@
 /**
  * Mockup Detail Sidebar Component
- * Contains mockup info, approval status, annotation tools, and action buttons
+ * Contains mockup info, simple status, annotation tools, and action buttons
  */
 
-import { Calendar, Download, Trash2 } from 'lucide-react';
+import { Calendar, Download, Trash2, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 import AnnotationToolbar from '@/components/collaboration/AnnotationToolbar';
-import ApprovalStatusBanner from '@/components/approvals/ApprovalStatusBanner';
-import FinalApprovalBanner from '@/components/approvals/FinalApprovalBanner';
-import type { CardMockup, MockupStageProgressWithDetails, Project, Workflow, AssetApprovalSummary } from '@/lib/supabase';
+import type { CardMockup, MockupStageProgressWithDetails, Project, Workflow } from '@/lib/supabase';
 import type { AnnotationTool } from '@/app/(dashboard)/mockups/[id]/page';
 
 interface MockupDetailSidebarProps {
@@ -15,10 +13,6 @@ interface MockupDetailSidebarProps {
   currentStageProgress?: MockupStageProgressWithDetails | null;
   workflow?: Workflow | null;
   project?: Project | null;
-  approvalSummary?: AssetApprovalSummary | null;
-  isCurrentUserReviewer: boolean;
-  hasCurrentUserApproved: boolean;
-  currentUserId: string;
   // Annotation tools
   activeTool: AnnotationTool;
   onToolChange: (tool: AnnotationTool) => void;
@@ -37,21 +31,54 @@ interface MockupDetailSidebarProps {
   isCreator: boolean;
   canAnnotate: boolean;
   onDelete: () => void;
-  onApprove: () => void;
-  onRequestChanges: () => void;
-  onFinalApprove: () => void;
-  isProcessingApproval: boolean;
+}
+
+// Simple status badge component
+function StatusBadge({ status }: { status?: string }) {
+  if (!status) return null;
+
+  const statusConfig: Record<string, { icon: React.ReactNode; label: string; className: string }> = {
+    'approved': {
+      icon: <CheckCircle className="h-4 w-4" />,
+      label: 'Approved',
+      className: 'bg-green-50 text-green-700 border-green-200',
+    },
+    'in_review': {
+      icon: <Clock className="h-4 w-4" />,
+      label: 'In Review',
+      className: 'bg-blue-50 text-blue-700 border-blue-200',
+    },
+    'pending_final_approval': {
+      icon: <Clock className="h-4 w-4" />,
+      label: 'Pending Final Approval',
+      className: 'bg-purple-50 text-purple-700 border-purple-200',
+    },
+    'changes_requested': {
+      icon: <AlertCircle className="h-4 w-4" />,
+      label: 'Changes Requested',
+      className: 'bg-amber-50 text-amber-700 border-amber-200',
+    },
+    'draft': {
+      icon: <Clock className="h-4 w-4" />,
+      label: 'Draft',
+      className: 'bg-gray-50 text-gray-700 border-gray-200',
+    },
+  };
+
+  const config = statusConfig[status] || statusConfig['draft'];
+
+  return (
+    <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium ${config.className}`}>
+      {config.icon}
+      {config.label}
+    </div>
+  );
 }
 
 export default function MockupDetailSidebar({
   mockup,
   currentStageProgress,
-  workflow,
   project,
-  approvalSummary,
-  isCurrentUserReviewer,
-  hasCurrentUserApproved,
-  currentUserId,
   activeTool,
   onToolChange,
   strokeColor,
@@ -68,10 +95,6 @@ export default function MockupDetailSidebar({
   isCreator,
   canAnnotate,
   onDelete,
-  onApprove,
-  onRequestChanges,
-  onFinalApprove,
-  isProcessingApproval,
 }: MockupDetailSidebarProps) {
   return (
     <div className="h-full flex flex-col">
@@ -86,62 +109,17 @@ export default function MockupDetailSidebar({
             <Calendar className="h-3 w-3" />
             {new Date(mockup.created_at).toLocaleDateString()}
           </div>
-        </div>
-
-        {/* Approval Status - Show FinalApprovalBanner if pending final approval */}
-        {currentStageProgress?.status === 'pending_final_approval' && workflow && project && mockup && (
-          <FinalApprovalBanner
-            mockupName={mockup.mockup_name}
-            projectName={project.name}
-            totalStages={workflow.stages?.length || 0}
-            onFinalApprove={onFinalApprove}
-            isProcessing={isProcessingApproval}
-          />
-        )}
-
-        {/* Approval Status Banner - Show if in review and has approval data */}
-        {currentStageProgress?.status === 'in_review' && approvalSummary && workflow && (
-          <ApprovalStatusBanner
-            stageProgress={approvalSummary.progress_summary[currentStageProgress.stage_order] || {
-              stage_order: currentStageProgress.stage_order,
-              stage_name: currentStageProgress.stage_name,
-              stage_color: currentStageProgress.stage_color,
-              approvals_required: currentStageProgress.approvals_required || 0,
-              approvals_received: currentStageProgress.approvals_received || 0,
-              is_complete: false,
-              user_approvals: []
-            }}
-            currentUserId={currentUserId}
-            isCurrentUserReviewer={isCurrentUserReviewer}
-            hasCurrentUserApproved={hasCurrentUserApproved}
-            onApprove={onApprove}
-            onRequestChanges={onRequestChanges}
-            isProcessing={isProcessingApproval}
-          />
-        )}
-
-        {/* Fallback Stage Info (for other statuses) */}
-        {currentStageProgress && workflow && project &&
-         currentStageProgress.status !== 'in_review' &&
-         currentStageProgress.status !== 'pending_final_approval' && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
-            <div className="text-xs font-semibold text-blue-900">
-              Stage: {currentStageProgress.stage_name || `Stage ${currentStageProgress.stage_order}`}
-            </div>
-            <div className="text-xs text-blue-700">
-              Status: {currentStageProgress.status}
-            </div>
-            <div className="text-xs text-blue-600">
+          {project && (
+            <div className="text-xs text-[var(--text-secondary)]">
               Project: {project.name}
             </div>
-            {currentStageProgress.notes && (
-              <div className="text-xs text-blue-800 pt-2 border-t border-blue-200">
-                <strong>Notes:</strong> {currentStageProgress.notes}
-              </div>
-            )}
-          </div>
-        )}
+          )}
+        </div>
 
+        {/* Simple Status Badge */}
+        {currentStageProgress?.status && (
+          <StatusBadge status={currentStageProgress.status} />
+        )}
 
         {/* Annotation Toolbar */}
         <div className="pt-4 border-t border-[var(--border-main)]">

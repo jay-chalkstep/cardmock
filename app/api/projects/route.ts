@@ -1,7 +1,6 @@
 import { NextRequest } from 'next/server';
-import { getAuthContext, isClient, getUserAssignedClientId } from '@/lib/api/auth';
+import { getAuthContext } from '@/lib/api/auth';
 import { successResponse, errorResponse, badRequestResponse } from '@/lib/api/response';
-import { checkRequiredFields } from '@/lib/api/error-handler';
 import { handleSupabaseError } from '@/lib/api/error-handler';
 import { supabaseServer } from '@/lib/supabase-server';
 import type { ProjectStatus } from '@/lib/supabase';
@@ -29,29 +28,11 @@ export async function GET(request: NextRequest) {
 
     logger.api('/api/projects', 'GET', { orgId, statusFilter });
 
-    // For Client-role users: Filter projects by their assigned client via client_id
-    const userIsClient = await isClient();
-    let assignedClientId: string | null = null;
-    
-    if (userIsClient) {
-      assignedClientId = await getUserAssignedClientId();
-      if (!assignedClientId) {
-        // Client-role user with no client assignment - return empty array
-        return successResponse({ projects: [] });
-      }
-    }
-
-    // Build query - filter at database level for better performance
+    // Build query
     let query = supabaseServer
       .from('projects')
       .select('*')
       .eq('organization_id', orgId);
-
-    // For Client-role users: Filter by client_id (direct relationship)
-    // For non-client users: Show all projects in organization
-    if (userIsClient && assignedClientId) {
-      query = query.eq('client_id', assignedClientId);
-    }
 
     // Apply status filter if provided
     if (statusFilter) {
@@ -66,7 +47,7 @@ export async function GET(request: NextRequest) {
       return handleSupabaseError(error);
     }
 
-    // Ensure we have a valid array (should never be null after query, but be defensive)
+    // Ensure we have a valid array
     const filteredProjects = projects || [];
 
     // Fetch mockup counts and previews for each project
@@ -110,8 +91,6 @@ export async function GET(request: NextRequest) {
  * Body:
  * {
  *   name: string (required),
- *   client_id: string (required),
- *   client_name?: string (optional, display field),
  *   description?: string (optional),
  *   status?: 'active' | 'completed' | 'archived' (default: 'active'),
  *   color?: string (default: '#3B82F6'),
@@ -125,40 +104,18 @@ export async function POST(request: NextRequest) {
     const { userId, orgId } = authResult;
 
     const body = await request.json();
-    const { name, client_id, client_name, description, status, color, workflow_id } = body;
+    const { name, description, status, color, workflow_id } = body;
 
     logger.api('/api/projects', 'POST', { orgId, userId });
 
     // Validate required fields
-    const missingFieldsCheck = checkRequiredFields(body, ['name', 'client_id']);
-    if (missingFieldsCheck) {
-      return missingFieldsCheck;
-    }
-
-    // Validate name
-    if (typeof name !== 'string' || name.trim().length === 0) {
+    if (!name || typeof name !== 'string' || name.trim().length === 0) {
       return badRequestResponse('Project name is required');
     }
 
     // Validate name length
     if (name.trim().length > 100) {
       return badRequestResponse('Project name must be less than 100 characters');
-    }
-
-    // Validate client_id exists and belongs to organization
-    if (typeof client_id !== 'string' || client_id.trim().length === 0) {
-      return badRequestResponse('Client ID is required');
-    }
-
-    const { data: client, error: clientError } = await supabaseServer
-      .from('clients')
-      .select('id, name')
-      .eq('id', client_id)
-      .eq('organization_id', orgId)
-      .single();
-
-    if (clientError || !client) {
-      return badRequestResponse('Client not found or does not belong to this organization');
     }
 
     // Validate status if provided
@@ -177,8 +134,6 @@ export async function POST(request: NextRequest) {
       .from('projects')
       .insert({
         name: name.trim(),
-        client_id: client_id, // Required - direct relationship to client
-        client_name: client_name?.trim() || client.name || null, // Optional display field, default to client name
         description: description?.trim() || null,
         status: status || 'active',
         color: color || '#3B82F6',
@@ -198,4 +153,3 @@ export async function POST(request: NextRequest) {
     return errorResponse(error, 'Failed to create project');
   }
 }
-

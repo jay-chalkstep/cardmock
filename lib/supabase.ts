@@ -106,7 +106,6 @@ export interface Brand {
   organization_id: string;
   description?: string;
   primary_logo_variant_id?: string;
-  client_id?: string; // Client association (Migration 25)
   created_at: string;
   updated_at: string;
   // Optional related data
@@ -114,7 +113,6 @@ export interface Brand {
   brand_colors?: BrandColor[];
   brand_fonts?: BrandFont[];
   primary_logo_variant?: LogoVariant;
-  client?: Client; // Optional relation
 }
 
 // Deprecated: Use Brand + LogoVariant instead
@@ -174,7 +172,6 @@ export interface Asset {
   created_by: string;
   folder_id?: string; // Folder organization
   project_id?: string; // Project organization
-  contract_id?: string; // Contract reference
   // Final approval (Migration 18)
   final_approved_by?: string; // Clerk user ID of project owner
   final_approved_at?: string;
@@ -217,7 +214,6 @@ export interface CardMockup {
   logo_y: number; // Percentage from top
   logo_scale: number; // Logo width as percentage of card width
   mockup_image_url?: string;
-  figma_metadata?: any; // Figma integration metadata (added in v4.1.0)
   created_at: string;
   updated_at: string;
   // Joined data (optional, populated when fetching with joins)
@@ -244,136 +240,14 @@ export interface Folder {
 
 export type ProjectStatus = 'active' | 'completed' | 'archived';
 
-// Contract types
-export type ContractStatus = 'draft' | 'pending_signature' | 'signed' | 'amended' | 'expired' | 'voided';
-export type ContractType = 'new' | 'amendment';
-export type DocuSignStatus = 'sent' | 'delivered' | 'signed' | 'declined' | 'voided' | 'completed';
-export type EmailMockupStatus = 'draft' | 'pending_approval' | 'approved' | 'rejected';
-export type PaymentMethodStatus = 'pending_approval' | 'approved' | 'rejected';
-
-export interface Client {
-  id: string;
-  organization_id: string;
-  name: string;
-  email?: string;
-  phone?: string;
-  address?: string;
-  notes?: string;
-  ein?: string; // Employer Identification Number (Migration 25)
-  parent_client_id?: string; // Client hierarchy (Migration 25)
-  created_by: string;
-  created_at: string;
-  updated_at: string;
-  // Optional relations
-  parent_client?: Client; // Parent client in hierarchy
-  child_clients?: Client[]; // Child clients in hierarchy
-}
-
-export interface ClientUser {
-  id: string;
-  client_id: string;
-  user_id: string; // Clerk user ID
-  organization_id: string;
-  assigned_by: string; // Clerk user ID who assigned
-  assigned_at: string;
-  created_at: string;
-  updated_at: string;
-  // Optional relations
-  client?: Client; // Client relation
-}
-
-export interface Contract {
-  id: string;
-  client_id: string;
-  project_id?: string;
-  contract_number: string;
-  status: ContractStatus;
-  type: ContractType;
-  parent_contract_id?: string;
-  title?: string;
-  description?: string;
-  start_date?: string;
-  end_date?: string;
-  organization_id: string;
-  created_by: string;
-  created_at: string;
-  updated_at: string;
-  ai_summary?: string;
-  ai_summary_generated_at?: string;
-  ai_changelog?: string;
-  ai_changelog_generated_at?: string;
-  // Joined data
-  clients?: Client;
-  projects?: { id: string; name: string };
-}
-
-export interface ContractDocument {
-  id: string;
-  contract_id: string;
-  version_number: number;
-  file_url: string;
-  file_name: string;
-  file_size?: number;
-  mime_type?: string;
-  docu_sign_envelope_id?: string;
-  docu_sign_status?: DocuSignStatus;
-  is_current: boolean;
-  uploaded_by: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface ContractDocumentVersion {
-  id: string;
-  document_id: string;
-  version_number: number;
-  file_url: string;
-  diff_summary?: string;
-  diff_summary_generated_at?: string;
-  created_by: string;
-  created_at: string;
-}
-
-export interface EmailMockup {
-  id: string;
-  contract_id?: string;
-  project_id?: string;
-  name: string;
-  html_content: string;
-  preview_url?: string;
-  branding_data?: any; // JSONB
-  status: EmailMockupStatus;
-  organization_id: string;
-  created_by: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface PaymentMethod {
-  id: string;
-  contract_id: string;
-  type: string;
-  details: any; // JSONB
-  status: PaymentMethodStatus;
-  approved_by?: string;
-  approved_at?: string;
-  organization_id: string;
-  created_by: string;
-  created_at: string;
-  updated_at: string;
-}
-
 export interface Project {
   id: string;
   organization_id: string;
   name: string;
-  client_id: string; // Required reference to clients table
-  client_name?: string; // Optional display field (can be derived from client relationship)
   description?: string;
   status: ProjectStatus;
   color: string; // Hex color for UI customization
   workflow_id?: string; // Optional workflow template assignment
-  contract_id?: string; // Optional contract reference (contracts are just approval assets)
   created_by: string; // Clerk user ID
   created_at: string;
   updated_at: string;
@@ -391,7 +265,6 @@ export interface Project {
     mockup_image_url: string;
   }>;
   workflow?: Workflow; // Populated via JOIN
-  contract?: { id: string; contract_number: string }; // Populated via JOIN
 }
 
 // Workflow types

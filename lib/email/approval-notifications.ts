@@ -159,7 +159,6 @@ export async function sendUserApprovalNotification({
 
       <div class="footer">
         <p>© ${new Date().getFullYear()} CardMock. All rights reserved.</p>
-        <p>Powered by Choice Digital</p>
       </div>
     </body>
     </html>
@@ -185,7 +184,6 @@ Review mockup here: ${mockupUrl}
 
 ---
 © ${new Date().getFullYear()} CardMock
-Powered by Choice Digital
   `;
 
   return sendEmail({
@@ -347,7 +345,6 @@ export async function sendStageCompleteNotification({
 
       <div class="footer">
         <p>© ${new Date().getFullYear()} CardMock. All rights reserved.</p>
-        <p>Powered by Choice Digital</p>
       </div>
     </body>
     </html>
@@ -371,7 +368,6 @@ Review mockup here: ${mockupUrl}
 
 ---
 © ${new Date().getFullYear()} CardMock
-Powered by Choice Digital
   `;
 
   return sendEmail({
@@ -532,7 +528,6 @@ export async function sendFinalApprovalNeededNotification({
 
       <div class="footer">
         <p>© ${new Date().getFullYear()} CardMock. All rights reserved.</p>
-        <p>Powered by Choice Digital</p>
       </div>
     </body>
     </html>
@@ -558,7 +553,6 @@ Give final approval here: ${mockupUrl}
 
 ---
 © ${new Date().getFullYear()} CardMock
-Powered by Choice Digital
   `;
 
   return sendEmail({
@@ -730,7 +724,6 @@ export async function sendFinalApprovalCompleteNotification({
 
       <div class="footer">
         <p>© ${new Date().getFullYear()} CardMock. All rights reserved.</p>
-        <p>Powered by Choice Digital</p>
       </div>
     </body>
     </html>
@@ -761,7 +754,6 @@ Congratulations on completing the approval process! This asset can now be downlo
 
 ---
 © ${new Date().getFullYear()} CardMock
-Powered by Choice Digital
   `;
 
   return sendEmail({

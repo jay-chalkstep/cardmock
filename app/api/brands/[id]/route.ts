@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
-import { getAuthContext, isClient, getUserAssignedClientId } from '@/lib/api/auth';
-import { successResponse, errorResponse, badRequestResponse, notFoundResponse, forbiddenResponse } from '@/lib/api/response';
+import { getAuthContext } from '@/lib/api/auth';
+import { successResponse, errorResponse, badRequestResponse, notFoundResponse } from '@/lib/api/response';
 import { handleSupabaseError } from '@/lib/api/error-handler';
 import { supabaseServer } from '@/lib/supabase-server';
 import { logger } from '@/lib/utils/logger';
@@ -11,7 +11,6 @@ export const dynamic = 'force-dynamic';
  * GET /api/brands/[id]
  *
  * Get a single brand
- * For Client-role users: Only returns brand if client_id matches user's assigned client
  */
 export async function GET(
   request: NextRequest,
@@ -21,7 +20,7 @@ export async function GET(
     const authResult = await getAuthContext();
     if (authResult instanceof Response) return authResult;
     const { orgId } = authResult;
-    
+
     const { id } = await context.params;
 
     logger.api(`/api/brands/${id}`, 'GET', { orgId });
@@ -35,18 +34,6 @@ export async function GET(
 
     if (error || !brand) {
       return notFoundResponse('Brand not found');
-    }
-
-    // For Client-role users: Verify brand belongs to their assigned client
-    const userIsClient = await isClient();
-    if (userIsClient) {
-      const assignedClientId = await getUserAssignedClientId();
-      if (!assignedClientId) {
-        return forbiddenResponse('Client assignment required');
-      }
-      if (brand.client_id !== assignedClientId) {
-        return forbiddenResponse('Access denied: Brand does not belong to your assigned client');
-      }
     }
 
     return successResponse({ brand });
@@ -64,8 +51,7 @@ export async function GET(
  * {
  *   company_name?: string,
  *   domain?: string,
- *   description?: string,
- *   client_id?: string
+ *   description?: string
  * }
  */
 export async function PATCH(
@@ -76,53 +62,23 @@ export async function PATCH(
     const authResult = await getAuthContext();
     if (authResult instanceof Response) return authResult;
     const { orgId } = authResult;
-    
+
     const { id } = await context.params;
     const body = await request.json();
-    const { company_name, domain, description, client_id } = body;
+    const { company_name, domain, description } = body;
 
     logger.api(`/api/brands/${id}`, 'PATCH', { orgId });
 
     // Check if brand exists
     const { data: existingBrand } = await supabaseServer
       .from('brands')
-      .select('id, client_id')
+      .select('id')
       .eq('id', id)
       .eq('organization_id', orgId)
       .single();
 
     if (!existingBrand) {
       return notFoundResponse('Brand not found');
-    }
-
-    // For Client-role users: Verify brand belongs to their assigned client
-    const userIsClient = await isClient();
-    if (userIsClient) {
-      const assignedClientId = await getUserAssignedClientId();
-      if (!assignedClientId) {
-        return forbiddenResponse('Client assignment required');
-      }
-      if (existingBrand.client_id !== assignedClientId) {
-        return forbiddenResponse('Access denied: Brand does not belong to your assigned client');
-      }
-      // Client-role users cannot change client_id
-      if (client_id !== undefined && client_id !== existingBrand.client_id) {
-        return forbiddenResponse('Client-role users cannot change brand client assignment');
-      }
-    }
-
-    // Validate client_id if provided
-    if (client_id !== undefined && client_id !== null) {
-      const { data: client } = await supabaseServer
-        .from('clients')
-        .select('id')
-        .eq('id', client_id)
-        .eq('organization_id', orgId)
-        .single();
-
-      if (!client) {
-        return badRequestResponse('Client not found');
-      }
     }
 
     // Build update object
@@ -140,10 +96,6 @@ export async function PATCH(
       updateData.domain = domain.trim();
     }
     if (description !== undefined) updateData.description = description?.trim() || null;
-    if (client_id !== undefined && !userIsClient) {
-      // Only allow client_id changes for non-Client-role users
-      updateData.client_id = client_id || null;
-    }
 
     // Update brand
     const { data: brand, error } = await supabaseServer

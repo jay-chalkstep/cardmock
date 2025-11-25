@@ -126,9 +126,6 @@ export default function ProjectSelector({
                 <Briefcase className="h-4 w-4 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
                   <div className="text-sm truncate font-medium">{project.name}</div>
-                  {project.client_name && (
-                    <div className="text-xs text-gray-500 truncate">{project.client_name}</div>
-                  )}
                 </div>
               </button>
             ))
