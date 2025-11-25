@@ -39,19 +39,30 @@ export default function MockupGridCard({
 
   const name = mockup.name || mockup.mockup_name || 'Untitled';
   const thumbnailUrl = mockup.preview_url || mockup.mockup_image_url;
-  const editedTime = formatDistanceToNow(new Date(mockup.updated_at || mockup.created_at), { addSuffix: true });
+
+  // Format the edited time - ensure it shows "X ago" not "in X" for past dates
+  const getEditedTime = () => {
+    const date = new Date(mockup.updated_at || mockup.created_at);
+    const now = new Date();
+    // If date is in the future (shouldn't happen), just show the date
+    if (date > now) {
+      return date.toLocaleDateString();
+    }
+    return formatDistanceToNow(date, { addSuffix: true });
+  };
+  const editedTime = getEditedTime();
 
   return (
     <div className="group relative">
       <Link href={`/mockups/${mockup.id}`}>
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg hover:border-gray-300 transition-all cursor-pointer">
           {/* Thumbnail */}
-          <div className="aspect-[4/3] bg-gray-100 relative overflow-hidden">
+          <div className="aspect-[4/3] bg-gray-50 relative overflow-hidden flex items-center justify-center p-3">
             {thumbnailUrl && !imageError ? (
               <img
                 src={thumbnailUrl}
                 alt={name}
-                className="w-full h-full object-cover"
+                className="max-w-full max-h-full object-contain rounded shadow-sm"
                 onError={() => setImageError(true)}
               />
             ) : (
