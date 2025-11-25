@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useOrganization, useUser } from '@/lib/hooks/useAuth';
 import {
   Clock,
@@ -45,6 +45,7 @@ const adminNavItems: NavItem[] = [
 export default function NavRail() {
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { membership, organization } = useOrganization();
   const { user } = useUser();
   const { setActiveNav } = usePanelContext();
@@ -52,6 +53,7 @@ export default function NavRail() {
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   const isAdmin = membership?.role === 'org:admin';
+  const currentTab = searchParams?.get('tab') || '';
 
   // Update active nav based on current path
   useEffect(() => {
@@ -67,9 +69,7 @@ export default function NavRail() {
 
     if (pathname?.startsWith('/library')) {
       // Check query params for tab
-      const url = new URL(window.location.href);
-      const tab = url.searchParams.get('tab');
-      if (tab === 'templates') {
+      if (currentTab === 'templates') {
         setActiveNav('templates');
       } else {
         setActiveNav('assets');
@@ -86,7 +86,7 @@ export default function NavRail() {
     if (activeAdminItem) {
       setActiveNav(activeAdminItem.id);
     }
-  }, [pathname, setActiveNav]);
+  }, [pathname, currentTab, setActiveNav]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -149,9 +149,9 @@ export default function NavRail() {
             } else if (item.id === 'trash') {
               isActive = pathname === '/trash';
             } else if (item.id === 'assets') {
-              isActive = pathname?.startsWith('/library') && !window.location.search.includes('tab=templates');
+              isActive = pathname?.startsWith('/library') && currentTab !== 'templates';
             } else if (item.id === 'templates') {
-              isActive = pathname?.startsWith('/library') && window.location.search.includes('tab=templates');
+              isActive = pathname?.startsWith('/library') && currentTab === 'templates';
             } else if (item.id === 'projects') {
               isActive = pathname?.startsWith('/projects');
             }
