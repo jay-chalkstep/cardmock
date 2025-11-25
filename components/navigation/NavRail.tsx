@@ -218,12 +218,12 @@ export default function NavRail() {
         >
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0">
             <span className="text-white text-sm font-medium">
-              {user?.firstName?.[0] || user?.email?.[0]?.toUpperCase() || 'U'}
+              {user?.firstName?.[0] || user?.username?.[0]?.toUpperCase() || 'U'}
             </span>
           </div>
           <div className="flex-1 min-w-0 text-left">
             <p className="text-sm font-medium text-white truncate">
-              {user?.firstName || user?.email?.split('@')[0] || 'User'}
+              {user?.firstName || user?.username || 'User'}
             </p>
             <p className="text-xs text-gray-500 truncate">
               {organization?.name || 'Organization'}

@@ -4,8 +4,6 @@
  */
 
 import { NextResponse } from 'next/server';
-import { supabaseServer } from '@/lib/supabase-server';
-import { Client } from '@/lib/supabase';
 
 // Hardcoded dev user - no auth required
 const MOCK_USER = {
@@ -72,19 +70,6 @@ export async function requireAdmin(): Promise<boolean | NextResponse> {
   return true;
 }
 
-/**
- * Check if user has Client role
- */
-export async function isClient(): Promise<boolean> {
-  return false;
-}
-
-/**
- * Require Client role or return error response
- */
-export async function requireClient(): Promise<boolean | NextResponse> {
-  return false;
-}
 
 /**
  * Check if user is internal (not a client)
@@ -100,33 +85,6 @@ export async function requireInternalUser(): Promise<boolean | NextResponse> {
   return true;
 }
 
-/**
- * Get the client ID assigned to the current user
- */
-export async function getUserAssignedClientId(userId?: string, orgId?: string): Promise<string | null> {
-  return null;
-}
-
-/**
- * Get the full client object assigned to the current user
- */
-export async function getUserAssignedClient(userId?: string, orgId?: string): Promise<Client | null> {
-  return null;
-}
-
-/**
- * Get the client hierarchy for the current user
- */
-export async function getUserClientHierarchy(): Promise<Client[]> {
-  return [];
-}
-
-/**
- * Get the client with hierarchy for a user
- */
-export async function getUserClientWithHierarchy(userId?: string, orgId?: string): Promise<Client | null> {
-  return null;
-}
 
 // Mock organization members for development
 export const MOCK_ORG_MEMBERS = [
