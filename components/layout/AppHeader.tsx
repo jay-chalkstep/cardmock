@@ -15,15 +15,17 @@ import GlobalSearch from '@/components/search/GlobalSearch';
 
 export default function AppHeader() {
   const { visibility, setVisibility } = usePanelContext();
-  const { user } = useUser();
+  const { user, isLoaded } = useUser();
   const [notificationCount, setNotificationCount] = useState(0);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const notificationsButtonRef = useRef<HTMLButtonElement>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
 
-  // Fetch unread notification count
+  // Fetch unread notification count - wait for Clerk to load first
   useEffect(() => {
+    if (!isLoaded) return;
+
     const fetchUnreadCount = async () => {
       try {
         const response = await fetch('/api/notifications/unread-count');
@@ -37,10 +39,9 @@ export default function AppHeader() {
     };
 
     fetchUnreadCount();
-    // Poll for new notifications every 30 seconds
     const interval = setInterval(fetchUnreadCount, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [isLoaded]);
 
   const handleToggleNav = () => {
     // Toggle Context Panel visibility instead of NavRail
