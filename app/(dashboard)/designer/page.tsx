@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
 import { useOrganization, useUser } from '@/lib/hooks/useAuth';
@@ -84,7 +84,7 @@ const getTypeColor = (type?: string) => {
   }
 };
 
-export default function DesignerPage() {
+function DesignerPageContent() {
   const { organization, isLoaded } = useOrganization();
   const { user } = useUser();
   const searchParams = useSearchParams();
@@ -729,5 +729,21 @@ export default function DesignerPage() {
         />
       </div>
     </GmailLayout>
+  );
+}
+
+export default function DesignerPage() {
+  return (
+    <Suspense
+      fallback={
+        <GmailLayout>
+          <div className="flex h-screen items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+          </div>
+        </GmailLayout>
+      }
+    >
+      <DesignerPageContent />
+    </Suspense>
   );
 }
