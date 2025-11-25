@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { getAuthContext, requireAdmin } from '@/lib/api/auth';
+import { getAuthContext, requireAdmin, getMockUserInfo, MOCK_ORG_MEMBERS } from '@/lib/api/auth';
 import { successResponse, errorResponse, badRequestResponse, notFoundResponse, forbiddenResponse } from '@/lib/api/response';
 import { handleSupabaseError } from '@/lib/api/error-handler';
 import { supabaseServer } from '@/lib/supabase-server';
@@ -49,32 +49,21 @@ export async function GET(
       return handleSupabaseError(error);
     }
 
-    // Enrich with user details from Clerk (dynamic import to avoid Edge Runtime issues)
-    const { clerkClient } = await import('@clerk/nextjs/server');
-    const clerk = await clerkClient();
-    const enrichedAssignments = await Promise.all(
-      (assignments || []).map(async (assignment) => {
-        try {
-          const user = await clerk.users.getUser(assignment.user_id);
-          return {
-            ...assignment,
-            user: {
-              id: user.id,
-              firstName: user.firstName,
-              lastName: user.lastName,
-              emailAddress: user.emailAddresses[0]?.emailAddress,
-              imageUrl: user.imageUrl,
-            },
-          };
-        } catch (error) {
-          logger.error('Failed to fetch user from Clerk', error);
-          return {
-            ...assignment,
-            user: null,
-          };
-        }
-      })
-    );
+    // Enrich with user details from mock auth
+    const enrichedAssignments = (assignments || []).map((assignment) => {
+      const userInfo = getMockUserInfo(assignment.user_id);
+      const nameParts = userInfo.name.split(' ');
+      return {
+        ...assignment,
+        user: {
+          id: userInfo.id,
+          firstName: nameParts[0] || '',
+          lastName: nameParts.slice(1).join(' ') || '',
+          emailAddress: userInfo.email,
+          imageUrl: userInfo.avatar,
+        },
+      };
+    });
 
     return successResponse({ 
       users: enrichedAssignments,
@@ -131,27 +120,14 @@ export async function POST(
       return notFoundResponse('Client not found');
     }
 
-    // Verify user exists in organization via Clerk (dynamic import to avoid Edge Runtime issues)
-    const { clerkClient } = await import('@clerk/nextjs/server');
-    const clerk = await clerkClient();
-    try {
-      const user = await clerk.users.getUser(user_id);
-      const orgMembership = (user as any).organizationMemberships?.find(
-        (m: any) => m.organization.id === orgId
-      );
-
-      if (!orgMembership) {
-        return badRequestResponse('User is not a member of this organization');
-      }
-
-      // Check if user has Client role
-      if (orgMembership.role !== 'org:client') {
-        return badRequestResponse('User must have Client role to be assigned to a client');
-      }
-    } catch (error) {
-      logger.error('Failed to verify user in Clerk', error);
-      return badRequestResponse('User not found or not accessible');
+    // Verify user exists in mock org members
+    const mockUser = MOCK_ORG_MEMBERS.find(m => m.id === user_id);
+    if (!mockUser) {
+      return badRequestResponse('User not found');
     }
+
+    // In dev mode, allow any user to be assigned (skip role check)
+    // In production, this would verify user has Client role
 
     // Check if user already has a client assigned
     const { data: existingAssignment } = await supabaseServer

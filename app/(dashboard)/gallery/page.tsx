@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useOrganization, useUser } from '@clerk/nextjs';
+import { useOrganization, useUser } from '@/lib/hooks/useAuth';
 import { supabase, CardMockup, Folder, Project } from '@/lib/supabase';
 import { buildFolderTree, getUnsortedAssetCount } from '@/lib/folders';
 import { useRouter } from 'next/navigation';

@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { getAuthContext } from '@/lib/api/auth';
+import { getAuthContext, getMockUserInfo } from '@/lib/api/auth';
 import { successResponse, errorResponse, badRequestResponse, notFoundResponse } from '@/lib/api/response';
 import { handleSupabaseError } from '@/lib/api/error-handler';
 import { supabaseServer } from '@/lib/supabase-server';
@@ -51,13 +51,9 @@ export async function POST(
       return badRequestResponse('Comment is already resolved');
     }
 
-    // Get user details from Clerk (dynamic import to avoid Edge Runtime issues)
-    const { clerkClient } = await import('@clerk/nextjs/server');
-    const client = await clerkClient();
-    const user = await client.users.getUser(userId);
-    const firstName = user.firstName || '';
-    const lastName = user.lastName || '';
-    const fullName = `${firstName} ${lastName}`.trim() || 'Unknown User';
+    // Get user details from mock auth
+    const userInfo = getMockUserInfo(userId);
+    const fullName = userInfo.name;
 
     // Resolve the comment
     const { data: resolvedComment, error: updateError} = await supabaseServer

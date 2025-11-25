@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useOrganization } from '@clerk/nextjs';
+import { useOrganization } from '@/lib/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import BrandDetailModal from '@/components/brand/BrandDetailModal';
 import Toast from '@/components/Toast';

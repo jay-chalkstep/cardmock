@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { UserButton, useUser } from '@clerk/nextjs';
+import { useUser } from '@/lib/hooks/useAuth';
 import {
   Menu,
   Bell,
   Settings,
   Search,
+  User,
 } from 'lucide-react';
 import { usePanelContext } from '@/lib/contexts/PanelContext';
 import { NotificationsPanel } from '@/components/notifications';
@@ -22,7 +23,7 @@ export default function AppHeader() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
 
-  // Fetch unread notification count - wait for Clerk to load first
+  // Fetch unread notification count
   useEffect(() => {
     if (!isLoaded) return;
 
@@ -44,7 +45,6 @@ export default function AppHeader() {
   }, [isLoaded]);
 
   const handleToggleNav = () => {
-    // Toggle Context Panel visibility instead of NavRail
     setVisibility({ context: !visibility.context });
   };
 
@@ -54,7 +54,6 @@ export default function AppHeader() {
 
   const handleNotificationsClose = () => {
     setNotificationsOpen(false);
-    // Refresh count when closing
     fetch('/api/notifications/unread-count')
       .then((res) => res.json())
       .then((data) => {
@@ -150,7 +149,6 @@ export default function AppHeader() {
           )}
         </div>
 
-
         {/* Settings */}
         <button
           onClick={handleSettings}
@@ -160,24 +158,14 @@ export default function AppHeader() {
           <Settings size={20} className="text-[var(--text-icon)]" />
         </button>
 
-        {/* User Button with Name */}
+        {/* User Display */}
         <div className="ml-2 flex items-center gap-2">
-          {user && (
-            <span className="text-sm font-medium text-[var(--text-primary)] hidden sm:inline">
-              {user.firstName && user.lastName
-                ? `${user.firstName} ${user.lastName}`
-                : user.firstName || user.username || user.emailAddresses[0]?.emailAddress?.split('@')[0]}
-            </span>
-          )}
-          <UserButton
-            showName={false}
-            appearance={{
-              elements: {
-                avatarBox: 'w-8 h-8',
-                userButtonTrigger: 'focus:shadow-none hover:opacity-80 transition-opacity',
-              },
-            }}
-          />
+          <span className="text-sm font-medium text-[var(--text-primary)] hidden sm:inline">
+            {user?.firstName} {user?.lastName}
+          </span>
+          <div className="w-8 h-8 bg-[var(--accent-blue)] rounded-full flex items-center justify-center">
+            <User size={16} className="text-white" />
+          </div>
         </div>
       </div>
 

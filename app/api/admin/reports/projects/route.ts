@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { getAuthContext, isAdmin } from '@/lib/api/auth';
+import { getAuthContext, isAdmin, getMockUserInfo } from '@/lib/api/auth';
 import { successResponse, errorResponse, forbiddenResponse } from '@/lib/api/response';
 import { handleSupabaseError } from '@/lib/api/error-handler';
 import { supabaseServer } from '@/lib/supabase-server';
@@ -143,30 +143,16 @@ export async function GET(request: NextRequest) {
     // Get unique user IDs
     const userIds = [...new Set(projects.map(p => p.created_by))];
 
-    // Fetch user details from Clerk (dynamic import to avoid Edge Runtime issues)
-    const { clerkClient } = await import('@clerk/nextjs/server');
-    const client = await clerkClient();
-    const userDetailsPromises = userIds.map(async (userId) => {
-      try {
-        const user = await client.users.getUser(userId);
-        return {
-          id: userId,
-          name: user.fullName || user.firstName || user.emailAddresses[0]?.emailAddress || 'Unknown User',
-          email: user.emailAddresses[0]?.emailAddress || '',
-          avatar: user.imageUrl
-        };
-      } catch (error) {
-        logger.error(`Error fetching user ${userId}`, error, { userId });
-        return {
-          id: userId,
-          name: 'Unknown User',
-          email: '',
-          avatar: ''
-        };
-      }
+    // Get user details from mock auth
+    const userDetails = userIds.map(userId => {
+      const userInfo = getMockUserInfo(userId);
+      return {
+        id: userId,
+        name: userInfo.name,
+        email: userInfo.email,
+        avatar: userInfo.avatar
+      };
     });
-
-    const userDetails = await Promise.all(userDetailsPromises);
     const userMap = Object.fromEntries(userDetails.map(u => [u.id, u]));
 
     // Group projects by user

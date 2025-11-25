@@ -1,27 +1,21 @@
 'use client';
 
-import {
-  SignInButton,
-  SignUpButton,
-  SignedIn,
-  SignedOut,
-  UserButton,
-} from '@clerk/nextjs';
+import { User } from 'lucide-react';
+import { useUser } from '@/lib/hooks/useAuth';
 
 export default function AuthHeader() {
+  const { user } = useUser();
+
   return (
     <header className="flex justify-end items-center p-4 gap-4 h-16">
-      <SignedOut>
-        <SignInButton />
-        <SignUpButton>
-          <button className="bg-[#6c47ff] text-ceramic-white rounded-full font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 cursor-pointer">
-            Sign Up
-          </button>
-        </SignUpButton>
-      </SignedOut>
-      <SignedIn>
-        <UserButton />
-      </SignedIn>
+      <div className="flex items-center gap-2">
+        <span className="text-sm font-medium">
+          {user.firstName} {user.lastName}
+        </span>
+        <div className="w-8 h-8 bg-[#6c47ff] rounded-full flex items-center justify-center">
+          <User size={16} className="text-white" />
+        </div>
+      </div>
     </header>
   );
 }

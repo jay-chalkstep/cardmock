@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { X, Search, UserPlus } from 'lucide-react';
-import { useOrganization } from '@clerk/nextjs';
+import { useOrganization } from '@/lib/hooks/useAuth';
 
 interface User {
   id: string;

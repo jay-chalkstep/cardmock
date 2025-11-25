@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useOrganization } from '@clerk/nextjs';
+import { useOrganization } from '@/lib/hooks/useAuth';
 import GmailLayout from '@/components/layout/GmailLayout';
 import { Briefcase, CheckCircle, Loader2, ExternalLink, Workflow as WorkflowIcon } from 'lucide-react';
 import type { Project, CardMockup, WorkflowStageColor } from '@/lib/supabase';

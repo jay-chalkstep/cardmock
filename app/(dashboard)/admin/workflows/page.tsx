@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useOrganization } from '@clerk/nextjs';
+import { useOrganization } from '@/lib/hooks/useAuth';
 import { Plus, Search, Workflow as WorkflowIcon, Loader2, Archive, Edit, Trash2, Star, MoreVertical, Briefcase } from 'lucide-react';
 import type { Workflow } from '@/lib/supabase';
 import Toast from '@/components/Toast';

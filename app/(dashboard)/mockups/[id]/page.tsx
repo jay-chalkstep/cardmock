@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, use } from 'react';
-import { useOrganization, useUser } from '@clerk/nextjs';
+import { useOrganization, useUser } from '@/lib/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { supabase, CardMockup } from '@/lib/supabase';
 import {

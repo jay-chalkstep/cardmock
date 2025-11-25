@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { getAuthContext } from '@/lib/api/auth';
+import { getAuthContext, getMockUserInfo } from '@/lib/api/auth';
 import { successResponse, errorResponse, badRequestResponse, notFoundResponse, forbiddenResponse } from '@/lib/api/response';
 import { handleSupabaseError, checkRequiredFields } from '@/lib/api/error-handler';
 import { supabaseServer } from '@/lib/supabase-server';
@@ -78,13 +78,9 @@ export async function PATCH(
         return badRequestResponse('comment_text cannot be empty');
       }
 
-      // Get user details from Clerk (dynamic import to avoid Edge Runtime issues)
-      const { clerkClient } = await import('@clerk/nextjs/server');
-      const client = await clerkClient();
-      const user = await client.users.getUser(userId);
-      const firstName = user.firstName || '';
-      const lastName = user.lastName || '';
-      const fullName = `${firstName} ${lastName}`.trim() || 'Unknown User';
+      // Get user details from mock auth
+      const userInfo = getMockUserInfo(userId);
+      const fullName = userInfo.name;
 
       // Build edit history entry
       const editHistory = comment.edit_history || [];
@@ -155,13 +151,9 @@ export async function DELETE(
       return forbiddenResponse('You can only delete your own comments');
     }
 
-    // Get user details from Clerk (dynamic import to avoid Edge Runtime issues)
-    const { clerkClient } = await import('@clerk/nextjs/server');
-    const client = await clerkClient();
-    const user = await client.users.getUser(userId);
-    const firstName = user.firstName || '';
-    const lastName = user.lastName || '';
-    const fullName = `${firstName} ${lastName}`.trim() || 'Unknown User';
+    // Get user details from mock auth
+    const userInfo = getMockUserInfo(userId);
+    const fullName = userInfo.name;
 
     // Soft delete comment (preserve for audit trail)
     const { error: deleteError } = await supabaseServer

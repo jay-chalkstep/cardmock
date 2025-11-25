@@ -4,7 +4,7 @@ import { useRef, useState, useEffect } from 'react';
 import { Stage, Layer, Image as KonvaImage, Arrow, Circle, Rect, Line, Text, Group } from 'react-konva';
 import { CardMockup } from '@/lib/supabase';
 import { Comment, AnnotationTool } from '@/app/(dashboard)/mockups/[id]/page';
-import { useUser, useOrganization } from '@clerk/nextjs';
+import { useUser, useOrganization } from '@/lib/hooks/useAuth';
 import Konva from 'konva';
 
 // Zoom configuration

@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { getAuthContext } from '@/lib/api/auth';
+import { getAuthContext, getMockUserInfo } from '@/lib/api/auth';
 import { successResponse, errorResponse, badRequestResponse, notFoundResponse, forbiddenResponse } from '@/lib/api/response';
 import { handleSupabaseError, checkRequiredFields } from '@/lib/api/error-handler';
 import { supabaseServer } from '@/lib/supabase-server';
@@ -126,11 +126,9 @@ export async function POST(
       return badRequestResponse(`Stage is not in review (current status: ${stageProgress.status})`);
     }
 
-    // Get current user info from Clerk
-    const { clerkClient } = await import('@clerk/nextjs/server');
-    const client = await clerkClient();
-    const user = await client.users.getUser(userId);
-    const userName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.emailAddresses[0]?.emailAddress || 'Unknown User';
+    // Get current user info from mock auth
+    const userInfo = getMockUserInfo(userId);
+    const userName = userInfo.name;
 
     if (action === 'approve') {
       // APPROVE LOGIC

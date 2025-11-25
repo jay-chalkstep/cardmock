@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { useOrganization, useUser } from '@clerk/nextjs';
+import { useOrganization, useUser } from '@/lib/hooks/useAuth';
 import { supabase, CardMockup, Folder, Project, Brand, CardTemplate } from '@/lib/supabase';
 import { buildFolderTree, getUnsortedAssetCount } from '@/lib/folders';
 import { useRouter } from 'next/navigation';

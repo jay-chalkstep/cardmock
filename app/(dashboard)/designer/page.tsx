@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
-import { useOrganization, useUser } from '@clerk/nextjs';
+import { useOrganization, useUser } from '@/lib/hooks/useAuth';
 import { supabase, Logo, CardTemplate, Folder, Project } from '@/lib/supabase';
 import { buildFolderTree } from '@/lib/folders';
 import Toast from '@/components/Toast';

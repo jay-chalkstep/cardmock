@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { useOrganization } from '@clerk/nextjs';
+import { useOrganization } from '@/lib/hooks/useAuth';
 import BrandCard from '@/components/brand/BrandCard';
 import BrandDetailModal from '@/components/brand/BrandDetailModal';
 import Toast from '@/components/Toast';

@@ -3,8 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { X, Settings, User, Building2, HelpCircle, Bell, Palette, Plug } from 'lucide-react';
-import { UserProfile, OrganizationProfile } from '@clerk/nextjs';
-import { useOrganization } from '@clerk/nextjs';
+import { useOrganization } from '@/lib/hooks/useAuth';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -279,38 +278,28 @@ export default function SettingsModal({
               )}
 
               {activeTab === 'account' && (
-                <div>
-                  <UserProfile
-                    appearance={{
-                      elements: {
-                        rootBox: 'w-full',
-                        cardBox: 'shadow-none border-0',
-                        navbar: 'border-b border-[var(--border-main)]',
-                        navbarButton: 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]',
-                        navbarButtonActive: 'text-[var(--accent-blue)] bg-[var(--bg-selected)]',
-                        page: 'p-6',
-                      },
-                    }}
-                    routing="hash"
-                  />
+                <div className="space-y-6">
+                  <div className="p-6 bg-[var(--bg-hover)] rounded-lg">
+                    <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
+                      Account Settings
+                    </h3>
+                    <p className="text-sm text-[var(--text-secondary)]">
+                      Account management is currently disabled. Authentication will be added in a future update.
+                    </p>
+                  </div>
                 </div>
               )}
 
               {activeTab === 'organization' && isAdmin && (
-                <div>
-                  <OrganizationProfile
-                    appearance={{
-                      elements: {
-                        rootBox: 'w-full',
-                        cardBox: 'shadow-none border-0',
-                        navbar: 'border-b border-[var(--border-main)]',
-                        navbarButton: 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]',
-                        navbarButtonActive: 'text-[var(--accent-blue)] bg-[var(--bg-selected)]',
-                        page: 'p-6',
-                      },
-                    }}
-                    routing="hash"
-                  />
+                <div className="space-y-6">
+                  <div className="p-6 bg-[var(--bg-hover)] rounded-lg">
+                    <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
+                      Organization Settings
+                    </h3>
+                    <p className="text-sm text-[var(--text-secondary)]">
+                      Organization management is currently disabled. Authentication will be added in a future update.
+                    </p>
+                  </div>
                 </div>
               )}
 
@@ -387,4 +376,3 @@ export default function SettingsModal({
     </div>
   );
 }
-

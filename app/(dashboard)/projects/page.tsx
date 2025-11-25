@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useOrganization, useUser } from '@clerk/nextjs';
+import { useOrganization, useUser } from '@/lib/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import type { Project, ProjectStatus } from '@/lib/supabase';
 import { usePanelContext } from '@/lib/contexts/PanelContext';

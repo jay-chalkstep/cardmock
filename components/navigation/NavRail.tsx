@@ -3,8 +3,7 @@
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { OrganizationSwitcher, useOrganization } from '@clerk/nextjs';
-import { dark } from '@clerk/themes';
+import { useOrganization } from '@/lib/hooks/useAuth';
 import {
   Library,
   Search,
@@ -18,6 +17,7 @@ import {
   Images,
   Package,
   Home,
+  Building2,
 } from 'lucide-react';
 import { usePanelContext } from '@/lib/contexts/PanelContext';
 
@@ -52,35 +52,30 @@ export default function NavRail() {
 
   // Update active nav based on current path
   useEffect(() => {
-    // Handle home route specially
     if (pathname === '/') {
       setActiveNav('home');
       return;
     }
-    
-    // Handle library route (also check for gallery for backward compatibility)
+
     if (pathname?.startsWith('/library') || pathname?.startsWith('/gallery')) {
       setActiveNav('library');
       return;
     }
-    
-    
-    // Handle clients route (admin only)
+
     if (pathname?.startsWith('/clients')) {
       setActiveNav('clients');
       return;
     }
-    
+
     const activeItem = navItems.find(item => {
-      if (item.id === 'home') return false; // Skip home for other routes
+      if (item.id === 'home') return false;
       return pathname?.startsWith(item.href);
     });
-    
+
     if (activeItem) {
       setActiveNav(activeItem.id);
     }
-    
-    // Check admin nav items
+
     const activeAdminItem = adminNavItems.find(item => pathname?.startsWith(item.href));
     if (activeAdminItem) {
       setActiveNav(activeAdminItem.id);
@@ -93,8 +88,7 @@ export default function NavRail() {
       <nav className="flex-1 py-4 overflow-y-auto">
         <ul className="space-y-1 px-2">
           {navItems.map((item) => {
-            // Special handling for home route
-            const isActive = item.id === 'home' 
+            const isActive = item.id === 'home'
               ? pathname === item.href
               : item.id === 'library'
               ? pathname?.startsWith('/library') || pathname?.startsWith('/gallery')
@@ -157,24 +151,12 @@ export default function NavRail() {
         )}
       </nav>
 
-      {/* Bottom Section */}
+      {/* Bottom Section - Org indicator */}
       <div className="border-t border-[var(--border-main)] p-3">
-        {/* Organization Switcher */}
         <div className="flex justify-center">
-          <OrganizationSwitcher
-            appearance={{
-              baseTheme: dark,
-              elements: {
-                rootBox: 'w-10',
-                organizationSwitcherTrigger: 'w-10 h-10 p-0 rounded-lg border border-[var(--border-main)] hover:bg-[var(--bg-hover)] transition-colors flex items-center justify-center',
-                organizationSwitcherTriggerIcon: 'text-[var(--text-secondary)]',
-                organizationPreview: 'hidden',
-                organizationPreviewAvatarBox: 'w-8 h-8',
-                organizationPreviewMainIdentifier: 'hidden',
-                organizationPreviewSecondaryIdentifier: 'hidden',
-              },
-            }}
-          />
+          <div className="w-10 h-10 rounded-lg border border-[var(--border-main)] flex items-center justify-center">
+            <Building2 size={20} className="text-[var(--text-secondary)]" />
+          </div>
         </div>
       </div>
     </div>
