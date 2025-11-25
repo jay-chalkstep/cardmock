@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { getAuthContext, isAdmin, isClient, getUserAssignedClientId } from '@/lib/api/auth';
+import { getAuthContext, isAdmin } from '@/lib/api/auth';
 import { successResponse, errorResponse, badRequestResponse, notFoundResponse, forbiddenResponse } from '@/lib/api/response';
 import { handleSupabaseError } from '@/lib/api/error-handler';
 import { supabaseServer } from '@/lib/supabase-server';
@@ -22,38 +22,18 @@ export async function GET(
     const authResult = await getAuthContext();
     if (authResult instanceof Response) return authResult;
     const { orgId } = authResult;
-    
+
     const { id } = await context.params;
 
     logger.api(`/api/projects/${id}`, 'GET', { orgId, projectId: id });
 
-    // For Client-role users: Check if they have access via client_id
-    const userIsClient = await isClient();
-    let assignedClientId: string | null = null;
-    
-    if (userIsClient) {
-      assignedClientId = await getUserAssignedClientId();
-      if (!assignedClientId) {
-        // Client-role user with no client assignment - return not found
-        return notFoundResponse('Project not found');
-      }
-    }
-
-    // Build query - filter at database level for client users
-    // Simplified query without nested JOINs to avoid RLS/foreign key issues
-    let query = supabaseServer
+    // Fetch project with workflow
+    const { data: project, error } = await supabaseServer
       .from('projects')
       .select('*, workflows(*)')
       .eq('id', id)
-      .eq('organization_id', orgId);
-
-    // For Client-role users: Filter by client_id (direct relationship)
-    // For non-client users: Show project if in organization
-    if (userIsClient && assignedClientId) {
-      query = query.eq('client_id', assignedClientId);
-    }
-
-    const { data: project, error } = await query.single();
+      .eq('organization_id', orgId)
+      .single();
 
     if (error) {
       logger.error('Project fetch error', {
@@ -100,14 +80,13 @@ export async function GET(
       .limit(4);
 
     // Rename workflows (table name) to workflow (expected by UI)
-    // Supabase may return workflows as an array or object depending on the relationship
     const { workflows, ...projectData } = project;
     const workflowData = Array.isArray(workflows) ? workflows[0] : workflows;
 
     return successResponse({
       project: {
         ...projectData,
-        workflow: workflowData || null, // Rename to match Project interface
+        workflow: workflowData || null,
         mockup_count: count || 0,
         mockup_previews: mockupPreviews || [],
       },
@@ -125,8 +104,6 @@ export async function GET(
  * Body:
  * {
  *   name?: string,
- *   client_id?: string,
- *   client_name?: string,
  *   description?: string,
  *   status?: 'active' | 'completed' | 'archived',
  *   color?: string,
@@ -141,7 +118,7 @@ export async function PATCH(
     const authResult = await getAuthContext();
     if (authResult instanceof Response) return authResult;
     const { userId, orgId } = authResult;
-    
+
     const { id } = await context.params;
 
     logger.api(`/api/projects/${id}`, 'PATCH', { orgId, userId });
@@ -167,7 +144,7 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { name, client_id, client_name, description, status, color, workflow_id } = body;
+    const { name, description, status, color, workflow_id } = body;
 
     // Prepare update data
     const updateData: any = {};
@@ -181,36 +158,6 @@ export async function PATCH(
         return badRequestResponse('Project name must be less than 100 characters');
       }
       updateData.name = name.trim();
-    }
-
-    // Handle client_id update
-    if (client_id !== undefined) {
-      // Validate client_id exists and belongs to organization
-      if (client_id === null || (typeof client_id === 'string' && client_id.trim().length === 0)) {
-        return badRequestResponse('Client ID cannot be empty');
-      }
-
-      const { data: client, error: clientError } = await supabaseServer
-        .from('clients')
-        .select('id, name')
-        .eq('id', client_id)
-        .eq('organization_id', orgId)
-        .single();
-
-      if (clientError || !client) {
-        return badRequestResponse('Client not found or does not belong to this organization');
-      }
-
-      updateData.client_id = client_id;
-      // Optionally update client_name to match client if not explicitly provided
-      if (client_name === undefined) {
-        updateData.client_name = client.name;
-      }
-    }
-
-    // Add client_name (can be null, but only if client_id is not being updated)
-    if (client_name !== undefined && client_id === undefined) {
-      updateData.client_name = client_name?.trim() || null;
     }
 
     // Add description (can be null)
@@ -300,7 +247,7 @@ export async function DELETE(
     const authResult = await getAuthContext();
     if (authResult instanceof Response) return authResult;
     const { userId, orgId } = authResult;
-    
+
     const { id } = await context.params;
 
     logger.api(`/api/projects/${id}`, 'DELETE', { orgId, userId });

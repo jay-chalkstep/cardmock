@@ -43,11 +43,6 @@ export default function ProjectCard({ project, onEdit, onDelete }: ProjectCardPr
               <h3 className="text-lg font-semibold text-gray-900 truncate">
                 {project.name}
               </h3>
-              {project.client_name && (
-                <p className="text-sm text-gray-600 truncate mt-1">
-                  {project.client_name}
-                </p>
-              )}
             </div>
 
             {/* Action menu */}

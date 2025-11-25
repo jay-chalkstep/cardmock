@@ -134,7 +134,6 @@ export async function sendStageReviewNotification({
 
       <div class="footer">
         <p>© ${new Date().getFullYear()} CardMock. All rights reserved.</p>
-        <p>Powered by Choice Digital</p>
       </div>
     </body>
     </html>
@@ -158,7 +157,6 @@ Review mockup here: ${mockupUrl}
 
 ---
 © ${new Date().getFullYear()} CardMock
-Powered by Choice Digital
   `;
 
   return sendEmail({
@@ -325,7 +323,6 @@ export async function sendChangesRequestedNotification({
 
       <div class="footer">
         <p>© ${new Date().getFullYear()} CardMock. All rights reserved.</p>
-        <p>Powered by Choice Digital</p>
       </div>
     </body>
     </html>
@@ -351,7 +348,6 @@ View mockup and feedback here: ${mockupUrl}
 
 ---
 © ${new Date().getFullYear()} CardMock
-Powered by Choice Digital
   `;
 
   return sendEmail({
@@ -491,7 +487,6 @@ export async function sendAllStagesApprovedNotification({
 
       <div class="footer">
         <p>© ${new Date().getFullYear()} CardMock. All rights reserved.</p>
-        <p>Powered by Choice Digital</p>
       </div>
     </body>
     </html>
@@ -514,7 +509,6 @@ View approved mockup here: ${mockupUrl}
 
 ---
 © ${new Date().getFullYear()} CardMock
-Powered by Choice Digital
   `;
 
   return sendEmail({

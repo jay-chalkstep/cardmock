@@ -51,8 +51,6 @@ export default function ProjectDetailPage() {
 
   const handleUpdateProject = async (projectData: {
     name: string;
-    client_id?: string;
-    client_name?: string;
     description?: string;
     status?: 'active' | 'completed' | 'archived';
     color?: string;
@@ -243,24 +241,13 @@ export default function ProjectDetailPage() {
           {/* Line 1: Project identity + stats */}
           <div className="flex items-center justify-between mb-2 gap-4">
             <div className="flex items-center gap-2 flex-wrap min-w-0">
-              {/* Color dot + Name + Client */}
+              {/* Color dot + Name */}
               <div className="flex items-center gap-2 min-w-0">
                 <div
                   className="w-2.5 h-2.5 rounded-full flex-shrink-0"
                   style={{ backgroundColor: project.color }}
                 />
                 <h1 className="text-xl font-bold text-gray-900 truncate">{project.name}</h1>
-                {project.client_name && (
-                  <span className="text-gray-500 text-sm truncate">• {project.client_name}</span>
-                )}
-                {project.contract && (
-                  <span 
-                    className="text-blue-600 text-sm truncate cursor-pointer hover:underline"
-                    onClick={() => project.contract && router.push(`/contracts/${project.contract.id}`)}
-                  >
-                    • Contract: {project.contract.contract_number}
-                  </span>
-                )}
               </div>
 
               {/* Divider */}

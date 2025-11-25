@@ -1,16 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Briefcase, Loader2, Workflow as WorkflowIcon, Users } from 'lucide-react';
-import type { ProjectStatus, Workflow, Client } from '@/lib/supabase';
+import { X, Briefcase, Loader2, Workflow as WorkflowIcon } from 'lucide-react';
+import type { ProjectStatus, Workflow } from '@/lib/supabase';
 
 interface NewProjectModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (projectData: {
     name: string;
-    client_id: string;
-    client_name?: string;
     description?: string;
     status?: ProjectStatus;
     color?: string;
@@ -41,8 +39,6 @@ export default function NewProjectModal({
   onSubmit,
 }: NewProjectModalProps) {
   const [name, setName] = useState('');
-  const [clientId, setClientId] = useState<string>('');
-  const [clientName, setClientName] = useState('');
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<ProjectStatus>('active');
   const [color, setColor] = useState('#3B82F6');
@@ -52,14 +48,11 @@ export default function NewProjectModal({
 
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [loadingWorkflows, setLoadingWorkflows] = useState(false);
-  const [clients, setClients] = useState<Client[]>([]);
-  const [loadingClients, setLoadingClients] = useState(false);
 
-  // Fetch workflows and clients on mount
+  // Fetch workflows on mount
   useEffect(() => {
     if (isOpen) {
       fetchWorkflows();
-      fetchClients();
     }
   }, [isOpen]);
 
@@ -70,7 +63,6 @@ export default function NewProjectModal({
       const result = await response.json();
 
       if (response.ok && result.success) {
-        // Extract data from the response structure { success: true, data: { workflows: [...] } }
         const fetchedWorkflows = result.data?.workflows || [];
         setWorkflows(fetchedWorkflows);
 
@@ -86,34 +78,6 @@ export default function NewProjectModal({
       setLoadingWorkflows(false);
     }
   };
-
-  const fetchClients = async () => {
-    setLoadingClients(true);
-    try {
-      const response = await fetch('/api/clients');
-      const result = await response.json();
-
-      if (response.ok && result.success) {
-        // Extract data from the response structure { success: true, data: { clients: [...] } }
-        const fetchedClients = result.data?.clients || [];
-        setClients(fetchedClients);
-      }
-    } catch (error) {
-      console.error('Error fetching clients:', error);
-    } finally {
-      setLoadingClients(false);
-    }
-  };
-
-  // Auto-populate client_name when client is selected
-  useEffect(() => {
-    if (clientId) {
-      const selectedClient = clients.find((c) => c.id === clientId);
-      if (selectedClient) {
-        setClientName(selectedClient.name);
-      }
-    }
-  }, [clientId, clients]);
 
   const selectedWorkflow = workflows.find((w) => w.id === workflowId);
 
@@ -133,17 +97,10 @@ export default function NewProjectModal({
       return;
     }
 
-    if (!clientId) {
-      setError('Client selection is required');
-      return;
-    }
-
     setIsSubmitting(true);
     try {
       await onSubmit({
         name: name.trim(),
-        client_id: clientId,
-        client_name: clientName.trim() || undefined,
         description: description.trim() || undefined,
         status,
         color,
@@ -151,8 +108,6 @@ export default function NewProjectModal({
       });
       // Reset form
       setName('');
-      setClientId('');
-      setClientName('');
       setDescription('');
       setStatus('active');
       setColor('#3B82F6');
@@ -168,8 +123,6 @@ export default function NewProjectModal({
   const handleClose = () => {
     if (!isSubmitting) {
       setName('');
-      setClientId('');
-      setClientName('');
       setDescription('');
       setStatus('active');
       setColor('#3B82F6');
@@ -222,64 +175,6 @@ export default function NewProjectModal({
               maxLength={100}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:bg-gray-50"
             />
-          </div>
-
-          {/* Client Selection */}
-          <div>
-            <label
-              htmlFor="clientId"
-              className="block text-sm font-medium text-gray-700 mb-2"
-            >
-              Client <span className="text-red-500">*</span>
-            </label>
-            {loadingClients ? (
-              <div className="flex items-center justify-center py-4 text-sm text-gray-500">
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                Loading clients...
-              </div>
-            ) : (
-              <select
-                id="clientId"
-                value={clientId}
-                onChange={(e) => setClientId(e.target.value)}
-                disabled={isSubmitting}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:bg-gray-50"
-              >
-                <option value="">Select a client...</option>
-                {clients.map((client) => (
-                  <option key={client.id} value={client.id}>
-                    {client.name}
-                  </option>
-                ))}
-              </select>
-            )}
-            {clients.length === 0 && !loadingClients && (
-              <p className="mt-1 text-xs text-gray-500">
-                No clients found. Please create a client first.
-              </p>
-            )}
-          </div>
-
-          {/* Client Name (optional display field) */}
-          <div>
-            <label
-              htmlFor="clientName"
-              className="block text-sm font-medium text-gray-700 mb-2"
-            >
-              Client Name (Display) <span className="text-gray-400 text-xs">(optional)</span>
-            </label>
-            <input
-              id="clientName"
-              type="text"
-              value={clientName}
-              onChange={(e) => setClientName(e.target.value)}
-              placeholder="Auto-populated from selected client..."
-              disabled={isSubmitting}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:bg-gray-50"
-            />
-            <p className="mt-1 text-xs text-gray-500">
-              Optional display name. Defaults to selected client name.
-            </p>
           </div>
 
           {/* Description */}
@@ -420,7 +315,7 @@ export default function NewProjectModal({
             </button>
             <button
               type="submit"
-              disabled={isSubmitting || !name.trim() || !clientId}
+              disabled={isSubmitting || !name.trim()}
               className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {isSubmitting ? (
