@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useOrganization, useUser } from '@/lib/hooks/useAuth';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { usePanelContext } from '@/lib/contexts/PanelContext';
 import GmailLayout from '@/components/layout/GmailLayout';
 import MockupGridCard from '@/components/mockups/MockupGridCard';
@@ -53,7 +53,6 @@ export default function HomePage() {
   const { organization, isLoaded } = useOrganization();
   const { user } = useUser();
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { setActiveNav } = usePanelContext();
 
   // State
