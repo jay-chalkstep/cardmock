@@ -2,12 +2,19 @@
 
 import { useState, useEffect } from 'react';
 import { useOrganization, useUser } from '@/lib/hooks/useAuth';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { usePanelContext } from '@/lib/contexts/PanelContext';
 import GmailLayout from '@/components/layout/GmailLayout';
+import MockupGridCard from '@/components/mockups/MockupGridCard';
 import Toast from '@/components/Toast';
-import { Briefcase, MessageSquare, Plus, Palette, Loader2, ArrowRight, CheckCircle, Clock } from 'lucide-react';
-import type { Project } from '@/lib/supabase';
+import {
+  Grid3X3,
+  List,
+  ChevronDown,
+  Loader2,
+  Image as ImageIcon,
+  Plus,
+} from 'lucide-react';
 
 interface ToastMessage {
   message: string;
@@ -15,31 +22,52 @@ interface ToastMessage {
   id: number;
 }
 
-interface DashboardStats {
-  pendingReviewsCount: number;
-  activeProjectsCount: number;
-  recentAssetsCount: number;
-  recentProjects: Project[];
-  pendingReviews: any[];
+interface Mockup {
+  id: string;
+  name?: string;
+  mockup_name?: string;
+  preview_url?: string;
+  mockup_image_url?: string;
+  updated_at: string;
+  created_at: string;
+  project_id?: string;
+  project?: {
+    id: string;
+    name: string;
+    color: string;
+  } | null;
+  is_featured?: boolean;
 }
 
+interface Project {
+  id: string;
+  name: string;
+  color: string;
+}
+
+type TabType = 'recent' | 'my-mockups' | 'shared';
+type ViewType = 'grid' | 'list';
+type SortType = 'updated' | 'created' | 'name';
+
 export default function HomePage() {
-  const { organization, isLoaded, membership } = useOrganization();
+  const { organization, isLoaded } = useOrganization();
   const { user } = useUser();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { setActiveNav } = usePanelContext();
 
-  const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState<DashboardStats>({
-    pendingReviewsCount: 0,
-    activeProjectsCount: 0,
-    recentAssetsCount: 0,
-    recentProjects: [],
-    pendingReviews: [],
-  });
-  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  // State
+  const [activeTab, setActiveTab] = useState<TabType>('recent');
+  const [viewType, setViewType] = useState<ViewType>('grid');
+  const [sortBy, setSortBy] = useState<SortType>('updated');
+  const [projectFilter, setProjectFilter] = useState<string>('all');
+  const [showProjectDropdown, setShowProjectDropdown] = useState(false);
+  const [showSortDropdown, setShowSortDropdown] = useState(false);
 
-  const isAdmin = membership?.role === 'org:admin';
+  const [loading, setLoading] = useState(true);
+  const [mockups, setMockups] = useState<Mockup[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   const showToast = (message: string, type: 'success' | 'error') => {
     const id = Date.now();
@@ -51,266 +79,328 @@ export default function HomePage() {
   };
 
   useEffect(() => {
-    setActiveNav('home');
+    setActiveNav('recents');
   }, [setActiveNav]);
 
+  // Fetch data
   useEffect(() => {
     if (organization?.id && user?.id) {
-      fetchDashboardData();
+      fetchData();
     }
-  }, [organization?.id, user?.id]);
+  }, [organization?.id, user?.id, activeTab]);
 
-  const fetchDashboardData = async () => {
+  const fetchData = async () => {
     if (!organization?.id || !user?.id) return;
 
     setLoading(true);
     try {
-      // Fetch pending reviews count
-      const reviewsResponse = await fetch('/api/reviews/my-stage-reviews');
-      const reviewsResult = await reviewsResponse.json();
-      const pendingReviews = reviewsResult.success
-        ? (reviewsResult.data?.projects || []).flatMap((p: any) => p.pending_mockups || [])
-        : [];
-
-      // Fetch projects
+      // Fetch projects for filter dropdown
       const projectsResponse = await fetch('/api/projects');
       const projectsResult = await projectsResponse.json();
-      const projects = projectsResult.data?.projects || projectsResult.projects || [];
-      const activeProjects = projects.filter((p: Project) => p.status === 'active');
-      const recentProjects = activeProjects.slice(0, 5);
+      const projectsList = projectsResult.data?.projects || projectsResult.projects || [];
+      setProjects(projectsList);
 
-      // Fetch recent assets count (using supabase directly would be better, but for now we'll skip)
-      // We can add this later if needed
+      // Fetch mockups/assets
+      const mockupsResponse = await fetch('/api/mockups?limit=50');
+      const mockupsResult = await mockupsResponse.json();
+      let mockupsList = mockupsResult.data?.mockups || mockupsResult.mockups || [];
 
-      setStats({
-        pendingReviewsCount: pendingReviews.length,
-        activeProjectsCount: activeProjects.length,
-        recentAssetsCount: 0, // We'll add this later if needed
-        recentProjects,
-        pendingReviews: pendingReviews.slice(0, 5),
+      // Enrich with project data
+      mockupsList = mockupsList.map((m: any) => {
+        const project = projectsList.find((p: Project) => p.id === m.project_id);
+        return {
+          ...m,
+          project: project ? { id: project.id, name: project.name, color: project.color } : null,
+        };
       });
+
+      setMockups(mockupsList);
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-      showToast('Failed to load dashboard data', 'error');
+      console.error('Error fetching data:', error);
+      showToast('Failed to load data', 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading) {
-    return (
-      <GmailLayout>
-        <div className="flex h-screen items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-[var(--accent-blue)]" />
-        </div>
-      </GmailLayout>
-    );
-  }
+  // Filter and sort mockups
+  const getFilteredMockups = () => {
+    let filtered = [...mockups];
+
+    // Filter by project
+    if (projectFilter !== 'all') {
+      filtered = filtered.filter(m => m.project_id === projectFilter);
+    }
+
+    // Sort
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'updated':
+          return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+        case 'created':
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        case 'name':
+          const nameA = (a.name || a.mockup_name || '').toLowerCase();
+          const nameB = (b.name || b.mockup_name || '').toLowerCase();
+          return nameA.localeCompare(nameB);
+        default:
+          return 0;
+      }
+    });
+
+    return filtered;
+  };
+
+  const filteredMockups = getFilteredMockups();
+  const selectedProject = projects.find(p => p.id === projectFilter);
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this mockup?')) return;
+
+    try {
+      const response = await fetch(`/api/mockups/${id}`, { method: 'DELETE' });
+      if (response.ok) {
+        setMockups(prev => prev.filter(m => m.id !== id));
+        showToast('Mockup deleted', 'success');
+      } else {
+        throw new Error('Failed to delete');
+      }
+    } catch (error) {
+      showToast('Failed to delete mockup', 'error');
+    }
+  };
+
+  const tabs = [
+    { id: 'recent' as TabType, label: 'Recently viewed' },
+    { id: 'my-mockups' as TabType, label: 'My mockups' },
+    { id: 'shared' as TabType, label: 'Shared with me' },
+  ];
 
   return (
     <>
       <GmailLayout>
-        <div className="max-w-7xl mx-auto p-8">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-[var(--text-primary)] mb-2">
-              Welcome back{user?.firstName ? `, ${user.firstName}` : ''}!
-            </h1>
-            <p className="text-[var(--text-secondary)]">
-              Here's what's happening with your projects and reviews.
-            </p>
+        <div className="h-full flex flex-col bg-[#f8f9fa]">
+          {/* Header with Tabs */}
+          <div className="bg-white border-b border-gray-200 px-6 pt-4">
+            {/* Tabs */}
+            <div className="flex items-center gap-1">
+              {tabs.map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors relative ${
+                    activeTab === tab.id
+                      ? 'text-blue-600 bg-blue-50'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  }`}
+                >
+                  {tab.label}
+                  {activeTab === tab.id && (
+                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
+                  )}
+                </button>
+              ))}
+            </div>
           </div>
 
-          {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            {/* Pending Reviews */}
-            <div
-              onClick={() => router.push('/my-stage-reviews')}
-              className="bg-white rounded-lg shadow-sm border border-[var(--border-main)] p-6 cursor-pointer hover:shadow-md transition-shadow"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-3 bg-blue-100 rounded-lg">
-                  <MessageSquare className="h-6 w-6 text-blue-600" />
-                </div>
-                {stats.pendingReviewsCount > 0 && (
-                  <span className="px-2 py-1 bg-red-100 text-red-700 text-xs font-semibold rounded-full">
-                    {stats.pendingReviewsCount}
-                  </span>
+          {/* Toolbar */}
+          <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {/* Project Filter */}
+              <div className="relative">
+                <button
+                  onClick={() => {
+                    setShowProjectDropdown(!showProjectDropdown);
+                    setShowSortDropdown(false);
+                  }}
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm border border-gray-300 rounded-md hover:bg-gray-50"
+                >
+                  {projectFilter === 'all' ? (
+                    'All projects'
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      <span
+                        className="w-2 h-2 rounded-full"
+                        style={{ backgroundColor: selectedProject?.color || '#3B82F6' }}
+                      />
+                      {selectedProject?.name || 'Project'}
+                    </span>
+                  )}
+                  <ChevronDown size={14} />
+                </button>
+                {showProjectDropdown && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setShowProjectDropdown(false)} />
+                    <div className="absolute top-full left-0 mt-1 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1 max-h-64 overflow-y-auto">
+                      <button
+                        onClick={() => {
+                          setProjectFilter('all');
+                          setShowProjectDropdown(false);
+                        }}
+                        className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 ${
+                          projectFilter === 'all' ? 'bg-blue-50 text-blue-600' : ''
+                        }`}
+                      >
+                        All projects
+                      </button>
+                      {projects.map(project => (
+                        <button
+                          key={project.id}
+                          onClick={() => {
+                            setProjectFilter(project.id);
+                            setShowProjectDropdown(false);
+                          }}
+                          className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2 ${
+                            projectFilter === project.id ? 'bg-blue-50 text-blue-600' : ''
+                          }`}
+                        >
+                          <span
+                            className="w-2 h-2 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: project.color }}
+                          />
+                          <span className="truncate">{project.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </>
                 )}
               </div>
-              <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-1">
-                Pending Reviews
-              </h3>
-              <p className="text-sm text-[var(--text-secondary)] mb-4">
-                {stats.pendingReviewsCount === 0
-                  ? 'No pending reviews'
-                  : `${stats.pendingReviewsCount} item${stats.pendingReviewsCount !== 1 ? 's' : ''} need your attention`}
-              </p>
-              <button className="text-sm text-[var(--accent-blue)] hover:underline flex items-center gap-1">
-                View Reviews <ArrowRight size={14} />
-              </button>
-            </div>
 
-            {/* Active Projects */}
-            <div
-              onClick={() => router.push('/projects')}
-              className="bg-white rounded-lg shadow-sm border border-[var(--border-main)] p-6 cursor-pointer hover:shadow-md transition-shadow"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-3 bg-green-100 rounded-lg">
-                  <Briefcase className="h-6 w-6 text-green-600" />
-                </div>
-              </div>
-              <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-1">
-                Active Projects
-              </h3>
-              <p className="text-sm text-[var(--text-secondary)] mb-4">
-                {stats.activeProjectsCount === 0
-                  ? 'No active projects'
-                  : `${stats.activeProjectsCount} active project${stats.activeProjectsCount !== 1 ? 's' : ''}`}
-              </p>
-              <button className="text-sm text-[var(--accent-blue)] hover:underline flex items-center gap-1">
-                View Projects <ArrowRight size={14} />
-              </button>
-            </div>
-
-            {/* Quick Actions */}
-            <div className="bg-white rounded-lg shadow-sm border border-[var(--border-main)] p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-3 bg-purple-100 rounded-lg">
-                  <Plus className="h-6 w-6 text-purple-600" />
-                </div>
-              </div>
-              <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-1">
-                Quick Actions
-              </h3>
-              <div className="space-y-2">
+              {/* Sort */}
+              <div className="relative">
                 <button
-                  onClick={() => router.push('/projects')}
-                  className="w-full text-left px-3 py-2 text-sm bg-[var(--bg-hover)] hover:bg-[var(--bg-hover)] rounded-lg transition-colors flex items-center gap-2"
+                  onClick={() => {
+                    setShowSortDropdown(!showSortDropdown);
+                    setShowProjectDropdown(false);
+                  }}
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm border border-gray-300 rounded-md hover:bg-gray-50"
                 >
-                  <Briefcase size={16} />
-                  <span>New Project</span>
+                  {sortBy === 'updated' && 'Last edited'}
+                  {sortBy === 'created' && 'Date created'}
+                  {sortBy === 'name' && 'Name'}
+                  <ChevronDown size={14} />
                 </button>
+                {showSortDropdown && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setShowSortDropdown(false)} />
+                    <div className="absolute top-full left-0 mt-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1">
+                      <button
+                        onClick={() => { setSortBy('updated'); setShowSortDropdown(false); }}
+                        className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 ${sortBy === 'updated' ? 'bg-blue-50 text-blue-600' : ''}`}
+                      >
+                        Last edited
+                      </button>
+                      <button
+                        onClick={() => { setSortBy('created'); setShowSortDropdown(false); }}
+                        className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 ${sortBy === 'created' ? 'bg-blue-50 text-blue-600' : ''}`}
+                      >
+                        Date created
+                      </button>
+                      <button
+                        onClick={() => { setSortBy('name'); setShowSortDropdown(false); }}
+                        className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 ${sortBy === 'name' ? 'bg-blue-50 text-blue-600' : ''}`}
+                      >
+                        Name
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* View Toggle */}
+            <div className="flex items-center gap-1 bg-gray-100 rounded-md p-0.5">
+              <button
+                onClick={() => setViewType('grid')}
+                className={`p-1.5 rounded ${viewType === 'grid' ? 'bg-white shadow-sm' : 'hover:bg-gray-200'}`}
+                title="Grid view"
+              >
+                <Grid3X3 size={18} className={viewType === 'grid' ? 'text-gray-900' : 'text-gray-500'} />
+              </button>
+              <button
+                onClick={() => setViewType('list')}
+                className={`p-1.5 rounded ${viewType === 'list' ? 'bg-white shadow-sm' : 'hover:bg-gray-200'}`}
+                title="List view"
+              >
+                <List size={18} className={viewType === 'list' ? 'text-gray-900' : 'text-gray-500'} />
+              </button>
+            </div>
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto p-6">
+            {loading ? (
+              <div className="flex items-center justify-center h-64">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+              </div>
+            ) : filteredMockups.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-64 text-center">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                  <ImageIcon size={32} className="text-gray-400" />
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No mockups yet</h3>
+                <p className="text-gray-500 mb-4 max-w-md">
+                  Create your first mockup to get started. Your recent work will appear here.
+                </p>
                 <button
                   onClick={() => router.push('/designer')}
-                  className="w-full text-left px-3 py-2 text-sm bg-[var(--bg-hover)] hover:bg-[var(--bg-hover)] rounded-lg transition-colors flex items-center gap-2"
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                 >
-                  <Palette size={16} />
-                  <span>Create Asset</span>
+                  <Plus size={18} />
+                  New Mockup
                 </button>
               </div>
-            </div>
-          </div>
-
-          {/* Recent Activity */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Recent Projects */}
-            <div className="bg-white rounded-lg shadow-sm border border-[var(--border-main)] p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-[var(--text-primary)]">
-                  Recent Projects
-                </h2>
-                <button
-                  onClick={() => router.push('/projects')}
-                  className="text-sm text-[var(--accent-blue)] hover:underline"
-                >
-                  View All
-                </button>
+            ) : viewType === 'grid' ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                {filteredMockups.map(mockup => (
+                  <MockupGridCard
+                    key={mockup.id}
+                    mockup={mockup}
+                    onDelete={handleDelete}
+                  />
+                ))}
               </div>
-              {stats.recentProjects.length === 0 ? (
-                <div className="text-center py-8">
-                  <Briefcase className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-[var(--text-secondary)] mb-4">No projects yet</p>
-                  <button
-                    onClick={() => router.push('/projects')}
-                    className="px-4 py-2 bg-[var(--accent-blue)] text-white rounded-lg hover:opacity-90 transition-opacity"
-                  >
-                    Create Project
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {stats.recentProjects.map((project) => (
-                    <div
-                      key={project.id}
-                      onClick={() => router.push(`/projects/${project.id}`)}
-                      className="p-4 border border-[var(--border-main)] rounded-lg hover:bg-[var(--bg-hover)] cursor-pointer transition-colors"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="w-3 h-3 rounded-full"
-                            style={{ backgroundColor: project.color || '#3B82F6' }}
-                          />
-                          <div>
-                            <h3 className="font-medium text-[var(--text-primary)]">
-                              {project.name}
-                            </h3>
-                            {project.client_name && (
-                              <p className="text-sm text-[var(--text-secondary)]">
-                                {project.client_name}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        <ArrowRight size={16} className="text-[var(--text-tertiary)]" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            ) : (
+              // List view
+              <div className="bg-white rounded-lg border border-gray-200 divide-y divide-gray-200">
+                {filteredMockups.map(mockup => {
+                  const name = mockup.name || mockup.mockup_name || 'Untitled';
+                  const thumbnailUrl = mockup.preview_url || mockup.mockup_image_url;
 
-            {/* Pending Reviews */}
-            <div className="bg-white rounded-lg shadow-sm border border-[var(--border-main)] p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-[var(--text-primary)]">
-                  Pending Reviews
-                </h2>
-                {stats.pendingReviewsCount > 0 && (
-                  <button
-                    onClick={() => router.push('/my-stage-reviews')}
-                    className="text-sm text-[var(--accent-blue)] hover:underline"
-                  >
-                    View All
-                  </button>
-                )}
-              </div>
-              {stats.pendingReviewsCount === 0 ? (
-                <div className="text-center py-8">
-                  <CheckCircle className="h-12 w-12 text-green-300 mx-auto mb-3" />
-                  <p className="text-[var(--text-secondary)]">All caught up!</p>
-                  <p className="text-sm text-[var(--text-tertiary)] mt-1">
-                    No pending reviews at this time.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {stats.pendingReviews.map((review: any, index: number) => (
+                  return (
                     <div
-                      key={index}
-                      onClick={() => router.push('/my-stage-reviews')}
-                      className="p-4 border border-[var(--border-main)] rounded-lg hover:bg-[var(--bg-hover)] cursor-pointer transition-colors"
+                      key={mockup.id}
+                      onClick={() => router.push(`/mockups/${mockup.id}`)}
+                      className="flex items-center gap-4 p-4 hover:bg-gray-50 cursor-pointer"
                     >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <Clock className="h-4 w-4 text-orange-500" />
-                          <div>
-                            <h3 className="font-medium text-[var(--text-primary)]">
-                              {review.mockup?.mockup_name || 'Unnamed Asset'}
-                            </h3>
-                            <p className="text-sm text-[var(--text-secondary)]">
-                              {review.stage_name || 'Review needed'}
-                            </p>
+                      <div className="w-16 h-12 bg-gray-100 rounded overflow-hidden flex-shrink-0">
+                        {thumbnailUrl ? (
+                          <img src={thumbnailUrl} alt={name} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <ImageIcon size={20} className="text-gray-400" />
                           </div>
-                        </div>
-                        <ArrowRight size={16} className="text-[var(--text-tertiary)]" />
+                        )}
                       </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-sm font-medium text-gray-900 truncate">{name}</h3>
+                        <p className="text-xs text-gray-500">
+                          Edited {new Date(mockup.updated_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                      {mockup.project && (
+                        <span
+                          className="px-2 py-0.5 text-xs font-medium rounded text-white"
+                          style={{ backgroundColor: mockup.project.color }}
+                        >
+                          {mockup.project.name}
+                        </span>
+                      )}
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       </GmailLayout>
@@ -329,4 +419,3 @@ export default function HomePage() {
     </>
   );
 }
-
