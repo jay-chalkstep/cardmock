@@ -8,6 +8,55 @@ import { logger } from '@/lib/utils/logger';
 export const dynamic = 'force-dynamic';
 
 /**
+ * GET /api/mockups
+ * Fetch mockups/assets for the current organization
+ */
+export async function GET(request: NextRequest) {
+  try {
+    const authResult = await getAuthContext();
+    if (authResult instanceof Response) return authResult;
+    const { userId, orgId } = authResult;
+
+    const supabase = createServerAdminClient();
+    const { searchParams } = new URL(request.url);
+    const limit = parseInt(searchParams.get('limit') || '50');
+
+    logger.api('/api/mockups', 'GET', { orgId, userId, limit });
+
+    const { data, error } = await supabase
+      .from('assets')
+      .select(`
+        *,
+        logo:logo_variants!logo_id (
+          id,
+          logo_url
+        ),
+        template:templates!template_id (
+          id,
+          template_name,
+          template_url
+        ),
+        project:projects (
+          id,
+          name,
+          color
+        )
+      `)
+      .eq('organization_id', orgId)
+      .order('updated_at', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      return handleSupabaseError(error);
+    }
+
+    return successResponse({ mockups: data || [] });
+  } catch (error) {
+    return errorResponse(error, 'Failed to fetch mockups');
+  }
+}
+
+/**
  * POST /api/mockups
  * Save a new mockup/asset
  */
