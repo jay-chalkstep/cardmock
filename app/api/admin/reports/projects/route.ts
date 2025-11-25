@@ -37,7 +37,6 @@ export async function GET(request: NextRequest) {
       .select(`
         id,
         name,
-        client_name,
         description,
         status,
         color,
@@ -177,7 +176,7 @@ export async function GET(request: NextRequest) {
       projectsByUser[project.created_by].push({
         id: project.id,
         name: project.name,
-        client: project.client_name || 'No client',
+        description: project.description || '',
         status: project.status,
         color: project.color,
         createdAt: project.created_at,

@@ -16,8 +16,6 @@ export async function createProject(formData: FormData) {
     }
 
     const name = formData.get('name') as string;
-    const clientId = formData.get('clientId') as string;
-    const clientName = formData.get('clientName') as string | null;
     const description = formData.get('description') as string | null;
     const color = formData.get('color') as string || '#3B82F6';
     const workflowId = formData.get('workflowId') as string | null;
@@ -26,30 +24,12 @@ export async function createProject(formData: FormData) {
       return { error: 'Project name is required' };
     }
 
-    if (!clientId || clientId.trim().length === 0) {
-      return { error: 'Client ID is required' };
-    }
-
     const supabase = createServerClient();
-
-    // Validate client exists and belongs to organization
-    const { data: client, error: clientError } = await supabase
-      .from('clients')
-      .select('id, name')
-      .eq('id', clientId)
-      .eq('organization_id', orgId)
-      .single();
-
-    if (clientError || !client) {
-      return { error: 'Client not found or does not belong to this organization' };
-    }
 
     const { data, error } = await supabase
       .from('projects')
       .insert({
         name: name.trim(),
-        client_id: clientId, // Required - direct relationship to client
-        client_name: clientName?.trim() || client.name || null, // Optional display field, default to client name
         description: description?.trim() || null,
         color,
         workflow_id: workflowId,
@@ -87,7 +67,6 @@ export async function updateProject(projectId: string, formData: FormData) {
     }
 
     const name = formData.get('name') as string;
-    const clientName = formData.get('clientName') as string | null;
     const description = formData.get('description') as string | null;
     const color = formData.get('color') as string;
     const status = formData.get('status') as 'active' | 'completed' | 'archived';
@@ -102,7 +81,6 @@ export async function updateProject(projectId: string, formData: FormData) {
       .from('projects')
       .update({
         name: name.trim(),
-        client_name: clientName?.trim(),
         description: description?.trim(),
         color,
         status

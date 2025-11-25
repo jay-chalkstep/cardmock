@@ -60,11 +60,13 @@ export default function ProjectListItem({
       {/* Title & Description */}
       <div className="flex-1 min-w-0">
         <div className="font-medium text-sm text-[var(--text-primary)] truncate">
-          {project.client_name || 'No client'}
-        </div>
-        <div className="text-xs text-[var(--text-secondary)] truncate">
           {project.name}
         </div>
+        {project.description && (
+          <div className="text-xs text-[var(--text-secondary)] truncate">
+            {project.description}
+          </div>
+        )}
       </div>
 
       {/* Status Badge */}

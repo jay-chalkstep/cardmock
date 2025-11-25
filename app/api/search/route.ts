@@ -41,9 +41,9 @@ export async function GET(request: NextRequest) {
     // Search projects
     const { data: projects, error: projectsError } = await supabase
       .from('projects')
-      .select('id, name, client_name, status')
+      .select('id, name, description, status')
       .eq('organization_id', orgId)
-      .or(`name.ilike.${searchTerm},client_name.ilike.${searchTerm},description.ilike.${searchTerm}`)
+      .or(`name.ilike.${searchTerm},description.ilike.${searchTerm}`)
       .limit(5);
 
     if (!projectsError && projects) {
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
           id: project.id,
           type: 'project',
           title: project.name,
-          subtitle: project.client_name || undefined,
+          subtitle: project.description || undefined,
           url: `/projects/${project.id}`,
         });
       });

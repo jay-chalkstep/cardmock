@@ -175,12 +175,6 @@ export default function ReviewPreview({ mockupId, projectId, stageOrder }: Revie
               />
               <span className="text-[var(--text-secondary)]">{data.project.name || 'Unknown Project'}</span>
             </div>
-            {data.project.client_name && (
-              <>
-                <span className="text-[var(--text-tertiary)]">•</span>
-                <span className="text-[var(--text-secondary)]">{data.project.client_name}</span>
-              </>
-            )}
           </div>
         )}
 
