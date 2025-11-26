@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useOrganization, useUser } from '@/lib/hooks/useAuth';
+import { useClerk } from '@clerk/nextjs';
 import {
   Clock,
   Building2,
@@ -35,6 +36,7 @@ export default function NavRail() {
   const router = useRouter();
   const { organization } = useOrganization();
   const { user } = useUser();
+  const { signOut } = useClerk();
   const { setActiveNav } = usePanelContext();
   const [searchQuery, setSearchQuery] = useState('');
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -181,10 +183,9 @@ export default function NavRail() {
                 Settings
               </Link>
               <button
-                onClick={() => {
+                onClick={async () => {
                   setShowUserMenu(false);
-                  // Handle logout - will depend on Supabase Auth implementation
-                  console.log('Sign out clicked');
+                  await signOut({ redirectUrl: '/sign-in' });
                 }}
                 className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-300 hover:bg-[#37373d] hover:text-white"
               >
