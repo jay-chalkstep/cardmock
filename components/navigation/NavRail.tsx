@@ -9,7 +9,6 @@ import {
   FolderKanban,
   Image,
   LayoutTemplate,
-  Trash2,
   Search,
   Plus,
   ChevronDown,
@@ -33,7 +32,6 @@ const mainNavItems: NavItem[] = [
   { id: 'projects', name: 'All Projects', href: '/projects', icon: FolderKanban },
   { id: 'assets', name: 'Assets', href: '/library?tab=assets', icon: Image },
   { id: 'templates', name: 'Templates', href: '/library?tab=templates', icon: LayoutTemplate },
-  { id: 'trash', name: 'Trash', href: '/trash', icon: Trash2 },
 ];
 
 // Admin-only items (hidden from regular users)
@@ -59,11 +57,6 @@ export default function NavRail() {
   useEffect(() => {
     if (pathname === '/') {
       setActiveNav('recents');
-      return;
-    }
-
-    if (pathname === '/trash') {
-      setActiveNav('trash');
       return;
     }
 
@@ -146,8 +139,6 @@ export default function NavRail() {
 
             if (item.id === 'recents') {
               isActive = pathname === '/';
-            } else if (item.id === 'trash') {
-              isActive = pathname === '/trash';
             } else if (item.id === 'assets') {
               isActive = pathname?.startsWith('/library') && currentTab !== 'templates';
             } else if (item.id === 'templates') {
