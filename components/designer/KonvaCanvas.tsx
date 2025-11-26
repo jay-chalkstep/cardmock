@@ -199,6 +199,19 @@ const KonvaCanvas = forwardRef<KonvaCanvasRef, KonvaCanvasProps>((props, ref) =>
         )}
       </Layer>
 
+      {/* Guide Lines Layer - rendered BEFORE logo so logo handles stay on top */}
+      <Layer>
+        <GuideLineOverlay
+          canvasWidth={width}
+          canvasHeight={height}
+          verticalGuides={verticalGuides}
+          horizontalGuides={horizontalGuides}
+          isVisible={showGuides}
+          onGuideMove={onGuideMove}
+          activeSnapGuideId={activeSnapGuideId}
+        />
+      </Layer>
+
       <Layer>
         {/* Logo */}
         {logoImage && (
@@ -235,7 +248,7 @@ const KonvaCanvas = forwardRef<KonvaCanvasRef, KonvaCanvasProps>((props, ref) =>
         )}
       </Layer>
 
-      {/* Precision Tools Overlay Layer */}
+      {/* Precision Tools Overlay Layer - on top but non-interactive */}
       <Layer listening={false}>
         {/* Measurement lines (from element to edges) */}
         {logoImage && (
@@ -249,19 +262,6 @@ const KonvaCanvas = forwardRef<KonvaCanvasRef, KonvaCanvasProps>((props, ref) =>
             isVisible={showMeasurements && isSelected}
           />
         )}
-      </Layer>
-
-      {/* Guide Lines Layer (interactive - allows dragging) */}
-      <Layer>
-        <GuideLineOverlay
-          canvasWidth={width}
-          canvasHeight={height}
-          verticalGuides={verticalGuides}
-          horizontalGuides={horizontalGuides}
-          isVisible={showGuides}
-          onGuideMove={onGuideMove}
-          activeSnapGuideId={activeSnapGuideId}
-        />
       </Layer>
     </Stage>
   );
