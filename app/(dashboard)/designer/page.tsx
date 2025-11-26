@@ -490,13 +490,13 @@ function DesignerPageContent() {
       const blob = await response.blob();
 
       // Prepare form data for API
+      // Note: Brand is inferred through logo_id -> logo_variants -> brand_id
       const formData = new FormData();
       formData.append('image', blob);
       formData.append('mockupName', mockupName);
       formData.append('logoId', selectedBrand.id);
       formData.append('templateId', selectedTemplate.id);
       if (selectedFolderId) formData.append('folderId', selectedFolderId);
-      if (selectedBrandIdForSave) formData.append('brandId', selectedBrandIdForSave);
       formData.append('logoX', ((logoPosition.x / stageWidth) * 100).toString());
       formData.append('logoY', ((logoPosition.y / stageHeight) * 100).toString());
       formData.append('logoScale', logoScale.toString());
