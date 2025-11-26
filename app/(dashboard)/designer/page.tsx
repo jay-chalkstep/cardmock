@@ -14,6 +14,7 @@ import DesignerPositionControls from '@/components/designer/DesignerPositionCont
 import DesignerSizeControls from '@/components/designer/DesignerSizeControls';
 import DesignerSavePanel from '@/components/designer/DesignerSavePanel';
 import DesignerBrandSelector from '@/components/designer/DesignerBrandSelector';
+import PrecisionToolsPanel from '@/components/designer/PrecisionToolsPanel';
 import {
   Grid,
   Loader2,
@@ -21,6 +22,15 @@ import {
 } from 'lucide-react';
 import { KonvaEventObject } from 'konva/lib/Node';
 import type { KonvaCanvasRef } from '@/components/designer/KonvaCanvas';
+import {
+  type Guide,
+  PREPAID_CARD_SPECS,
+  getDefaultGuides,
+  createCustomGuide,
+  scaleGuidesToCanvas,
+  shouldSnapToGuide,
+  SNAP_THRESHOLD,
+} from '@/lib/guidePresets';
 
 // Dynamically import the KonvaCanvas wrapper to avoid SSR issues
 const KonvaCanvas = dynamic(
@@ -104,6 +114,20 @@ function DesignerPageContent() {
   const [isSelected, setIsSelected] = useState(false);
   const [keepAspectRatio, setKeepAspectRatio] = useState(true);
   const [showGrid, setShowGrid] = useState(false);
+
+  // Precision Tools state
+  const [showMeasurements, setShowMeasurements] = useState(true);
+  const [showGuides, setShowGuides] = useState(true);
+  const [snapEnabled, setSnapEnabled] = useState(true);
+  const [verticalGuides, setVerticalGuides] = useState<Guide[]>(() => {
+    const defaults = getDefaultGuides();
+    return defaults.vertical;
+  });
+  const [horizontalGuides, setHorizontalGuides] = useState<Guide[]>(() => {
+    const defaults = getDefaultGuides();
+    return defaults.horizontal;
+  });
+  const [activeSnapGuideId, setActiveSnapGuideId] = useState<string | null>(null);
 
   // UI state
   const [showLogoSelector, setShowLogoSelector] = useState(false);
@@ -369,6 +393,8 @@ function DesignerPageContent() {
       x: e.target.x(),
       y: e.target.y()
     });
+    // Clear active snap guide
+    setActiveSnapGuideId(null);
   };
 
   // Handle transform end
@@ -456,6 +482,155 @@ function DesignerPageContent() {
         });
         break;
     }
+  };
+
+  // Precision Tools handlers
+  // Scale guides from card coordinates to canvas coordinates for display
+  const scaledVerticalGuides = scaleGuidesToCanvas(
+    verticalGuides,
+    stageWidth,
+    PREPAID_CARD_SPECS.width
+  );
+  const scaledHorizontalGuides = scaleGuidesToCanvas(
+    horizontalGuides,
+    stageHeight,
+    PREPAID_CARD_SPECS.height
+  );
+
+  // Handle guide movement
+  const handleGuideMove = (guideId: string, newCanvasPosition: number) => {
+    // Find if it's a vertical or horizontal guide
+    const isVertical = verticalGuides.some(g => g.id === guideId);
+
+    if (isVertical) {
+      // Convert canvas position to card position
+      const cardPosition = (newCanvasPosition / stageWidth) * PREPAID_CARD_SPECS.width;
+      setVerticalGuides(prev =>
+        prev.map(g => (g.id === guideId ? { ...g, position: cardPosition } : g))
+      );
+    } else {
+      const cardPosition = (newCanvasPosition / stageHeight) * PREPAID_CARD_SPECS.height;
+      setHorizontalGuides(prev =>
+        prev.map(g => (g.id === guideId ? { ...g, position: cardPosition } : g))
+      );
+    }
+  };
+
+  // Add a new guide
+  const handleAddGuide = (type: 'vertical' | 'horizontal', canvasPosition: number) => {
+    if (type === 'vertical') {
+      const cardPosition = (canvasPosition / stageWidth) * PREPAID_CARD_SPECS.width;
+      const newGuide = createCustomGuide('vertical', cardPosition);
+      setVerticalGuides(prev => [...prev, newGuide]);
+    } else {
+      const cardPosition = (canvasPosition / stageHeight) * PREPAID_CARD_SPECS.height;
+      const newGuide = createCustomGuide('horizontal', cardPosition);
+      setHorizontalGuides(prev => [...prev, newGuide]);
+    }
+  };
+
+  // Remove a guide
+  const handleRemoveGuide = (guideId: string) => {
+    setVerticalGuides(prev => prev.filter(g => g.id !== guideId));
+    setHorizontalGuides(prev => prev.filter(g => g.id !== guideId));
+  };
+
+  // Reset to preset guides
+  const handleResetToPresets = () => {
+    const defaults = getDefaultGuides();
+    setVerticalGuides(defaults.vertical);
+    setHorizontalGuides(defaults.horizontal);
+  };
+
+  // Handle position change from measurements panel
+  const handlePositionChange = (x: number, y: number) => {
+    setLogoPosition({
+      x: Math.max(0, Math.min(stageWidth - logoSize.width, x)),
+      y: Math.max(0, Math.min(stageHeight - logoSize.height, y)),
+    });
+  };
+
+  // Handle size change from measurements panel
+  const handleSizeChange = (width: number, height: number) => {
+    const newWidth = Math.max(20, Math.min(stageWidth, width));
+    const newHeight = Math.max(20, Math.min(stageHeight, height));
+
+    setLogoSize({ width: newWidth, height: newHeight });
+    setLogoScale(Math.round((newWidth / stageWidth) * 100));
+  };
+
+  // Handle drag move with snap-to-guides
+  const handleDragMove = (e: KonvaEventObject<DragEvent>) => {
+    if (!snapEnabled) {
+      setActiveSnapGuideId(null);
+      return;
+    }
+
+    const node = e.target;
+    let newX = node.x();
+    let newY = node.y();
+    let snappedGuideId: string | null = null;
+
+    // Calculate element edges
+    const leftEdge = newX;
+    const rightEdge = newX + logoSize.width;
+    const topEdge = newY;
+    const bottomEdge = newY + logoSize.height;
+
+    // Check vertical guides (snap left or right edge)
+    for (const guide of scaledVerticalGuides) {
+      // Snap left edge to guide
+      if (Math.abs(leftEdge - guide.position) <= SNAP_THRESHOLD) {
+        newX = guide.position;
+        snappedGuideId = guide.id;
+        break;
+      }
+      // Snap right edge to guide
+      if (Math.abs(rightEdge - guide.position) <= SNAP_THRESHOLD) {
+        newX = guide.position - logoSize.width;
+        snappedGuideId = guide.id;
+        break;
+      }
+    }
+
+    // Check horizontal guides (snap top or bottom edge)
+    for (const guide of scaledHorizontalGuides) {
+      // Snap top edge to guide
+      if (Math.abs(topEdge - guide.position) <= SNAP_THRESHOLD) {
+        newY = guide.position;
+        snappedGuideId = snappedGuideId || guide.id;
+        break;
+      }
+      // Snap bottom edge to guide
+      if (Math.abs(bottomEdge - guide.position) <= SNAP_THRESHOLD) {
+        newY = guide.position - logoSize.height;
+        snappedGuideId = snappedGuideId || guide.id;
+        break;
+      }
+    }
+
+    // Also snap to canvas edges and center
+    const centerX = stageWidth / 2;
+    const centerY = stageHeight / 2;
+    const elementCenterX = newX + logoSize.width / 2;
+    const elementCenterY = newY + logoSize.height / 2;
+
+    // Snap to horizontal center
+    if (Math.abs(elementCenterX - centerX) <= SNAP_THRESHOLD) {
+      newX = centerX - logoSize.width / 2;
+    }
+    // Snap to vertical center
+    if (Math.abs(elementCenterY - centerY) <= SNAP_THRESHOLD) {
+      newY = centerY - logoSize.height / 2;
+    }
+
+    // Apply snapped position
+    node.x(newX);
+    node.y(newY);
+
+    // Update position state for real-time display
+    setLogoPosition({ x: newX, y: newY });
+    setActiveSnapGuideId(snappedGuideId);
   };
 
   // Save mockup
@@ -601,6 +776,34 @@ function DesignerPageContent() {
               </button>
             </div>
 
+            {/* Precision Tools Panel */}
+            {selectedBrand && (
+              <PrecisionToolsPanel
+                elementX={logoPosition.x}
+                elementY={logoPosition.y}
+                elementWidth={logoSize.width}
+                elementHeight={logoSize.height}
+                canvasWidth={stageWidth}
+                canvasHeight={stageHeight}
+                isSelected={isSelected}
+                aspectLocked={keepAspectRatio}
+                onAspectLockToggle={() => setKeepAspectRatio(!keepAspectRatio)}
+                onPositionChange={handlePositionChange}
+                onSizeChange={handleSizeChange}
+                verticalGuides={verticalGuides}
+                horizontalGuides={horizontalGuides}
+                showGuides={showGuides}
+                onToggleGuides={() => setShowGuides(!showGuides)}
+                snapEnabled={snapEnabled}
+                onSnapToggle={() => setSnapEnabled(!snapEnabled)}
+                onAddGuide={handleAddGuide}
+                onRemoveGuide={handleRemoveGuide}
+                onResetToPresets={handleResetToPresets}
+                showMeasurements={showMeasurements}
+                onToggleMeasurements={() => setShowMeasurements(!showMeasurements)}
+              />
+            )}
+
             {/* Save Section */}
             {selectedBrand && selectedTemplate && (
               <DesignerSavePanel
@@ -638,9 +841,17 @@ function DesignerPageContent() {
                       showGrid={showGrid}
                       keepAspectRatio={keepAspectRatio}
                       onDragEnd={handleDragEnd}
+                      onDragMove={handleDragMove}
                       onTransformEnd={handleTransformEnd}
                       onClick={() => setIsSelected(true)}
                       onDeselect={() => setIsSelected(false)}
+                      // Precision Tools props
+                      showMeasurements={showMeasurements}
+                      showGuides={showGuides}
+                      verticalGuides={scaledVerticalGuides}
+                      horizontalGuides={scaledHorizontalGuides}
+                      onGuideMove={handleGuideMove}
+                      activeSnapGuideId={activeSnapGuideId}
                     />
                   </div>
                 ) : (
