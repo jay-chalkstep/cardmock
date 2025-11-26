@@ -649,13 +649,17 @@ function DesignerPageContent() {
 
     setSaving(true);
     try {
-      // Temporarily hide grid and selection for clean export
+      // Temporarily hide all visual aids for clean export
       const wasShowingGrid = showGrid;
       const wasSelected = isSelected;
+      const wasShowingGuides = showGuides;
+      const wasShowingMeasurements = showMeasurements;
 
-      // Hide UI elements
+      // Hide UI elements (guides, measurements, grid, selection)
       if (wasShowingGrid) setShowGrid(false);
       if (wasSelected) setIsSelected(false);
+      if (wasShowingGuides) setShowGuides(false);
+      if (wasShowingMeasurements) setShowMeasurements(false);
 
       // Wait for state updates to render
       await new Promise(resolve => setTimeout(resolve, 50));
@@ -669,6 +673,8 @@ function DesignerPageContent() {
       // Restore UI elements
       if (wasShowingGrid) setShowGrid(true);
       if (wasSelected) setIsSelected(true);
+      if (wasShowingGuides) setShowGuides(true);
+      if (wasShowingMeasurements) setShowMeasurements(true);
 
       if (!dataURL) {
         throw new Error('Failed to generate image from canvas');
