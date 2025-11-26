@@ -22,7 +22,7 @@ interface ToastMessage {
   id: number;
 }
 
-interface Mockup {
+interface CardMock {
   id: string;
   name?: string;
   mockup_name?: string;
@@ -30,22 +30,9 @@ interface Mockup {
   mockup_image_url?: string;
   updated_at: string;
   created_at: string;
-  project_id?: string;
-  project?: {
-    id: string;
-    name: string;
-    color: string;
-  } | null;
-  is_featured?: boolean;
+  brand_id?: string;
 }
 
-interface Project {
-  id: string;
-  name: string;
-  color: string;
-}
-
-type TabType = 'recent' | 'my-mockups' | 'shared';
 type ViewType = 'grid' | 'list';
 type SortType = 'updated' | 'created' | 'name';
 
@@ -56,16 +43,12 @@ export default function HomePage() {
   const { setActiveNav } = usePanelContext();
 
   // State
-  const [activeTab, setActiveTab] = useState<TabType>('recent');
   const [viewType, setViewType] = useState<ViewType>('grid');
   const [sortBy, setSortBy] = useState<SortType>('updated');
-  const [projectFilter, setProjectFilter] = useState<string>('all');
-  const [showProjectDropdown, setShowProjectDropdown] = useState(false);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
 
   const [loading, setLoading] = useState(true);
-  const [mockups, setMockups] = useState<Mockup[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [cardMocks, setCardMocks] = useState<CardMock[]>([]);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   const showToast = (message: string, type: 'success' | 'error') => {
@@ -83,56 +66,34 @@ export default function HomePage() {
 
   // Fetch data
   useEffect(() => {
-    if (organization?.id && user?.id) {
-      fetchData();
+    if (organization?.id) {
+      fetchCardMocks();
     }
-  }, [organization?.id, user?.id, activeTab]);
+  }, [organization?.id]);
 
-  const fetchData = async () => {
-    if (!organization?.id || !user?.id) return;
+  const fetchCardMocks = async () => {
+    if (!organization?.id) return;
 
     setLoading(true);
     try {
-      // Fetch projects for filter dropdown
-      const projectsResponse = await fetch('/api/projects');
-      const projectsResult = await projectsResponse.json();
-      const projectsList = projectsResult.data?.projects || projectsResult.projects || [];
-      setProjects(projectsList);
-
-      // Fetch mockups/assets
-      const mockupsResponse = await fetch('/api/mockups?limit=50');
-      const mockupsResult = await mockupsResponse.json();
-      let mockupsList = mockupsResult.data?.mockups || mockupsResult.mockups || [];
-
-      // Enrich with project data
-      mockupsList = mockupsList.map((m: any) => {
-        const project = projectsList.find((p: Project) => p.id === m.project_id);
-        return {
-          ...m,
-          project: project ? { id: project.id, name: project.name, color: project.color } : null,
-        };
-      });
-
-      setMockups(mockupsList);
+      // Fetch recent CardMocks (assets/mockups)
+      const response = await fetch('/api/mockups?limit=50');
+      const result = await response.json();
+      const mockupsList = result.data?.mockups || result.mockups || [];
+      setCardMocks(mockupsList);
     } catch (error) {
-      console.error('Error fetching data:', error);
-      showToast('Failed to load data', 'error');
+      console.error('Error fetching CardMocks:', error);
+      showToast('Failed to load CardMocks', 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  // Filter and sort mockups
-  const getFilteredMockups = () => {
-    let filtered = [...mockups];
+  // Sort CardMocks
+  const getSortedCardMocks = () => {
+    const sorted = [...cardMocks];
 
-    // Filter by project
-    if (projectFilter !== 'all') {
-      filtered = filtered.filter(m => m.project_id === projectFilter);
-    }
-
-    // Sort
-    filtered.sort((a, b) => {
+    sorted.sort((a, b) => {
       switch (sortBy) {
         case 'updated':
           return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
@@ -147,131 +108,44 @@ export default function HomePage() {
       }
     });
 
-    return filtered;
+    return sorted;
   };
 
-  const filteredMockups = getFilteredMockups();
-  const selectedProject = projects.find(p => p.id === projectFilter);
+  const sortedCardMocks = getSortedCardMocks();
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this mockup?')) return;
+    if (!confirm('Are you sure you want to delete this CardMock?')) return;
 
     try {
       const response = await fetch(`/api/mockups/${id}`, { method: 'DELETE' });
       if (response.ok) {
-        setMockups(prev => prev.filter(m => m.id !== id));
-        showToast('Mockup deleted', 'success');
+        setCardMocks(prev => prev.filter(m => m.id !== id));
+        showToast('CardMock deleted', 'success');
       } else {
         throw new Error('Failed to delete');
       }
     } catch (error) {
-      showToast('Failed to delete mockup', 'error');
+      showToast('Failed to delete CardMock', 'error');
     }
   };
-
-  const tabs = [
-    { id: 'recent' as TabType, label: 'Recently viewed' },
-    { id: 'my-mockups' as TabType, label: 'My mockups' },
-    { id: 'shared' as TabType, label: 'Shared with me' },
-  ];
 
   return (
     <>
       <GmailLayout>
         <div className="h-full flex flex-col bg-[#f8f9fa]">
-          {/* Header with Tabs */}
-          <div className="bg-white border-b border-gray-200 px-6 pt-4">
-            {/* Tabs */}
-            <div className="flex items-center gap-1">
-              {tabs.map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors relative ${
-                    activeTab === tab.id
-                      ? 'text-blue-600 bg-blue-50'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                  }`}
-                >
-                  {tab.label}
-                  {activeTab === tab.id && (
-                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
-                  )}
-                </button>
-              ))}
-            </div>
+          {/* Header */}
+          <div className="bg-white border-b border-gray-200 px-6 py-4">
+            <h1 className="text-2xl font-semibold text-gray-900">Recents</h1>
+            <p className="text-sm text-gray-500 mt-1">Your recently edited CardMocks</p>
           </div>
 
           {/* Toolbar */}
           <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              {/* Project Filter */}
-              <div className="relative">
-                <button
-                  onClick={() => {
-                    setShowProjectDropdown(!showProjectDropdown);
-                    setShowSortDropdown(false);
-                  }}
-                  className="flex items-center gap-2 px-3 py-1.5 text-sm border border-gray-300 rounded-md hover:bg-gray-50"
-                >
-                  {projectFilter === 'all' ? (
-                    'All projects'
-                  ) : (
-                    <span className="flex items-center gap-2">
-                      <span
-                        className="w-2 h-2 rounded-full"
-                        style={{ backgroundColor: selectedProject?.color || '#3B82F6' }}
-                      />
-                      {selectedProject?.name || 'Project'}
-                    </span>
-                  )}
-                  <ChevronDown size={14} />
-                </button>
-                {showProjectDropdown && (
-                  <>
-                    <div className="fixed inset-0 z-10" onClick={() => setShowProjectDropdown(false)} />
-                    <div className="absolute top-full left-0 mt-1 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1 max-h-64 overflow-y-auto">
-                      <button
-                        onClick={() => {
-                          setProjectFilter('all');
-                          setShowProjectDropdown(false);
-                        }}
-                        className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 ${
-                          projectFilter === 'all' ? 'bg-blue-50 text-blue-600' : ''
-                        }`}
-                      >
-                        All projects
-                      </button>
-                      {projects.map(project => (
-                        <button
-                          key={project.id}
-                          onClick={() => {
-                            setProjectFilter(project.id);
-                            setShowProjectDropdown(false);
-                          }}
-                          className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2 ${
-                            projectFilter === project.id ? 'bg-blue-50 text-blue-600' : ''
-                          }`}
-                        >
-                          <span
-                            className="w-2 h-2 rounded-full flex-shrink-0"
-                            style={{ backgroundColor: project.color }}
-                          />
-                          <span className="truncate">{project.name}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </div>
-
               {/* Sort */}
               <div className="relative">
                 <button
-                  onClick={() => {
-                    setShowSortDropdown(!showSortDropdown);
-                    setShowProjectDropdown(false);
-                  }}
+                  onClick={() => setShowSortDropdown(!showSortDropdown)}
                   className="flex items-center gap-2 px-3 py-1.5 text-sm border border-gray-300 rounded-md hover:bg-gray-50"
                 >
                   {sortBy === 'updated' && 'Last edited'}
@@ -330,31 +204,31 @@ export default function HomePage() {
           <div className="flex-1 overflow-y-auto p-6">
             {loading ? (
               <div className="flex items-center justify-center h-64">
-                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
               </div>
-            ) : filteredMockups.length === 0 ? (
+            ) : sortedCardMocks.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-64 text-center">
                 <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
                   <ImageIcon size={32} className="text-gray-400" />
                 </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No mockups yet</h3>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No CardMocks yet</h3>
                 <p className="text-gray-500 mb-4 max-w-md">
-                  Create your first mockup to get started. Your recent work will appear here.
+                  Create your first CardMock to get started. Your recent work will appear here.
                 </p>
                 <button
                   onClick={() => router.push('/designer')}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
                 >
                   <Plus size={18} />
-                  New Mockup
+                  New CardMock
                 </button>
               </div>
             ) : viewType === 'grid' ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                {filteredMockups.map(mockup => (
+                {sortedCardMocks.map(cardMock => (
                   <MockupGridCard
-                    key={mockup.id}
-                    mockup={mockup}
+                    key={cardMock.id}
+                    mockup={cardMock}
                     onDelete={handleDelete}
                   />
                 ))}
@@ -362,14 +236,14 @@ export default function HomePage() {
             ) : (
               // List view
               <div className="bg-white rounded-lg border border-gray-200 divide-y divide-gray-200">
-                {filteredMockups.map(mockup => {
-                  const name = mockup.name || mockup.mockup_name || 'Untitled';
-                  const thumbnailUrl = mockup.preview_url || mockup.mockup_image_url;
+                {sortedCardMocks.map(cardMock => {
+                  const name = cardMock.name || cardMock.mockup_name || 'Untitled';
+                  const thumbnailUrl = cardMock.preview_url || cardMock.mockup_image_url;
 
                   return (
                     <div
-                      key={mockup.id}
-                      onClick={() => router.push(`/mockups/${mockup.id}`)}
+                      key={cardMock.id}
+                      onClick={() => router.push(`/mockups/${cardMock.id}`)}
                       className="flex items-center gap-4 p-4 hover:bg-gray-50 cursor-pointer"
                     >
                       <div className="w-16 h-12 bg-gray-100 rounded overflow-hidden flex-shrink-0">
@@ -384,17 +258,9 @@ export default function HomePage() {
                       <div className="flex-1 min-w-0">
                         <h3 className="text-sm font-medium text-gray-900 truncate">{name}</h3>
                         <p className="text-xs text-gray-500">
-                          Edited {new Date(mockup.updated_at).toLocaleDateString()}
+                          Edited {new Date(cardMock.updated_at).toLocaleDateString()}
                         </p>
                       </div>
-                      {mockup.project && (
-                        <span
-                          className="px-2 py-0.5 text-xs font-medium rounded text-white"
-                          style={{ backgroundColor: mockup.project.color }}
-                        >
-                          {mockup.project.name}
-                        </span>
-                      )}
                     </div>
                   );
                 })}
