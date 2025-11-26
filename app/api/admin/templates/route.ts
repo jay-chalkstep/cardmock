@@ -4,12 +4,39 @@ import { successResponse, errorResponse, badRequestResponse, forbiddenResponse }
 import { handleSupabaseError } from '@/lib/api/error-handler';
 import { createServerAdminClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/utils/logger';
+import sharp from 'sharp';
+import { PREPAID_CARD_SPECS } from '@/lib/guidePresets';
 
 export const dynamic = 'force-dynamic';
+
+// Target dimensions for prepaid card templates at 300 DPI
+const TARGET_WIDTH = PREPAID_CARD_SPECS.width;   // 1012
+const TARGET_HEIGHT = PREPAID_CARD_SPECS.height; // 637
+const TARGET_ASPECT_RATIO = TARGET_WIDTH / TARGET_HEIGHT; // ~1.589
+const ASPECT_RATIO_TOLERANCE = 0.02; // 2% tolerance for aspect ratio
+
+/**
+ * Get quality warning based on scale factor
+ */
+function getQualityWarning(scaleFactor: number): {
+  level: 'success' | 'warning' | 'caution' | 'danger';
+  message: string;
+} {
+  if (scaleFactor <= 10) {
+    return { level: 'success', message: 'Scaled to print resolution' };
+  } else if (scaleFactor <= 30) {
+    return { level: 'warning', message: 'May appear slightly soft in print' };
+  } else if (scaleFactor <= 50) {
+    return { level: 'caution', message: 'Noticeable quality loss likely' };
+  } else {
+    return { level: 'danger', message: 'Will appear blurry — consider a larger source' };
+  }
+}
 
 /**
  * POST /api/admin/templates
  * Upload a new template (admin only)
+ * Validates aspect ratio and scales to print resolution (1012×637 @ 300 DPI)
  */
 export async function POST(request: NextRequest) {
   try {
@@ -46,19 +73,51 @@ export async function POST(request: NextRequest) {
       return badRequestResponse('File size must be less than 10MB');
     }
 
-    // Generate unique filename
-    const fileExt = imageFile.name.split('.').pop() || 'png';
-    const fileName = `${Date.now()}-${templateName.toLowerCase().replace(/[^a-z0-9]/g, '-')}.${fileExt}`;
-
-    // Convert File to ArrayBuffer for upload
+    // Convert File to ArrayBuffer for processing
     const arrayBuffer = await imageFile.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    const inputBuffer = Buffer.from(arrayBuffer);
 
-    // Upload to Supabase Storage
+    // Get original image dimensions using sharp
+    const metadata = await sharp(inputBuffer).metadata();
+    const originalWidth = metadata.width;
+    const originalHeight = metadata.height;
+
+    if (!originalWidth || !originalHeight) {
+      return badRequestResponse('Unable to read image dimensions');
+    }
+
+    // Check aspect ratio
+    const uploadedAspectRatio = originalWidth / originalHeight;
+    const aspectRatioDiff = Math.abs(uploadedAspectRatio - TARGET_ASPECT_RATIO) / TARGET_ASPECT_RATIO;
+
+    if (aspectRatioDiff > ASPECT_RATIO_TOLERANCE) {
+      return badRequestResponse(
+        `Invalid aspect ratio. Expected ${TARGET_ASPECT_RATIO.toFixed(3)}:1 (prepaid card format), ` +
+        `got ${uploadedAspectRatio.toFixed(3)}:1. ` +
+        `Required dimensions: ${TARGET_WIDTH}×${TARGET_HEIGHT}px or proportionally scaled.`
+      );
+    }
+
+    // Calculate scale factor (positive = upscaling, negative = downscaling)
+    const scaleFactor = ((TARGET_WIDTH / originalWidth) - 1) * 100;
+
+    // Scale image to target dimensions
+    const scaledBuffer = await sharp(inputBuffer)
+      .resize(TARGET_WIDTH, TARGET_HEIGHT, {
+        fit: 'fill', // Exact dimensions (aspect ratio already validated)
+        kernel: scaleFactor > 0 ? 'lanczos3' : 'lanczos2', // Better quality for upscaling
+      })
+      .png({ quality: 100, compressionLevel: 6 }) // Always output as PNG for best quality
+      .toBuffer();
+
+    // Generate unique filename (always .png after processing)
+    const fileName = `${Date.now()}-${templateName.toLowerCase().replace(/[^a-z0-9]/g, '-')}.png`;
+
+    // Upload scaled image to Supabase Storage
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('card-templates')
-      .upload(fileName, buffer, {
-        contentType: imageFile.type,
+      .upload(fileName, scaledBuffer, {
+        contentType: 'image/png',
         cacheControl: '3600',
       });
 
@@ -74,7 +133,10 @@ export async function POST(request: NextRequest) {
 
     const publicUrl = urlData.publicUrl;
 
-    // Create database record
+    // Get quality warning
+    const qualityWarning = getQualityWarning(Math.max(0, scaleFactor));
+
+    // Create database record with dimension tracking
     const { data: template, error: dbError } = await supabase
       .from('templates')
       .insert({
@@ -83,6 +145,14 @@ export async function POST(request: NextRequest) {
         organization_id: orgId,
         created_by: userId,
         uploaded_date: new Date().toISOString(),
+        file_type: 'image/png',
+        file_size: scaledBuffer.length,
+        // Dimension tracking
+        width: TARGET_WIDTH,
+        height: TARGET_HEIGHT,
+        original_width: originalWidth,
+        original_height: originalHeight,
+        scale_factor: Math.round(scaleFactor * 100) / 100, // 2 decimal places
       })
       .select()
       .single();
@@ -93,9 +163,25 @@ export async function POST(request: NextRequest) {
       return handleSupabaseError(dbError);
     }
 
-    logger.info('Template uploaded successfully', { id: template.id, templateName });
+    logger.info('Template uploaded successfully', {
+      id: template.id,
+      templateName,
+      originalDimensions: `${originalWidth}×${originalHeight}`,
+      scaleFactor: `${scaleFactor.toFixed(1)}%`,
+    });
 
-    return successResponse({ template }, 201);
+    // Return template with scaling info for UI feedback
+    return successResponse({
+      template,
+      scalingInfo: {
+        originalWidth,
+        originalHeight,
+        scaledWidth: TARGET_WIDTH,
+        scaledHeight: TARGET_HEIGHT,
+        scaleFactor: Math.round(scaleFactor * 100) / 100,
+        qualityWarning,
+      },
+    }, 201);
   } catch (error) {
     logger.error('Template upload error', error);
     return errorResponse(error, 'Failed to upload template');

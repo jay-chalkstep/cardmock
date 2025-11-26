@@ -5,12 +5,35 @@ import { useRouter } from 'next/navigation';
 import { useOrganization } from '@/lib/hooks/useAuth';
 import GmailLayout from '@/components/layout/GmailLayout';
 import Toast from '@/components/Toast';
-import { Upload, X, Loader2, LayoutTemplate, ImageIcon } from 'lucide-react';
+import TemplateUploadFeedbackModal from '@/components/templates/TemplateUploadFeedbackModal';
+import { Upload, X, Loader2, LayoutTemplate, ImageIcon, Info } from 'lucide-react';
+import { PREPAID_CARD_SPECS } from '@/lib/guidePresets';
 
 interface ToastMessage {
   message: string;
   type: 'success' | 'error';
   id: number;
+}
+
+interface ScalingInfo {
+  originalWidth: number;
+  originalHeight: number;
+  scaledWidth: number;
+  scaledHeight: number;
+  scaleFactor: number;
+  qualityWarning: {
+    level: 'success' | 'warning' | 'caution' | 'danger';
+    message: string;
+  };
+}
+
+interface UploadResult {
+  template: {
+    id: string;
+    template_name: string;
+    template_url: string;
+  };
+  scalingInfo: ScalingInfo;
 }
 
 export default function AdminTemplatesPage() {
@@ -23,6 +46,10 @@ export default function AdminTemplatesPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  // Feedback modal state
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [uploadResult, setUploadResult] = useState<UploadResult | null>(null);
 
   // Check if user is admin
   const isAdmin = membership?.role === 'org:admin';
@@ -111,22 +138,53 @@ export default function AdminTemplatesPage() {
         throw new Error(result.error || 'Failed to upload template');
       }
 
-      showToast('Template uploaded successfully!', 'success');
-
-      // Reset form
-      setTemplateName('');
-      clearFile();
-
-      // Redirect to templates page after short delay
-      setTimeout(() => {
-        router.push('/templates');
-      }, 1500);
+      // Show feedback modal with scaling info
+      setUploadResult({
+        template: result.data.template,
+        scalingInfo: result.data.scalingInfo,
+      });
+      setShowFeedbackModal(true);
     } catch (err) {
       console.error('Error uploading template:', err);
       showToast(err instanceof Error ? err.message : 'Failed to upload template', 'error');
     } finally {
       setUploading(false);
     }
+  };
+
+  // Handle "Continue" from feedback modal
+  const handleContinue = () => {
+    setShowFeedbackModal(false);
+    showToast('Template uploaded successfully!', 'success');
+
+    // Reset form
+    setTemplateName('');
+    clearFile();
+    setUploadResult(null);
+
+    // Redirect to templates page
+    setTimeout(() => {
+      router.push('/templates');
+    }, 1000);
+  };
+
+  // Handle "Upload Different" from feedback modal
+  const handleUploadDifferent = async () => {
+    // Delete the uploaded template
+    if (uploadResult?.template.id) {
+      try {
+        await fetch(`/api/admin/templates?id=${uploadResult.template.id}`, {
+          method: 'DELETE',
+        });
+      } catch (err) {
+        console.error('Error deleting template:', err);
+      }
+    }
+
+    setShowFeedbackModal(false);
+    setUploadResult(null);
+    clearFile();
+    // Keep the template name so user doesn't have to re-enter
   };
 
   // Debug: log auth state
@@ -242,6 +300,18 @@ export default function AdminTemplatesPage() {
               </div>
             )}
 
+            {/* Dimension Requirements Info */}
+            <div className="mt-3 flex items-start gap-2 p-3 bg-blue-50 rounded-lg border border-blue-100">
+              <Info className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
+              <div className="text-xs text-blue-700">
+                <p className="font-medium mb-1">Prepaid Card Format Required</p>
+                <p>
+                  Images will be scaled to {PREPAID_CARD_SPECS.width}×{PREPAID_CARD_SPECS.height}px (300 DPI print resolution).
+                  For best quality, upload at this size or larger with a {(PREPAID_CARD_SPECS.width / PREPAID_CARD_SPECS.height).toFixed(2)}:1 aspect ratio.
+                </p>
+              </div>
+            </div>
+
             <input
               ref={fileInputRef}
               type="file"
@@ -289,6 +359,19 @@ export default function AdminTemplatesPage() {
           onClose={() => removeToast(toast.id)}
         />
       ))}
+
+      {/* Upload Feedback Modal */}
+      {uploadResult && (
+        <TemplateUploadFeedbackModal
+          isOpen={showFeedbackModal}
+          onClose={handleContinue}
+          templateName={uploadResult.template.template_name}
+          templateUrl={uploadResult.template.template_url}
+          scalingInfo={uploadResult.scalingInfo}
+          onContinue={handleContinue}
+          onUploadDifferent={handleUploadDifferent}
+        />
+      )}
     </GmailLayout>
   );
 }

@@ -195,6 +195,12 @@ export interface CardTemplate {
   uploaded_date: string;
   created_at: string;
   updated_at: string;
+  // Dimension tracking (added in migration 40)
+  width?: number;
+  height?: number;
+  original_width?: number;
+  original_height?: number;
+  scale_factor?: number;
 }
 
 export interface CardMockup {
