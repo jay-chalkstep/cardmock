@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
 import { useOrganization, useUser } from '@/lib/hooks/useAuth';
-import { supabase, Logo, CardTemplate, Folder, Project } from '@/lib/supabase';
+import { supabase, Logo, CardTemplate, Folder } from '@/lib/supabase';
 import { buildFolderTree } from '@/lib/folders';
 import Toast from '@/components/Toast';
 import GmailLayout from '@/components/layout/GmailLayout';
@@ -123,9 +123,8 @@ function DesignerPageContent() {
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [showCreateFolderModal, setShowCreateFolderModal] = useState(false);
 
-  // Project state
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  // Brand state for saving
+  const [selectedBrandIdForSave, setSelectedBrandIdForSave] = useState<string | null>(null);
 
   // Refs
   const canvasRef = useRef<KonvaCanvasRef>(null);
@@ -141,26 +140,30 @@ function DesignerPageContent() {
     setToasts(prev => prev.filter(toast => toast.id !== id));
   };
 
-  // Load logos, templates, folders, and projects when organization loads
+  // Load logos, templates, and folders when organization loads
   useEffect(() => {
     if (organization?.id && user?.id) {
       fetchLogos();
       fetchTemplates();
       fetchFolders();
-      fetchProjects();
     }
   }, [organization?.id, user?.id]);
 
-  // Handle projectId from query params
+  // Handle brandId from query params (for pre-selecting brand)
   useEffect(() => {
-    const projectIdParam = searchParams?.get('projectId');
-    if (projectIdParam && projects.length > 0) {
-      const project = projects.find(p => p.id === projectIdParam);
-      if (project) {
-        setSelectedProjectId(projectIdParam);
+    const brandIdParam = searchParams?.get('brandId');
+    if (brandIdParam && brandGroups.length > 0) {
+      const brand = brandGroups.find(b => b.id === brandIdParam);
+      if (brand) {
+        setSelectedBrandIdForSave(brandIdParam);
+        // Auto-expand the brand and select its primary variant
+        setExpandedBrand(brandIdParam);
+        if (brand.primaryVariant) {
+          loadBrandImage(brand.primaryVariant);
+        }
       }
     }
-  }, [searchParams, projects]);
+  }, [searchParams, brandGroups]);
 
 
   // Handle responsive canvas sizing
@@ -288,28 +291,6 @@ function DesignerPageContent() {
     } catch (error) {
       console.error('Error fetching folders:', error);
       // Don't show error toast for folders - it's optional functionality
-    }
-  };
-
-  // Fetch available projects
-  const fetchProjects = async () => {
-    if (!organization?.id) return;
-
-    try {
-      const response = await fetch('/api/projects');
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        // Don't show error - projects are optional
-        return;
-      }
-
-      // Extract data from the response structure { success: true, data: { projects: [...] } }
-      const fetchedProjects = result.data?.projects || [];
-      setProjects(fetchedProjects);
-    } catch (error) {
-      console.error('Error fetching projects:', error);
-      // Don't show error toast for projects - it's optional functionality
     }
   };
 
@@ -515,7 +496,7 @@ function DesignerPageContent() {
       formData.append('logoId', selectedBrand.id);
       formData.append('templateId', selectedTemplate.id);
       if (selectedFolderId) formData.append('folderId', selectedFolderId);
-      if (selectedProjectId) formData.append('projectId', selectedProjectId);
+      if (selectedBrandIdForSave) formData.append('brandId', selectedBrandIdForSave);
       formData.append('logoX', ((logoPosition.x / stageWidth) * 100).toString());
       formData.append('logoY', ((logoPosition.y / stageHeight) * 100).toString());
       formData.append('logoScale', logoScale.toString());
@@ -615,9 +596,9 @@ function DesignerPageContent() {
                 selectedFolderId={selectedFolderId}
                 onFolderSelect={setSelectedFolderId}
                 onCreateFolder={() => setShowCreateFolderModal(true)}
-                projects={projects}
-                selectedProjectId={selectedProjectId}
-                onProjectSelect={setSelectedProjectId}
+                brands={brandGroups.map(b => ({ id: b.id, company_name: b.company_name, domain: b.domain }))}
+                selectedBrandId={selectedBrandIdForSave}
+                onBrandSelect={setSelectedBrandIdForSave}
                 onSave={saveMockup}
                 saving={saving}
                 canSave={!!mockupName.trim()}

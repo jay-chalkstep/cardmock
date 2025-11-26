@@ -1,11 +1,17 @@
 /**
  * Designer Save Panel Component
- * Contains save form with name, folder, and project selection
+ * Contains save form with name and folder selection
  */
 
 import { Save, Loader2 } from 'lucide-react';
 import FolderSelector from '@/components/folders/FolderSelector';
-import type { Folder, Project } from '@/lib/supabase';
+import type { Folder } from '@/lib/supabase';
+
+interface Brand {
+  id: string;
+  company_name: string;
+  domain: string;
+}
 
 interface DesignerSavePanelProps {
   mockupName: string;
@@ -14,9 +20,9 @@ interface DesignerSavePanelProps {
   selectedFolderId: string | null;
   onFolderSelect: (folderId: string | null) => void;
   onCreateFolder: () => void;
-  projects: Project[];
-  selectedProjectId: string | null;
-  onProjectSelect: (projectId: string | null) => void;
+  brands?: Brand[];
+  selectedBrandId?: string | null;
+  onBrandSelect?: (brandId: string | null) => void;
   onSave: () => void;
   saving: boolean;
   canSave: boolean;
@@ -29,9 +35,9 @@ export default function DesignerSavePanel({
   selectedFolderId,
   onFolderSelect,
   onCreateFolder,
-  projects,
-  selectedProjectId,
-  onProjectSelect,
+  brands = [],
+  selectedBrandId,
+  onBrandSelect,
   onSave,
   saving,
   canSave,
@@ -59,21 +65,23 @@ export default function DesignerSavePanel({
             onCreateFolder={onCreateFolder}
           />
         </div>
-        <div>
-          <label className="text-sm text-gray-600 mb-1 block">Project (Optional)</label>
-          <select
-            value={selectedProjectId || ''}
-            onChange={(e) => onProjectSelect(e.target.value || null)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#374151] text-sm"
-          >
-            <option value="">No project</option>
-            {projects.map((project) => (
-              <option key={project.id} value={project.id}>
-                {project.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        {brands.length > 0 && onBrandSelect && (
+          <div>
+            <label className="text-sm text-gray-600 mb-1 block">Brand (Optional)</label>
+            <select
+              value={selectedBrandId || ''}
+              onChange={(e) => onBrandSelect(e.target.value || null)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#374151] text-sm"
+            >
+              <option value="">No brand</option>
+              {brands.map((brand) => (
+                <option key={brand.id} value={brand.id}>
+                  {brand.company_name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         <button
           onClick={onSave}
           disabled={saving || !canSave}
@@ -95,4 +103,3 @@ export default function DesignerSavePanel({
     </div>
   );
 }
-
