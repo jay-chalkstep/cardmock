@@ -149,17 +149,31 @@ function DesignerPageContent() {
     }
   }, [organization?.id, user?.id]);
 
-  // Handle brandId from query params (for pre-selecting brand)
+  // Handle brandId and logoVariantId from query params (for pre-selecting brand/variant)
   useEffect(() => {
     const brandIdParam = searchParams?.get('brandId');
-    if (brandIdParam && brandGroups.length > 0) {
-      const brand = brandGroups.find(b => b.id === brandIdParam);
-      if (brand) {
-        setSelectedBrandIdForSave(brandIdParam);
-        // Auto-expand the brand and select its primary variant
-        setExpandedBrand(brandIdParam);
-        if (brand.primaryVariant) {
-          loadBrandImage(brand.primaryVariant);
+    const logoVariantIdParam = searchParams?.get('logoVariantId');
+
+    if (brandGroups.length > 0) {
+      if (logoVariantIdParam) {
+        // If specific logo variant is provided, find and load it directly
+        for (const brand of brandGroups) {
+          const variant = brand.variants.find(v => v.id === logoVariantIdParam);
+          if (variant) {
+            setSelectedBrandIdForSave(brand.id);
+            setExpandedBrand(brand.id);
+            loadBrandImage(variant);
+            break;
+          }
+        }
+      } else if (brandIdParam) {
+        // If only brand is provided, expand the brand but let user select variant
+        const brand = brandGroups.find(b => b.id === brandIdParam);
+        if (brand) {
+          setSelectedBrandIdForSave(brandIdParam);
+          setExpandedBrand(brandIdParam);
+          // Open the logo selector modal for user to choose a variant
+          setShowLogoSelector(true);
         }
       }
     }

@@ -16,6 +16,7 @@ import {
   Image as ImageIcon,
   Package
 } from 'lucide-react';
+import LogoVariantSelectorModal from '@/components/brand/LogoVariantSelectorModal';
 
 interface Asset {
   id: string;
@@ -43,6 +44,7 @@ export default function BrandDetailPage() {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const [showLogoSelector, setShowLogoSelector] = useState(false);
 
   const showToast = (message: string, type: 'success' | 'error') => {
     const id = Date.now();
@@ -135,8 +137,21 @@ export default function BrandDetailPage() {
   };
 
   const handleNewCardMock = () => {
-    // Navigate to designer with brand pre-selected
-    router.push(`/designer?brandId=${brandId}`);
+    const logoVariants = brand?.logo_variants || [];
+
+    // If only one variant, navigate directly with that variant
+    if (logoVariants.length === 1) {
+      router.push(`/designer?brandId=${brandId}&logoVariantId=${logoVariants[0].id}`);
+    } else {
+      // Show logo selector modal for multiple variants
+      setShowLogoSelector(true);
+    }
+  };
+
+  const handleLogoVariantSelect = (variant: LogoVariant) => {
+    setShowLogoSelector(false);
+    // Navigate to designer with the selected logo variant
+    router.push(`/designer?brandId=${brandId}&logoVariantId=${variant.id}`);
   };
 
   if (loading || !isLoaded) {
@@ -291,6 +306,15 @@ export default function BrandDetailPage() {
           onClose={() => removeToast(toast.id)}
         />
       ))}
+
+      {/* Logo Variant Selector Modal */}
+      <LogoVariantSelectorModal
+        isOpen={showLogoSelector}
+        onClose={() => setShowLogoSelector(false)}
+        onSelect={handleLogoVariantSelect}
+        brandName={brand?.company_name || ''}
+        variants={brand?.logo_variants || []}
+      />
     </GmailLayout>
   );
 }
