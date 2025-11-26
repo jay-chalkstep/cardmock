@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 
 interface SearchResult {
   id: string;
-  type: 'project' | 'brand' | 'template' | 'asset';
+  type: 'brand' | 'template' | 'asset';
   title: string;
   subtitle?: string;
   url: string;
@@ -16,8 +16,7 @@ interface SearchResult {
 
 /**
  * GET /api/search
- * Unified search across projects, brands, templates, and assets
- * Searches within document content (searchable_text) for assets
+ * Unified search across brands, templates, and assets
  */
 export async function GET(request: NextRequest) {
   try {
@@ -38,26 +37,6 @@ export async function GET(request: NextRequest) {
     const searchTerm = `%${query.toLowerCase()}%`;
     const results: SearchResult[] = [];
 
-    // Search projects
-    const { data: projects, error: projectsError } = await supabase
-      .from('projects')
-      .select('id, name, description, status')
-      .eq('organization_id', orgId)
-      .or(`name.ilike.${searchTerm},description.ilike.${searchTerm}`)
-      .limit(5);
-
-    if (!projectsError && projects) {
-      projects.forEach((project) => {
-        results.push({
-          id: project.id,
-          type: 'project',
-          title: project.name,
-          subtitle: project.description || undefined,
-          url: `/projects/${project.id}`,
-        });
-      });
-    }
-
     // Search brands
     const { data: brands, error: brandsError } = await supabase
       .from('brands')
@@ -73,12 +52,12 @@ export async function GET(request: NextRequest) {
           type: 'brand',
           title: brand.company_name,
           subtitle: brand.domain,
-          url: `/library?tab=brands`,
+          url: `/brands/${brand.id}`,
         });
       });
     }
 
-    // Search templates (check both templates and card_templates tables for backward compatibility)
+    // Search templates
     const { data: templates, error: templatesError } = await supabase
       .from('templates')
       .select('id, template_name, name')
@@ -92,12 +71,12 @@ export async function GET(request: NextRequest) {
           id: template.id,
           type: 'template',
           title: template.template_name || template.name || 'Unnamed Template',
-          url: `/library?tab=templates`,
+          url: `/templates`,
         });
       });
     }
 
-    // Search assets (check both name, mockup_name, and searchable_text fields)
+    // Search assets (CardMocks)
     const { data: assets, error: assetsError } = await supabase
       .from('assets')
       .select('id, name, mockup_name, searchable_text')
@@ -110,14 +89,14 @@ export async function GET(request: NextRequest) {
         results.push({
           id: asset.id,
           type: 'asset',
-          title: asset.mockup_name || asset.name || 'Unnamed Asset',
-          url: `/library?tab=assets`,
+          title: asset.mockup_name || asset.name || 'Unnamed CardMock',
+          url: `/mockups/${asset.id}`,
         });
       });
     }
 
-    // Sort results by type priority (projects, brands, assets, templates)
-    const typeOrder = { project: 0, brand: 1, asset: 2, template: 3 };
+    // Sort results by type priority (brands, assets, templates)
+    const typeOrder = { brand: 0, asset: 1, template: 2 };
     results.sort((a, b) => {
       const orderDiff = typeOrder[a.type] - typeOrder[b.type];
       if (orderDiff !== 0) return orderDiff;
@@ -130,4 +109,3 @@ export async function GET(request: NextRequest) {
     return errorResponse(error, 'Failed to perform search');
   }
 }
-
