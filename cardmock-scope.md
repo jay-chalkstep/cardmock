@@ -16,25 +16,39 @@ Figma-inspired UI focused purely on prepaid card mockup creation. Clean, familia
 
 ## UI Structure (Figma-Inspired)
 
+### Terminology
+- **CardMock** — The deliverable mockup asset (branded name)
+- **Brand** — Client or prospect (replaces "projects" as the organizational container)
+- **Template** — Card structure/background
+
+### Header (Top Bar)
+| Element | Notes |
+|---------|-------|
+| Logo | CardMock branding |
+| Search | Global search |
+| + New CardMock | Primary CTA, always visible |
+| User menu | Minimal settings/logout |
+
 ### Left Sidebar
-| Item | Notes |
-|------|-------|
-| Recents | Recently viewed/edited mockups |
-| All Projects | Project folders |
-| Assets | Brand assets library (Brandfetch + uploads) |
+| Item | What it shows |
+|------|---------------|
+| Recents | Recent CardMocks across all brands (home/dashboard) |
+| Brands | Client/prospect list — click into a brand to see its CardMocks |
 | Templates | Card template library |
-| Trash | Deleted items |
 
 ### Main Content Area
-- **Tabs:** Recently viewed · My mockups · Shared with me
-- **Filters:** By project, file type, last edited
+- **Grid view** of CardMocks or Brands
+- **Filters:** By date, status
 - **View toggle:** Grid / List
 - **Cards:** Thumbnail + title + "Edited X ago"
 
-### Top Bar
-- Search
-- New mockup button
-- User menu (minimal)
+### Designer (Full-Screen Mode)
+Not a nav item — opens when creating or editing a CardMock:
+- **Entry points:**
+  - "New CardMock" button in header → pick brand → pick template → canvas
+  - Inside a Brand → "New CardMock" → pick template → canvas
+  - Click existing CardMock → canvas opens for editing
+- **Canvas:** Konva.js mockup builder with brand assets + template
 
 ---
 
@@ -45,10 +59,9 @@ Figma-inspired UI focused purely on prepaid card mockup creation. Clean, familia
 |---------|-------|
 | Brandfetch integration | Pull logos, colors, brand identity |
 | Manual asset upload | Logos, artwork, brand elements |
-| Projects & folders | Basic organization |
+| Brands | Container for CardMocks (replaces projects/clients) |
 | Card template library | Prepaid card templates |
-| Canvas/mockup builder | Konva.js composition |
-| Comments/feedback | Pin comments on designs |
+| Canvas/mockup builder | Konva.js composition (full-screen designer) |
 | Email notifications | Via Resend |
 
 ### 🔒 KEEP (Hidden/Dormant)
@@ -57,6 +70,7 @@ Figma-inspired UI focused purely on prepaid card mockup creation. Clean, familia
 | Multi-stage approval workflows | Hide UI, preserve logic |
 | Reviewer tracking | Keep tables, hide interface |
 | Approval audit trail | Keep logging, hide display |
+| Comments/feedback | Keep for Phase 2 |
 | Notification system | Simplify to essentials |
 
 ### ❌ CUT (Remove)
@@ -92,20 +106,20 @@ Figma-inspired UI focused purely on prepaid card mockup creation. Clean, familia
 ## Routes/Pages
 
 ### Keep
-- `/` → Dashboard (Figma-style recents)
-- `/projects` → All projects
-- `/projects/[id]` → Project detail
-- `/assets` → Asset library
+- `/` → Recents (dashboard with recent CardMocks)
+- `/brands` → Brand list
+- `/brands/[id]` → Brand detail with its CardMocks
 - `/templates` → Template browser
-- `/mockup/[id]` → Canvas editor
-- `/mockup/[id]/review` → Feedback view (simplified)
+- `/designer/[id]` → Full-screen canvas editor (opens for new or existing CardMock)
 - `/settings` → Basic settings only
 
 ### Remove
-- `/contracts/*`
+- `/projects/*` → Replaced by Brands
 - `/clients/*`
+- `/contracts/*`
 - Any AI feature routes
 - Complex approval management routes
+- Integration routes (Gmail, Slack, Drive, etc.)
 
 ---
 
