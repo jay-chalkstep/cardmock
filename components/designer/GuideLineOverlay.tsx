@@ -1,15 +1,16 @@
 'use client';
 
-import React, { useRef } from 'react';
+import React from 'react';
 import { Group, Line, Rect, Text, Circle } from 'react-konva';
 import { KonvaEventObject } from 'konva/lib/Node';
 import type { Guide } from '@/lib/guidePresets';
+import { PREPAID_CARD_SPECS } from '@/lib/guidePresets';
 
 interface GuideLineOverlayProps {
   // Canvas dimensions
   canvasWidth: number;
   canvasHeight: number;
-  // Guide lines
+  // Guide lines (positions are in CANVAS coordinates for rendering)
   verticalGuides: Guide[];
   horizontalGuides: Guide[];
   // Visibility
@@ -24,11 +25,14 @@ interface GuideLineOverlayProps {
 /**
  * GuideLineOverlay renders draggable guide lines on the canvas.
  *
+ * IMPORTANT: Guide positions are received in canvas coordinates for rendering,
+ * but labels display actual card coordinates (1012×637 at 300 DPI).
+ *
  * Features:
  * - Vertical guides (full height, draggable left/right)
  * - Horizontal guides (full width, draggable up/down)
  * - Color-coded by type (preset cyan, midpoint amber, custom purple)
- * - Position labels on each guide
+ * - Position labels showing card coordinates (not canvas coordinates)
  * - Drag handles for repositioning
  */
 const GuideLineOverlay: React.FC<GuideLineOverlayProps> = ({
@@ -43,6 +47,14 @@ const GuideLineOverlay: React.FC<GuideLineOverlayProps> = ({
 }) => {
   if (!isVisible) return null;
 
+  // Scale factors to convert canvas coords to card coords (300 DPI)
+  const scaleX = PREPAID_CARD_SPECS.width / canvasWidth;
+  const scaleY = PREPAID_CARD_SPECS.height / canvasHeight;
+
+  // Convert canvas position to card position (for display labels)
+  const toCardX = (canvasPx: number) => Math.round(canvasPx * scaleX);
+  const toCardY = (canvasPx: number) => Math.round(canvasPx * scaleY);
+
   const labelFontSize = 10;
   const labelPadding = 3;
   const labelHeight = labelFontSize + labelPadding * 2;
@@ -53,10 +65,12 @@ const GuideLineOverlay: React.FC<GuideLineOverlayProps> = ({
     return text.length * 6 + labelPadding * 2;
   };
 
-  // Render a vertical guide (full height line, position is x)
+  // Render a vertical guide (full height line, position is x in canvas coords)
   const renderVerticalGuide = (guide: Guide) => {
     const isActive = activeSnapGuideId === guide.id;
-    const labelText = `${Math.round(guide.position)}px`;
+    // Convert canvas position to card position for display
+    const cardPosition = toCardX(guide.position);
+    const labelText = `${cardPosition}px`;
     const labelWidth = getLabelWidth(labelText);
 
     return (
@@ -146,10 +160,12 @@ const GuideLineOverlay: React.FC<GuideLineOverlayProps> = ({
     );
   };
 
-  // Render a horizontal guide (full width line, position is y)
+  // Render a horizontal guide (full width line, position is y in canvas coords)
   const renderHorizontalGuide = (guide: Guide) => {
     const isActive = activeSnapGuideId === guide.id;
-    const labelText = `${Math.round(guide.position)}px`;
+    // Convert canvas position to card position for display
+    const cardPosition = toCardY(guide.position);
+    const labelText = `${cardPosition}px`;
     const labelWidth = getLabelWidth(labelText);
 
     return (

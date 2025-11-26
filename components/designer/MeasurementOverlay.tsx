@@ -2,9 +2,10 @@
 
 import React from 'react';
 import { Group, Line, Rect, Text } from 'react-konva';
+import { PREPAID_CARD_SPECS } from '@/lib/guidePresets';
 
 interface MeasurementOverlayProps {
-  // Element position and size
+  // Element position and size (in canvas pixels)
   elementX: number;
   elementY: number;
   elementWidth: number;
@@ -20,9 +21,12 @@ interface MeasurementOverlayProps {
  * MeasurementOverlay displays visual measurement guides on the canvas
  * showing the distance from the selected element to the card edges.
  *
+ * IMPORTANT: Labels show actual card coordinates (1012×637 at 300 DPI),
+ * not canvas display coordinates.
+ *
  * Features:
  * - Dashed lines from element edges to canvas edges
- * - Measurement labels (pills) showing pixel values
+ * - Measurement labels (pills) showing pixel values in card coordinates
  * - Cyan color scheme matching professional design tools
  */
 const MeasurementOverlay: React.FC<MeasurementOverlayProps> = ({
@@ -36,16 +40,24 @@ const MeasurementOverlay: React.FC<MeasurementOverlayProps> = ({
 }) => {
   if (!isVisible) return null;
 
+  // Scale factors to convert canvas coords to card coords (300 DPI)
+  const scaleX = PREPAID_CARD_SPECS.width / canvasWidth;
+  const scaleY = PREPAID_CARD_SPECS.height / canvasHeight;
+
+  // Convert canvas position to card position (for display labels)
+  const toCardX = (canvasPx: number) => Math.round(canvasPx * scaleX);
+  const toCardY = (canvasPx: number) => Math.round(canvasPx * scaleY);
+
   // Colors
   const lineColor = '#22d3ee'; // Cyan
   const labelBgColor = '#0f172a'; // Dark slate
   const labelTextColor = '#22d3ee'; // Cyan
 
-  // Measurement values
-  const leftDistance = Math.round(elementX);
-  const topDistance = Math.round(elementY);
-  const rightDistance = Math.round(canvasWidth - elementX - elementWidth);
-  const bottomDistance = Math.round(canvasHeight - elementY - elementHeight);
+  // Measurement values in CARD coordinates (1012×637)
+  const leftDistance = toCardX(elementX);
+  const topDistance = toCardY(elementY);
+  const rightDistance = toCardX(canvasWidth - elementX - elementWidth);
+  const bottomDistance = toCardY(canvasHeight - elementY - elementHeight);
 
   // Label styling
   const labelFontSize = 11;
@@ -58,7 +70,7 @@ const MeasurementOverlay: React.FC<MeasurementOverlayProps> = ({
     return textLength * 7 + labelPadding * 2;
   };
 
-  // Calculate positions for measurement lines
+  // Calculate positions for measurement lines (in canvas coords for rendering)
   const elementCenterY = elementY + elementHeight / 2;
   const elementCenterX = elementX + elementWidth / 2;
 
@@ -75,7 +87,7 @@ const MeasurementOverlay: React.FC<MeasurementOverlayProps> = ({
             dash={[4, 4]}
           />
           {/* Label pill */}
-          <Group x={leftDistance / 2 - getLabelWidth(leftDistance) / 2} y={elementCenterY - labelHeight / 2 - 10}>
+          <Group x={elementX / 2 - getLabelWidth(leftDistance) / 2} y={elementCenterY - labelHeight / 2 - 10}>
             <Rect
               width={getLabelWidth(leftDistance)}
               height={labelHeight}
@@ -107,7 +119,7 @@ const MeasurementOverlay: React.FC<MeasurementOverlayProps> = ({
             dash={[4, 4]}
           />
           {/* Label pill */}
-          <Group x={elementCenterX + 10} y={topDistance / 2 - labelHeight / 2}>
+          <Group x={elementCenterX + 10} y={elementY / 2 - labelHeight / 2}>
             <Rect
               width={getLabelWidth(topDistance)}
               height={labelHeight}
@@ -140,7 +152,7 @@ const MeasurementOverlay: React.FC<MeasurementOverlayProps> = ({
           />
           {/* Label pill */}
           <Group
-            x={elementX + elementWidth + (rightDistance / 2) - getLabelWidth(rightDistance) / 2}
+            x={elementX + elementWidth + ((canvasWidth - elementX - elementWidth) / 2) - getLabelWidth(rightDistance) / 2}
             y={elementCenterY - labelHeight / 2 + 10}
           >
             <Rect
@@ -176,7 +188,7 @@ const MeasurementOverlay: React.FC<MeasurementOverlayProps> = ({
           {/* Label pill */}
           <Group
             x={elementCenterX - 10 - getLabelWidth(bottomDistance)}
-            y={elementY + elementHeight + (bottomDistance / 2) - labelHeight / 2}
+            y={elementY + elementHeight + ((canvasHeight - elementY - elementHeight) / 2) - labelHeight / 2}
           >
             <Rect
               width={getLabelWidth(bottomDistance)}
