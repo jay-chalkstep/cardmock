@@ -129,12 +129,16 @@ export default function AdminTemplatesPage() {
     }
   };
 
+  // Debug: log auth state
+  console.log('Admin Templates Auth State:', { isLoaded, organization: organization?.name, membership: membership?.role, isAdmin });
+
   // Show loading while checking auth
   if (!isLoaded) {
     return (
       <GmailLayout>
         <div className="flex items-center justify-center h-64">
           <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+          <p className="ml-2 text-gray-600">Loading auth state...</p>
         </div>
       </GmailLayout>
     );
@@ -151,6 +155,9 @@ export default function AdminTemplatesPage() {
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
           <p className="text-gray-600 mb-6">
             You need administrator privileges to upload templates.
+          </p>
+          <p className="text-sm text-gray-400 mb-4">
+            Debug: Role = {membership?.role || 'none'}, Org = {organization?.name || 'none'}
           </p>
           <button
             onClick={() => router.push('/templates')}
