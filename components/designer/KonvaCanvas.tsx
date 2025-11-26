@@ -4,6 +4,9 @@ import React, { forwardRef, useImperativeHandle, useRef, useEffect } from 'react
 import { Stage, Layer, Image, Transformer, Line } from 'react-konva';
 import Konva from 'konva';
 import { KonvaEventObject } from 'konva/lib/Node';
+import MeasurementOverlay from './MeasurementOverlay';
+import GuideLineOverlay from './GuideLineOverlay';
+import type { Guide } from '@/lib/guidePresets';
 
 interface KonvaCanvasProps {
   width: number;
@@ -19,6 +22,15 @@ interface KonvaCanvasProps {
   onTransformEnd: () => void;
   onClick: () => void;
   onDeselect: () => void;
+  // Precision tools props
+  showMeasurements?: boolean;
+  showGuides?: boolean;
+  verticalGuides?: Guide[];
+  horizontalGuides?: Guide[];
+  onGuideMove?: (guideId: string, newPosition: number) => void;
+  activeSnapGuideId?: string | null;
+  // Drag callback for real-time updates
+  onDragMove?: (e: KonvaEventObject<DragEvent>) => void;
 }
 
 export interface KonvaCanvasRef {
@@ -42,7 +54,15 @@ const KonvaCanvas = forwardRef<KonvaCanvasRef, KonvaCanvasProps>((props, ref) =>
     onDragEnd,
     onTransformEnd,
     onClick,
-    onDeselect
+    onDeselect,
+    // Precision tools props
+    showMeasurements = false,
+    showGuides = false,
+    verticalGuides = [],
+    horizontalGuides = [],
+    onGuideMove,
+    activeSnapGuideId = null,
+    onDragMove,
   } = props;
 
   const stageRef = useRef<Konva.Stage>(null);
@@ -191,6 +211,7 @@ const KonvaCanvas = forwardRef<KonvaCanvasRef, KonvaCanvasProps>((props, ref) =>
               width={logoSize.width}
               height={logoSize.height}
               draggable
+              onDragMove={onDragMove}
               onDragEnd={onDragEnd}
               onTransformEnd={handleTransformEnd}
               onClick={onClick}
@@ -212,6 +233,35 @@ const KonvaCanvas = forwardRef<KonvaCanvasRef, KonvaCanvasProps>((props, ref) =>
             )}
           </>
         )}
+      </Layer>
+
+      {/* Precision Tools Overlay Layer */}
+      <Layer listening={false}>
+        {/* Measurement lines (from element to edges) */}
+        {logoImage && (
+          <MeasurementOverlay
+            elementX={logoPosition.x}
+            elementY={logoPosition.y}
+            elementWidth={logoSize.width}
+            elementHeight={logoSize.height}
+            canvasWidth={width}
+            canvasHeight={height}
+            isVisible={showMeasurements && isSelected}
+          />
+        )}
+      </Layer>
+
+      {/* Guide Lines Layer (interactive - allows dragging) */}
+      <Layer>
+        <GuideLineOverlay
+          canvasWidth={width}
+          canvasHeight={height}
+          verticalGuides={verticalGuides}
+          horizontalGuides={horizontalGuides}
+          isVisible={showGuides}
+          onGuideMove={onGuideMove}
+          activeSnapGuideId={activeSnapGuideId}
+        />
       </Layer>
     </Stage>
   );
