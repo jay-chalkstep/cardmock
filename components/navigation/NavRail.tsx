@@ -163,8 +163,8 @@ export default function NavRail() {
             <li>
               <button
                 onClick={() => {
-                  console.log('Admin templates button clicked');
-                  router.push('/admin/templates');
+                  console.log('Admin templates button clicked - using window.location');
+                  window.location.href = '/admin/templates';
                 }}
                 className={`
                   w-full flex items-center gap-3 px-3 py-2 rounded-md transition-all text-sm
