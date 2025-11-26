@@ -3,11 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useOrganization } from '@/lib/hooks/useAuth';
 import { useRouter } from 'next/navigation';
-import BrandDetailModal from '@/components/brand/BrandDetailModal';
 import Toast from '@/components/Toast';
 import GmailLayout from '@/components/layout/GmailLayout';
 import { Search, Loader2, Trash2, Package } from 'lucide-react';
-import { supabase, Brand, LogoVariant } from '@/lib/supabase';
+import { supabase, Brand } from '@/lib/supabase';
 import { deleteBrand as deleteBrandAction } from '@/app/actions/brands';
 
 interface ToastMessage {
@@ -26,8 +25,6 @@ export default function BrandsPage() {
   // Library state
   const [brands, setBrands] = useState<Brand[]>([]);
   const [filteredBrands, setFilteredBrands] = useState<Brand[]>([]);
-  const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [deletingBrandId, setDeletingBrandId] = useState<string | null>(null);
 
   // Fetch brands on mount
@@ -214,10 +211,7 @@ export default function BrandsPage() {
 
                   {/* Card Content */}
                   <button
-                    onClick={() => {
-                      setSelectedBrand(brand);
-                      setIsModalOpen(true);
-                    }}
+                    onClick={() => router.push(`/brands/${brand.id}`)}
                     disabled={isDeleting}
                     className="w-full text-left disabled:opacity-50"
                   >
@@ -282,17 +276,6 @@ export default function BrandsPage() {
           </div>
         )}
 
-        {/* Brand Detail Modal */}
-        {selectedBrand && (
-          <BrandDetailModal
-            brand={selectedBrand}
-            isOpen={isModalOpen}
-            onClose={() => setIsModalOpen(false)}
-            onSelectLogo={(logo: LogoVariant) => {
-              console.log('Selected logo:', logo);
-            }}
-          />
-        )}
       </div>
 
       {/* Toast Notifications */}

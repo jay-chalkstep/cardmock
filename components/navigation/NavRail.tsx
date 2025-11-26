@@ -2,20 +2,17 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useOrganization, useUser } from '@/lib/hooks/useAuth';
 import {
   Clock,
-  FolderKanban,
-  Image,
+  Building2,
   LayoutTemplate,
   Search,
   Plus,
   ChevronDown,
   Settings,
   LogOut,
-  Workflow,
-  BarChart3,
 } from 'lucide-react';
 import { usePanelContext } from '@/lib/contexts/PanelContext';
 
@@ -26,32 +23,21 @@ interface NavItem {
   icon: React.ComponentType<{ size?: number; className?: string }>;
 }
 
-// Figma-inspired main navigation
+// Figma-inspired main navigation per v1 scope
 const mainNavItems: NavItem[] = [
   { id: 'recents', name: 'Recents', href: '/', icon: Clock },
-  { id: 'projects', name: 'All Projects', href: '/projects', icon: FolderKanban },
-  { id: 'assets', name: 'Assets', href: '/library?tab=assets', icon: Image },
-  { id: 'templates', name: 'Templates', href: '/library?tab=templates', icon: LayoutTemplate },
-];
-
-// Admin-only items (hidden from regular users)
-const adminNavItems: NavItem[] = [
-  { id: 'workflows', name: 'Workflows', href: '/admin/workflows', icon: Workflow },
-  { id: 'reports', name: 'Reports', href: '/admin/reports', icon: BarChart3 },
+  { id: 'brands', name: 'Brands', href: '/brands', icon: Building2 },
+  { id: 'templates', name: 'Templates', href: '/templates', icon: LayoutTemplate },
 ];
 
 export default function NavRail() {
   const pathname = usePathname();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const { membership, organization } = useOrganization();
+  const { organization } = useOrganization();
   const { user } = useUser();
   const { setActiveNav } = usePanelContext();
   const [searchQuery, setSearchQuery] = useState('');
   const [showUserMenu, setShowUserMenu] = useState(false);
-
-  const isAdmin = membership?.role === 'org:admin';
-  const currentTab = searchParams?.get('tab') || '';
 
   // Update active nav based on current path
   useEffect(() => {
@@ -60,26 +46,16 @@ export default function NavRail() {
       return;
     }
 
-    if (pathname?.startsWith('/library')) {
-      // Check query params for tab
-      if (currentTab === 'templates') {
-        setActiveNav('templates');
-      } else {
-        setActiveNav('assets');
-      }
+    if (pathname?.startsWith('/brands')) {
+      setActiveNav('brands');
       return;
     }
 
-    if (pathname?.startsWith('/projects')) {
-      setActiveNav('projects');
+    if (pathname?.startsWith('/templates')) {
+      setActiveNav('templates');
       return;
     }
-
-    const activeAdminItem = adminNavItems.find(item => pathname?.startsWith(item.href));
-    if (activeAdminItem) {
-      setActiveNav(activeAdminItem.id);
-    }
-  }, [pathname, currentTab, setActiveNav]);
+  }, [pathname, setActiveNav]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,7 +64,7 @@ export default function NavRail() {
     }
   };
 
-  const handleNewMockup = () => {
+  const handleNewCardMock = () => {
     router.push('/designer');
   };
 
@@ -120,14 +96,14 @@ export default function NavRail() {
         </form>
       </div>
 
-      {/* New Mockup Button */}
+      {/* New CardMock Button */}
       <div className="px-3 pb-3">
         <button
-          onClick={handleNewMockup}
-          className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2.5 px-4 rounded-md transition-colors"
+          onClick={handleNewCardMock}
+          className="w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium py-2.5 px-4 rounded-md transition-colors"
         >
           <Plus size={18} />
-          New Mockup
+          New CardMock
         </button>
       </div>
 
@@ -139,12 +115,10 @@ export default function NavRail() {
 
             if (item.id === 'recents') {
               isActive = pathname === '/';
-            } else if (item.id === 'assets') {
-              isActive = pathname?.startsWith('/library') && currentTab !== 'templates';
+            } else if (item.id === 'brands') {
+              isActive = pathname?.startsWith('/brands') || false;
             } else if (item.id === 'templates') {
-              isActive = pathname?.startsWith('/library') && currentTab === 'templates';
-            } else if (item.id === 'projects') {
-              isActive = pathname?.startsWith('/projects');
+              isActive = pathname?.startsWith('/templates') || false;
             }
 
             return (
@@ -166,39 +140,6 @@ export default function NavRail() {
             );
           })}
         </ul>
-
-        {/* Admin Section */}
-        {isAdmin && (
-          <div className="mt-6 pt-4 border-t border-[#333]">
-            <div className="px-3 mb-2">
-              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                Admin
-              </span>
-            </div>
-            <ul className="space-y-0.5">
-              {adminNavItems.map((item) => {
-                const isActive = pathname === item.href || pathname?.startsWith(item.href);
-                return (
-                  <li key={item.id}>
-                    <Link
-                      href={item.href}
-                      className={`
-                        flex items-center gap-3 px-3 py-2 rounded-md transition-all text-sm
-                        ${isActive
-                          ? 'bg-[#37373d] text-white'
-                          : 'text-gray-400 hover:bg-[#2d2d2d] hover:text-white'
-                        }
-                      `}
-                    >
-                      <item.icon size={18} className="flex-shrink-0" />
-                      <span className="font-medium">{item.name}</span>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        )}
       </nav>
 
       {/* User Menu */}
@@ -242,8 +183,8 @@ export default function NavRail() {
               <button
                 onClick={() => {
                   setShowUserMenu(false);
-                  // Handle logout - will depend on auth implementation
-                  router.push('/sign-out');
+                  // Handle logout - will depend on Supabase Auth implementation
+                  console.log('Sign out clicked');
                 }}
                 className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-300 hover:bg-[#37373d] hover:text-white"
               >
