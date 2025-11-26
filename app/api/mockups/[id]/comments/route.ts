@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { getAuthContext, getMockUserInfo } from '@/lib/api/auth';
+import { getAuthContext, getUserInfo } from '@/lib/api/auth';
 import { successResponse, errorResponse, badRequestResponse, notFoundResponse, forbiddenResponse } from '@/lib/api/response';
 import { handleSupabaseError, checkRequiredFields } from '@/lib/api/error-handler';
 import { supabaseServer } from '@/lib/supabase-server';
@@ -107,7 +107,7 @@ export async function POST(
     }
 
     // Get user details from mock auth
-    const userInfo = getMockUserInfo(userId);
+    const userInfo = await getUserInfo(userId);
     const fullName = userInfo.name;
     const userEmail = userInfo.email;
 

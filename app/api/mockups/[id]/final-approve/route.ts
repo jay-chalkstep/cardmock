@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { getAuthContext, isAdmin, getMockUserInfo } from '@/lib/api/auth';
+import { getAuthContext, isAdmin, getUserInfo } from '@/lib/api/auth';
 import { successResponse, errorResponse, badRequestResponse, notFoundResponse, forbiddenResponse } from '@/lib/api/response';
 import { handleSupabaseError } from '@/lib/api/error-handler';
 import { supabase } from '@/lib/supabase';
@@ -75,7 +75,7 @@ export async function POST(
     }
 
     // Get user's name for display
-    const userInfo = getMockUserInfo(userId);
+    const userInfo = await getUserInfo(userId);
     const userName = userInfo.name;
 
     // Record final approval using database function

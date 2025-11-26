@@ -2,7 +2,7 @@
 
 import { createServerClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
-import { getAuthContext } from '@/lib/api/auth';
+import { getAuthContextOrThrow } from '@/lib/api/auth';
 
 /**
  * Server Action to save a brand with all its logo variants, colors, and fonts
@@ -34,7 +34,7 @@ export async function saveBrand(data: {
   logoSize?: number;
 }) {
   try {
-    const { userId, orgId } = await getAuthContext();
+    const { userId, orgId } = await getAuthContextOrThrow();
 
     if (!userId || !orgId) {
       return { error: 'Unauthorized' };
@@ -210,7 +210,7 @@ export async function saveBrand(data: {
  */
 export async function deleteBrand(brandId: string) {
   try {
-    const { userId, orgId } = await getAuthContext();
+    const { userId, orgId } = await getAuthContextOrThrow();
 
     if (!userId || !orgId) {
       return { error: 'Unauthorized' };

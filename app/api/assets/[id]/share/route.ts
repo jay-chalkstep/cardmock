@@ -25,7 +25,9 @@ export async function POST(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-const { userId, orgId } = await getOrgAuthContext();
+    const authResult = await getOrgAuthContext();
+    if (authResult instanceof Response) return authResult;
+    const { userId, orgId } = authResult;
     
     const { id } = await context.params;
     const body = await request.json();
@@ -137,7 +139,9 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-const { userId, orgId } = await getOrgAuthContext();
+    const authResult = await getOrgAuthContext();
+    if (authResult instanceof Response) return authResult;
+    const { userId, orgId } = authResult;
     
     const { id } = await context.params;
     

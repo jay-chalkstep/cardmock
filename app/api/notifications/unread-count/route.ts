@@ -14,7 +14,9 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(request: NextRequest) {
   try {
-    const { userId, orgId } = await getUserAuthContext();
+    const authResult = await getUserAuthContext();
+    if (authResult instanceof Response) return authResult;
+    const { userId, orgId } = authResult;
 
     // If user is not in an org, return 0 notifications
     if (!orgId) {

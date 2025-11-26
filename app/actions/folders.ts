@@ -2,14 +2,14 @@
 
 import { createServerClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
-import { getAuthContext } from '@/lib/api/auth';
+import { getAuthContextOrThrow } from '@/lib/api/auth';
 
 /**
  * Server Action to create a new folder
  */
 export async function createFolder(formData: FormData) {
   try {
-    const { userId, orgId } = await getAuthContext();
+    const { userId, orgId } = await getAuthContextOrThrow();
 
     if (!userId || !orgId) {
       return { error: 'Unauthorized' };
@@ -58,7 +58,7 @@ export async function createFolder(formData: FormData) {
  */
 export async function renameFolder(folderId: string, newName: string) {
   try {
-    const { userId, orgId } = await getAuthContext();
+    const { userId, orgId } = await getAuthContextOrThrow();
 
     if (!userId || !orgId) {
       return { error: 'Unauthorized' };
@@ -96,7 +96,7 @@ export async function renameFolder(folderId: string, newName: string) {
  */
 export async function deleteFolder(folderId: string) {
   try {
-    const { userId, orgId } = await getAuthContext();
+    const { userId, orgId } = await getAuthContextOrThrow();
 
     if (!userId || !orgId) {
       return { error: 'Unauthorized' };

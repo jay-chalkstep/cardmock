@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { getAuthContext, getMockUserInfo } from '@/lib/api/auth';
+import { getAuthContext, getUserInfo } from '@/lib/api/auth';
 import { successResponse, errorResponse, badRequestResponse, notFoundResponse } from '@/lib/api/response';
 import { handleSupabaseError } from '@/lib/api/error-handler';
 import { supabaseServer } from '@/lib/supabase-server';
@@ -51,8 +51,8 @@ export async function POST(
       return badRequestResponse('Comment is already resolved');
     }
 
-    // Get user details from mock auth
-    const userInfo = getMockUserInfo(userId);
+    // Get user details from Clerk
+    const userInfo = await getUserInfo(userId);
     const fullName = userInfo.name;
 
     // Resolve the comment

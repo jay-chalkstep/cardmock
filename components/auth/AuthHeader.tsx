@@ -4,7 +4,15 @@ import { User } from 'lucide-react';
 import { useUser } from '@/lib/hooks/useAuth';
 
 export default function AuthHeader() {
-  const { user } = useUser();
+  const { user, isLoaded } = useUser();
+
+  if (!isLoaded || !user) {
+    return (
+      <header className="flex justify-end items-center p-4 gap-4 h-16">
+        <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse" />
+      </header>
+    );
+  }
 
   return (
     <header className="flex justify-end items-center p-4 gap-4 h-16">
@@ -12,8 +20,12 @@ export default function AuthHeader() {
         <span className="text-sm font-medium">
           {user.firstName} {user.lastName}
         </span>
-        <div className="w-8 h-8 bg-[#6c47ff] rounded-full flex items-center justify-center">
-          <User size={16} className="text-white" />
+        <div className="w-8 h-8 bg-[#6c47ff] rounded-full flex items-center justify-center overflow-hidden">
+          {user.imageUrl ? (
+            <img src={user.imageUrl} alt="" className="w-full h-full object-cover" />
+          ) : (
+            <User size={16} className="text-white" />
+          )}
         </div>
       </div>
     </header>
