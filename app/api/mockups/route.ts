@@ -29,17 +29,13 @@ export async function GET(request: NextRequest) {
         *,
         logo:logo_variants!logo_id (
           id,
-          logo_url
+          logo_url,
+          brand_id
         ),
         template:templates!template_id (
           id,
           template_name,
           template_url
-        ),
-        brand:brands!brand_id (
-          id,
-          company_name,
-          domain
         )
       `)
       .eq('organization_id', orgId)
@@ -76,7 +72,6 @@ export async function POST(request: NextRequest) {
     const logoId = formData.get('logoId') as string;
     const templateId = formData.get('templateId') as string;
     const folderId = formData.get('folderId') as string | null;
-    const brandId = formData.get('brandId') as string | null;
     const logoX = parseFloat(formData.get('logoX') as string);
     const logoY = parseFloat(formData.get('logoY') as string);
     const logoScale = parseFloat(formData.get('logoScale') as string);
@@ -119,7 +114,6 @@ export async function POST(request: NextRequest) {
       organization_id: orgId,
       created_by: userId,
       folder_id: folderId || null,
-      brand_id: brandId || null,
       logo_x: logoX,
       logo_y: logoY,
       logo_scale: logoScale,
