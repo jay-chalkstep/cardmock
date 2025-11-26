@@ -14,7 +14,7 @@ import PreviewArea from '@/components/preview/PreviewArea';
 import { usePanelContext } from '@/lib/contexts/PanelContext';
 import MockupDetailSidebar from '@/components/mockups/MockupDetailSidebar';
 import MockupDetailPreviewPanel from '@/components/mockups/MockupDetailPreviewPanel';
-import type { MockupStageProgressWithDetails, Project, Workflow } from '@/lib/supabase';
+import type { MockupStageProgressWithDetails, Workflow } from '@/lib/supabase';
 
 interface ToastMessage {
   message: string;
@@ -89,7 +89,6 @@ export default function MockupDetailPage({ params }: { params: Promise<{ id: str
   // Stage progress state
   const [stageProgress, setStageProgress] = useState<MockupStageProgressWithDetails[]>([]);
   const [workflow, setWorkflow] = useState<Workflow | null>(null);
-  const [project, setProject] = useState<Project | null>(null);
 
   // Toast notifications
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -131,10 +130,6 @@ export default function MockupDetailPage({ params }: { params: Promise<{ id: str
 
   // Stage workflow computed values
   const currentStageProgress = stageProgress.find(p => p.status === 'in_review');
-  const isStageReviewer = currentStageProgress && project
-    ? // Check if user is assigned as reviewer for current stage
-      false // TODO: fetch stage reviewers and check
-    : false;
 
   useEffect(() => {
     setActiveNav('mockups');
@@ -199,35 +194,7 @@ export default function MockupDetailPage({ params }: { params: Promise<{ id: str
       });
 
       setMockup(data);
-      
-      // Check if user is a reviewer for this mockup's project
-      // Reviewers are assigned at the project level via project_stage_reviewers
-      // Only check if user is not the creator and mockup has a project
-      if (user?.id && data.created_by !== user.id && data.project_id) {
-        try {
-          const { data: reviewerData, error: reviewerError } = await supabase
-            .from('project_stage_reviewers')
-            .select('id')
-            .eq('project_id', data.project_id)
-            .eq('user_id', user.id)
-            .limit(1)
-            .maybeSingle();
-          
-          if (reviewerError) {
-            console.error('Error checking reviewer status:', reviewerError);
-            setIsReviewer(false);
-          } else {
-            setIsReviewer(!!reviewerData);
-          }
-        } catch (error) {
-          console.error('Error checking reviewer status:', error);
-          setIsReviewer(false);
-        }
-      } else {
-        // If user is creator or mockup has no project, they're not a reviewer
-        setIsReviewer(false);
-      }
-      
+
       console.log('=== END FETCH MOCKUP DATA ===\n');
     } catch (error) {
       console.error('❌ Error fetching mockup:', error);
@@ -291,22 +258,6 @@ export default function MockupDetailPage({ params }: { params: Promise<{ id: str
       setStageProgress(progress || []);
       setWorkflow(workflowData || null);
 
-      // If mockup has project_id, fetch project data
-      if (mockup?.project_id) {
-        console.log('Fetching project data:', mockup.project_id);
-        const projectUrl = `/api/projects/${mockup.project_id}`;
-        const projectResponse = await fetch(projectUrl);
-        console.log('Project response status:', projectResponse.status);
-
-        if (projectResponse.ok) {
-          const { project: projectData } = await projectResponse.json();
-          console.log('✅ Project fetched:', projectData?.project_name);
-          setProject(projectData);
-        } else {
-          console.error('❌ Project fetch failed:', projectResponse.status);
-        }
-      }
-
       console.log('=== END FETCH STAGE PROGRESS ===\n');
     } catch (error) {
       console.error('❌ Error fetching stage progress:', error);
@@ -368,7 +319,6 @@ export default function MockupDetailPage({ params }: { params: Promise<{ id: str
       mockup={mockup}
       currentStageProgress={currentStageProgress}
       workflow={workflow}
-      project={project}
       activeTool={activeTool}
       onToolChange={setActiveTool}
       strokeColor={strokeColor}
