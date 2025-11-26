@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { getAuthContext, getMockOrgMembers } from '@/lib/api/auth';
+import { getAuthContext, getOrgMembers } from '@/lib/api/auth';
 import { successResponse, errorResponse } from '@/lib/api/response';
 import { logger } from '@/lib/utils/logger';
 
@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
     logger.api('/api/org/members', 'GET', { orgId, userId });
 
     // Return mock organization members (excluding current user)
-    const members = getMockOrgMembers(userId);
+    const members = await getOrgMembers(orgId, userId);
 
     logger.info('Organization members fetched successfully', { orgId, count: members.length });
 

@@ -2,14 +2,14 @@
 
 import { createServerClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
-import { getAuthContext } from '@/lib/api/auth';
+import { getAuthContextOrThrow } from '@/lib/api/auth';
 
 /**
  * Server Action to create a new project
  */
 export async function createProject(formData: FormData) {
   try {
-    const { userId, orgId } = await getAuthContext();
+    const { userId, orgId } = await getAuthContextOrThrow();
 
     if (!userId || !orgId) {
       return { error: 'Unauthorized' };
@@ -60,7 +60,7 @@ export async function createProject(formData: FormData) {
  */
 export async function updateProject(projectId: string, formData: FormData) {
   try {
-    const { userId, orgId } = await getAuthContext();
+    const { userId, orgId } = await getAuthContextOrThrow();
 
     if (!userId || !orgId) {
       return { error: 'Unauthorized' };
@@ -108,7 +108,7 @@ export async function updateProject(projectId: string, formData: FormData) {
  */
 export async function archiveProject(projectId: string) {
   try {
-    const { userId, orgId } = await getAuthContext();
+    const { userId, orgId } = await getAuthContextOrThrow();
 
     if (!userId || !orgId) {
       return { error: 'Unauthorized' };
@@ -141,7 +141,7 @@ export async function archiveProject(projectId: string) {
  */
 export async function deleteProject(projectId: string) {
   try {
-    const { userId, orgId } = await getAuthContext();
+    const { userId, orgId } = await getAuthContextOrThrow();
 
     if (!userId || !orgId) {
       return { error: 'Unauthorized' };

@@ -2,14 +2,14 @@
 
 import { createServerClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
-import { getAuthContext } from '@/lib/api/auth';
+import { getAuthContextOrThrow } from '@/lib/api/auth';
 
 /**
  * Server Action to delete an asset
  */
 export async function deleteAsset(assetId: string) {
   try {
-    const { userId, orgId } = await getAuthContext();
+    const { userId, orgId } = await getAuthContextOrThrow();
 
     if (!userId || !orgId) {
       return { error: 'Unauthorized' };
@@ -72,7 +72,7 @@ export async function deleteAsset(assetId: string) {
  */
 export async function moveAsset(assetId: string, folderId: string | null) {
   try {
-    const { userId, orgId } = await getAuthContext();
+    const { userId, orgId } = await getAuthContextOrThrow();
 
     if (!userId || !orgId) {
       return { error: 'Unauthorized' };
@@ -106,7 +106,7 @@ export async function moveAsset(assetId: string, folderId: string | null) {
  */
 export async function deleteAssets(assetIds: string[]) {
   try {
-    const { userId, orgId } = await getAuthContext();
+    const { userId, orgId } = await getAuthContextOrThrow();
 
     if (!userId || !orgId) {
       return { error: 'Unauthorized' };
@@ -177,7 +177,7 @@ export async function deleteAssets(assetIds: string[]) {
  */
 export async function updateAssetProject(assetId: string, projectId: string | null) {
   try {
-    const { userId, orgId } = await getAuthContext();
+    const { userId, orgId } = await getAuthContextOrThrow();
 
     if (!userId || !orgId) {
       return { error: 'Unauthorized' };
@@ -214,7 +214,7 @@ export async function updateAssetProject(assetId: string, projectId: string | nu
  */
 export async function moveAssets(assetIds: string[], folderId: string | null) {
   try {
-    const { userId, orgId } = await getAuthContext();
+    const { userId, orgId } = await getAuthContextOrThrow();
 
     if (!userId || !orgId) {
       return { error: 'Unauthorized' };
