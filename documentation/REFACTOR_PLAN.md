@@ -1,411 +1,322 @@
-# CardMock Refactor Plan - Current State
+# CardMock v1 — Build Plan
 
-**Last Updated:** 2025-11-09  
-**Current Version:** v3.7.0  
-**Status:** ✅ Core Refactoring Complete
-
----
-
-## 🎯 Executive Summary
-
-This document tracks the ongoing refactoring effort to improve code quality, reduce bugs, eliminate duplicate code, and modernize the codebase. The plan is updated as work progresses and serves as a memory for future development sessions.
+**Last Updated:** 2025-11-26
+**Target Version:** v1.0.0
+**Status:** Planning
 
 ---
 
-## ✅ Completed Work
+## Overview
 
-### Phase 1: API Route Standardization (100% Complete)
+This plan outlines the work required to rebuild CardMock as a focused, Figma-inspired prepaid card mockup creation tool. The goal is to strip away complexity and deliver a clean, simple experience.
 
-**Status:** ✅ Complete
-
-All API routes have been refactored to use standardized utilities:
-
-- **Authentication Utilities** (`lib/api/auth.ts`)
-  - `getAuthContext()` - Standardized auth context retrieval
-  - `isAdmin()` - Admin role checking
-  - `requireAuth()` - Auth requirement with error handling
-
-- **Response Utilities** (`lib/api/response.ts`)
-  - `successResponse()` - Standardized success responses
-  - `errorResponse()` - Standardized error responses
-  - `badRequestResponse()`, `notFoundResponse()`, `forbiddenResponse()` - HTTP status helpers
-
-- **Error Handling** (`lib/api/error-handler.ts`)
-  - `handleSupabaseError()` - Supabase error handling
-  - `checkRequiredFields()` - Field validation
-
-- **Logging** (`lib/utils/logger.ts`)
-  - Centralized logging with levels (debug, info, warn, error, api, db)
-
-**Refactored Routes:**
-- `/api/card-upload/route.ts`
-- `/api/upload/route.ts`
-- `/api/templates/route.ts`
-- `/api/comments/[id]/route.ts`
-- `/api/comments/[id]/resolve/route.ts`
-- `/api/comments/[id]/unresolve/route.ts`
-- `/api/workflows/route.ts`
-- `/api/workflows/[id]/route.ts`
-- `/api/folders/[id]/route.ts`
-- `/api/org/members/route.ts`
-- `/api/brandfetch/route.ts`
-- `/api/mockups/[id]/final-approve/route.ts`
-- `/api/projects/[id]/mockups/route.ts`
-- `/api/projects/[id]/reviewers/route.ts`
-- `/api/reviews/my-stage-reviews/route.ts`
-- `/api/projects/metrics/route.ts`
-- `/api/projects/[id]/metrics/route.ts`
-- `/api/mockups/[id]/stage-progress/[stage_order]/route.ts`
-- `/api/admin/reports/projects/route.ts`
-- `/api/projects/route.ts` (fixed response parsing)
-- And more...
-
-**Benefits:**
-- Consistent error handling across all routes
-- Standardized response format (`{ success: true, data: {...} }`)
-- Centralized logging
-- Better error messages
-- Reduced code duplication
-
-### Phase 2: AI Features Removal (100% Complete)
-
-**Status:** ✅ Complete
-
-All AI-powered features have been removed for simplification and stability:
-
-- **Deleted Files:**
-  - All `/api/ai/*` routes (4 files)
-  - All `components/ai/*` components (10 files)
-  - All `lib/ai/*` library files (5 files)
-  - `lib/hooks/useAIMetadata.ts`
-  - `types/ai.ts`
-  - `contexts/AIContext.tsx`
-  - `components/search/AIGlobalSearch.tsx`
-  - `components/ui/AIIndicator.tsx`
-
-- **Code Cleanup:**
-  - Removed AI imports from mockup detail page
-  - Removed AI state and functions
-  - Removed AI button from AppHeader
-  - Removed AIProvider from dashboard layout
-  - Removed OpenAI dependency from package.json
-
-- **Database Migration:**
-  - Created `supabase/20_remove_ai_features.sql`
-  - Drops `mockup_ai_metadata`, `folder_suggestions`, `search_queries` tables
-  - Removes pgvector extension (if not used elsewhere)
-
-- **Documentation:**
-  - CHANGELOG updated with v3.7.0 entry
-  - README needs update (see Phase 3 below)
-
-### Phase 3: Route Modernization (100% Complete)
-
-**Status:** ✅ Complete
-
-- Routes renamed:
-  - `/card-designer` → `/designer`
-  - `/mockup-library` → `/gallery`
-  - Created `/brands` route
-  - Deleted old redirect routes
-
-- Navigation updated to point to new routes
-- Build tested and passing
-
-### Phase 4: Database Modernization (Partial - 30% Complete)
-
-**Status:** ⚠️ Partial
-
-- **Completed:**
-  - Migration 13: Table renames (`card_mockups` → `assets`, `card_templates` → `templates`)
-  - Compatibility views created
-  - All API routes updated to use new table names
-  - TypeScript types updated
-
-- **Remaining:**
-  - Column renaming (some columns still use old names)
-  - Complete terminology cleanup in UI
-
-### Phase 5: Error Handling Infrastructure (100% Complete)
-
-**Status:** ✅ Complete
-
-- Created `ErrorBoundary` component
-- Created `ErrorPage` component
-- Standardized error handling patterns
-- Centralized error utilities
+**Reference:** See [cardmock-scope.md](../cardmock-scope.md) for the complete scope definition.
 
 ---
 
-## 🚧 Remaining Work
+## Phase 1: Authentication Migration
 
-### Phase 6: Documentation Update (100% Complete)
+**Goal:** Replace Clerk with Supabase Auth
 
-**Status:** ✅ Complete
+### Tasks
 
-**Completed Tasks:**
-1. ✅ Updated `README.md`:
-   - Removed all AI references
-   - Updated version from 3.6.0 to 3.7.0
-   - Removed "AI-Powered Features" section
-   - Removed AI API keys from environment variables
-   - Updated tech stack (removed OpenAI, Google Vision, pgvector)
-   - Updated deployment checklist (removed AI testing steps)
-   - Updated migration list (removed AI migration 11, renumbered remaining migrations)
+- [ ] Remove Clerk dependencies from `package.json`
+- [ ] Delete Clerk-related files:
+  - `middleware.ts` (Clerk middleware)
+  - `app/sign-in/` directory
+  - `app/sign-up/` directory
+- [ ] Set up Supabase Auth:
+  - Configure auth in Supabase dashboard
+  - Create `lib/supabase/auth.ts` utilities
+  - Implement sign-in/sign-up pages with Supabase
+- [ ] Update environment variables (remove `CLERK_*`, keep `SUPABASE_*`)
+- [ ] Update all API routes to use Supabase Auth
+- [ ] Update client-side auth hooks
+- [ ] Remove organization/multi-tenant logic (simplify to single-user for v1)
 
-2. ✅ Verified `CHANGELOG.md`:
-   - Already has v3.7.0 entry ✅
-   - AI removal details documented
-
-### Phase 7: Component Extraction & Organization (100% Complete)
-
-**Status:** ✅ Complete
-
-**Completed:**
-
-1. ✅ **Mockup Detail Page** (`app/(dashboard)/mockups/[id]/page.tsx`)
-   - ✅ Created `MockupDetailPreviewPanel.tsx` component
-   - ✅ Using existing `MockupDetailSidebar.tsx` component
-   - ✅ Reduced from ~765 lines to ~580 lines (24% reduction)
-   - ✅ Cleaned up unused imports
-
-2. ✅ **Designer Page** (`app/(dashboard)/designer/page.tsx`)
-   - ✅ Created `DesignerSelectionPanel.tsx` component
-   - ✅ Created `DesignerPositionControls.tsx` component
-   - ✅ Created `DesignerSizeControls.tsx` component
-   - ✅ Created `DesignerSavePanel.tsx` component
-   - ✅ Created `DesignerBrandSelector.tsx` component
-   - ✅ Reduced from ~1014 lines to ~690 lines (32% reduction)
-   - ✅ Cleaned up unused imports
-
-3. ✅ **Projects Page** (`app/(dashboard)/projects/page.tsx`)
-   - ✅ Created `ProjectsContextPanel.tsx` component
-   - ✅ Extracted search and filter UI into reusable component
-   - ✅ Cleaned up unused imports
-
-**Component Organization:**
-- ✅ Created barrel exports for feature directories:
-  - `components/mockups/index.ts`
-  - `components/designer/index.ts`
-  - `components/approvals/index.ts`
-  - `components/projects/index.ts`
-  - `components/collaboration/index.ts`
-  - `components/folders/index.ts`
-- ✅ Consistent import patterns using barrel exports
-
-### Phase 8: Next.js 15 Modernization (100% Complete)
-
-**Status:** ✅ Complete
-
-**Completed:**
-
-1. ✅ **Loading States:**
-   - ✅ Created `loading.tsx` files for all major routes:
-     - `app/(dashboard)/gallery/loading.tsx`
-     - `app/(dashboard)/projects/loading.tsx`
-     - `app/(dashboard)/brands/loading.tsx`
-     - `app/(dashboard)/designer/loading.tsx`
-     - `app/(dashboard)/admin/templates/loading.tsx`
-   - ✅ Consistent loading UI with spinner and message
-
-2. ✅ **Error Boundaries:**
-   - ✅ Created `error.tsx` files for routes missing them:
-     - `app/(dashboard)/designer/error.tsx`
-     - `app/(dashboard)/admin/templates/error.tsx`
-   - ✅ Existing error files already in place for gallery, projects, brands, search
-   - ✅ All use consistent `ErrorPage` component
-
-3. ✅ **Server Actions:**
-   - ✅ Server Actions already implemented for:
-     - Projects (create, update, delete, archive)
-     - Assets (delete, move, update project)
-     - Brands (delete)
-     - Folders (create, rename, delete)
-   - ✅ Using `revalidatePath` for cache invalidation
-
-4. ✅ **Layout Standardization:**
-   - ✅ Migrated `admin/templates` from `FourPanelLayout` to `GmailLayout`
-   - ✅ Created `TemplatesContextPanel.tsx` component
-   - ✅ Created `TemplatesGridView.tsx` component
-   - ✅ All pages now use consistent `GmailLayout`
-   - ✅ `FourPanelLayout` no longer used (can be deprecated/removed)
-
-**Note on Server Components:**
-- Pages remain client components due to interactivity requirements
-- Current architecture works well with Server Actions for mutations
-- Could be refactored in future if needed, but not required
-
-### Phase 9: Terminology Standardization (Low Priority)
-
-**Status:** 🟡 Partial (15% Complete)
-
-**Remaining Tasks:**
-
-1. **UI Text Updates:**
-   - Some pages still use "mockup" instead of "asset"
-   - Some components still use "card" terminology
-   - Complete consistency pass
-
-2. **Variable Renaming:**
-   - `selectedLogo` → `selectedBrand`
-   - `mockups` → `assets` (where appropriate)
-   - `mockupId` → `assetId`
-
-3. **Component Renaming:**
-   - `LogoCard` → `BrandCard` (already done ✅)
-   - Any remaining component name updates
-
-**Estimated Time:** 2-3 hours
-
-### Phase 10: Code Quality Improvements (Ongoing)
-
-**Status:** 🟡 Ongoing
-
-**Areas for Improvement:**
-
-1. **Type Safety:**
-   - Ensure all API responses are properly typed
-   - Fix any `any` types
-   - Improve TypeScript strictness
-
-2. **Performance:**
-   - Optimize database queries
-   - Add proper indexing
-   - Implement pagination where needed
-
-3. **Testing:**
-   - Add unit tests for utilities
-   - Add integration tests for API routes
-   - Add E2E tests for critical flows
-
-4. **Documentation:**
-   - Add JSDoc comments to utilities
-   - Document complex functions
-   - Update API documentation
-
-**Estimated Time:** Ongoing
+### Files to Modify
+- `lib/supabase/client.ts`
+- `lib/supabase/server.ts`
+- `lib/api/auth.ts`
+- All API routes using `getAuthContext()`
 
 ---
 
-## 📋 Immediate Next Steps
+## Phase 2: UI Rebuild (Figma-Style)
 
-### Priority 1: Documentation Update ✅ COMPLETE
-1. ✅ Update README.md to remove AI references
-2. ✅ Bump version to 3.7.0
-3. ✅ Remove AI sections
-4. ✅ Update environment variables
-5. ✅ Update tech stack
-6. ✅ Update deployment checklist
+**Goal:** Clean, minimal navigation with Recents/Brands/Templates structure
 
-### Priority 2: Component Extraction ✅ COMPLETE
-1. ✅ Extract components from mockup detail page
-2. ✅ Extract components from designer page
-3. ✅ Create barrel exports for all feature directories
-4. ✅ Projects page improvements (extracted context panel)
+### 2.1 Header Rebuild
 
-### Priority 3: Next.js 15 Modernization ✅ COMPLETE
-1. ✅ Layout standardization (migrated admin/templates to GmailLayout)
-2. ✅ Server Actions already implemented
-3. ✅ Add loading/error states (completed)
-4. ✅ Standardize layouts (all pages use GmailLayout)
+- [ ] Create new `AppHeader.tsx`:
+  - CardMock logo (left)
+  - Global search (center)
+  - **+ New CardMock** button (primary CTA)
+  - User menu with settings/logout (right)
+- [ ] Remove complex header elements (notifications bell, etc.)
 
----
+### 2.2 Left Sidebar Rebuild
 
-## 📊 Progress Tracking
+- [ ] Create new `Sidebar.tsx` with three items:
+  - **Recents** — Links to `/` (dashboard)
+  - **Brands** — Links to `/brands`
+  - **Templates** — Links to `/templates`
+- [ ] Remove old navigation items:
+  - Projects
+  - Gallery
+  - My Stage Reviews
+  - Admin menu items
+- [ ] Style to match Figma aesthetic (clean, minimal)
 
-### Overall Progress: ~75% Complete
+### 2.3 Main Content Grid
 
-- ✅ API Route Standardization: 100%
-- ✅ AI Features Removal: 100%
-- ✅ Route Modernization: 100%
-- ✅ Error Handling Infrastructure: 100%
-- ✅ Documentation Update: 100%
-- ✅ Component Extraction: 100%
-- ✅ Next.js 15 Modernization: 100%
-- ⚠️ Database Modernization: 30%
-- 🟡 Terminology Standardization: 15%
-- 🟡 Code Quality Improvements: Ongoing
+- [ ] Create reusable `CardGrid.tsx` component:
+  - Thumbnail + title + "Edited X ago"
+  - Grid/List view toggle
+  - Filter by date, status
+- [ ] Implement for CardMocks and Brands
 
----
+### Files to Create
+- `components/layout/AppHeader.tsx`
+- `components/layout/Sidebar.tsx`
+- `components/ui/CardGrid.tsx`
+- `components/ui/CardGridItem.tsx`
 
-## 🎯 Success Criteria
-
-### Code Quality
-- ✅ All API routes use standardized utilities
-- ✅ Consistent error handling
-- ✅ Centralized logging
-- 🔴 No duplicate code patterns
-- 🔴 All components properly organized
-
-### Performance
-- 🔴 Fast page loads (< 2s)
-- 🔴 Smooth interactions
-- 🔴 Optimized database queries
-
-### Maintainability
-- ✅ Clear code organization
-- ✅ Consistent patterns
-- 🔴 Comprehensive documentation
-- 🔴 Easy to add new features
-
-### User Experience
-- ✅ No broken features
-- ✅ Consistent UI/UX
-- 🔴 Fast loading states
-- 🔴 Clear error messages
+### Files to Delete/Replace
+- `components/navigation/NavRail.tsx`
+- `components/SidebarSimple.tsx`
+- `components/GmailLayout.tsx` (replace with simpler layout)
 
 ---
 
-## 📝 Notes
+## Phase 3: Route Restructuring
 
-### Key Decisions Made
-1. **API Standardization:** All routes use `getAuthContext()`, `successResponse()`, `errorResponse()`
-2. **AI Removal:** Complete removal for simplification and stability
-3. **Route Naming:** Standardized on `/designer`, `/gallery`, `/brands`
-4. **Database:** Using `assets` and `templates` tables (with compatibility views)
+**Goal:** Simplified route structure matching the scope
 
-### Known Issues
-- Terminology not fully standardized
-- Some database columns still use old names
+### Routes to Keep/Create
 
-### Future Considerations
-- Consider adding unit tests
-- Consider adding E2E tests
-- Consider performance monitoring
-- Consider adding analytics
+| Route | Purpose | Status |
+|-------|---------|--------|
+| `/` | Recents dashboard | Modify existing |
+| `/brands` | Brand list | Already exists |
+| `/brands/[id]` | Brand detail + CardMocks | Modify existing |
+| `/templates` | Template browser | Create new |
+| `/designer/[id]` | Full-screen canvas | Modify existing |
+| `/settings` | Basic settings | Simplify existing |
 
----
+### Routes to Remove
 
-## 🔄 Plan Updates
+- [ ] Delete `/projects/*` (replaced by Brands)
+- [ ] Delete `/clients/*`
+- [ ] Delete `/contracts/*`
+- [ ] Delete `/admin/*` (workflows, users, templates admin)
+- [ ] Delete `/my-stage-reviews/*`
+- [ ] Delete `/gallery/*` (merged into Brands)
+- [ ] Delete `/search/*` (merged into global search)
+- [ ] Delete any AI-related routes
+- [ ] Delete integration routes (Gmail, Slack, etc.)
 
-**2025-11-09:**
-- Created initial refactor plan
-- Documented completed work (API refactoring, AI removal)
-- Identified remaining work priorities
-- Set immediate next steps
+### Dashboard (`/`) Changes
 
-**2025-11-09 (Later):**
-- ✅ Completed Phase 6: Documentation Update
-  - Updated README.md to remove all AI references
-  - Bumped version to 3.7.0
-  - Updated tech stack, environment variables, and deployment checklist
-- ✅ Completed Phase 7: Component Extraction
-  - Extracted components from mockup detail page (24% size reduction)
-  - Extracted 5 components from designer page (32% size reduction)
-  - Created MockupDetailPreviewPanel, DesignerSelectionPanel, DesignerPositionControls, DesignerSizeControls, DesignerSavePanel, DesignerBrandSelector
-  - Created ProjectsContextPanel component
-  - Created barrel exports for all feature directories (mockups, designer, approvals, projects, collaboration, folders, templates)
-- ✅ Completed Phase 8: Next.js 15 Modernization
-  - Created loading.tsx files for all major routes (gallery, projects, brands, designer, admin/templates)
-  - Created error.tsx files for routes missing them (designer, admin/templates)
-  - Verified Server Actions already implemented for all mutations
-  - Consistent error handling using ErrorPage component
-  - Migrated admin/templates from FourPanelLayout to GmailLayout
-  - Created TemplatesContextPanel and TemplatesGridView components
-  - All pages now use consistent GmailLayout
-- ✅ **Committed and Pushed:** All changes committed to main branch (commit 335711b)
+- [ ] Show recent CardMocks across all brands
+- [ ] Remove project/workflow widgets
+- [ ] Simple grid of recent work
+
+### Brands (`/brands/[id]`) Changes
+
+- [ ] Show brand info (logo, colors from Brandfetch)
+- [ ] Grid of CardMocks for this brand
+- [ ] "New CardMock" button → opens designer
+
+### Designer (`/designer/[id]`) Changes
+
+- [ ] Full-screen canvas mode
+- [ ] Brand selector (if creating new)
+- [ ] Template selector
+- [ ] Keep Konva.js canvas functionality
+- [ ] PNG + PDF export
 
 ---
 
-**This plan is a living document and should be updated as work progresses.**
+## Phase 4: Code Cleanup
 
+**Goal:** Remove all unused features and dead code
+
+### 4.1 Remove Contract Management
+
+- [ ] Delete `app/(dashboard)/contracts/` directory
+- [ ] Delete `app/api/contracts/` directory
+- [ ] Delete `components/contracts/` directory
+- [ ] Delete `lib/docusign/` directory
+- [ ] Remove contract-related types from `lib/supabase.ts`
+
+### 4.2 Remove Client Management
+
+- [ ] Delete `app/(dashboard)/clients/` directory
+- [ ] Delete `app/api/clients/` directory
+- [ ] Delete client-related components
+- [ ] Remove client types
+
+### 4.3 Remove AI Features
+
+- [ ] Delete `app/api/ai/` directory (if still exists)
+- [ ] Delete `components/ai/` directory (if still exists)
+- [ ] Delete `lib/ai/` directory (if still exists)
+- [ ] Remove OpenAI dependencies
+
+### 4.4 Remove Platform Integrations
+
+- [ ] Delete Gmail integration code
+- [ ] Delete Slack integration code
+- [ ] Delete Drive/Dropbox import code
+- [ ] Delete presentation mode code
+- [ ] Delete public sharing code
+
+### 4.5 Remove Complex Approval System
+
+- [ ] Delete `app/(dashboard)/my-stage-reviews/` directory
+- [ ] Delete `components/approvals/` directory
+- [ ] Delete approval-related API routes
+- [ ] Keep database tables (dormant for Phase 2)
+
+### 4.6 Remove Complex Settings
+
+- [ ] Simplify settings modal to basics only
+- [ ] Remove organization management
+- [ ] Remove notification preferences (Phase 2)
+
+---
+
+## Phase 5: Database Cleanup
+
+**Goal:** Clean up unused tables while preserving core data
+
+### Tables to Keep
+- `brands`
+- `logo_variants`
+- `brand_colors`
+- `brand_fonts`
+- `templates`
+- `assets`
+- `folders`
+
+### Tables to Keep (Dormant)
+- `approvals` / `approval_stages`
+- `mockup_comments`
+- `mockup_reviewers`
+- `notifications`
+- `workflows`
+
+### Tables to Drop
+- [ ] `contracts`
+- [ ] `contract_versions`
+- [ ] `contract_documents`
+- [ ] `clients`
+- [ ] `client_contacts`
+- [ ] `client_user_associations`
+- [ ] AI-related tables
+- [ ] Integration tables (Gmail, Slack, etc.)
+- [ ] Public sharing tables
+
+### Migration Script
+- [ ] Create `supabase/cleanup_v1.sql` migration
+- [ ] Drop unused tables
+- [ ] Clean up orphaned data
+
+---
+
+## Phase 6: Component Organization
+
+**Goal:** Clean component structure for v1
+
+### New Structure
+
+```
+components/
+├── layout/
+│   ├── AppHeader.tsx
+│   ├── Sidebar.tsx
+│   └── PageLayout.tsx
+├── ui/
+│   ├── CardGrid.tsx
+│   ├── CardGridItem.tsx
+│   ├── Button.tsx
+│   ├── Modal.tsx
+│   └── Toast.tsx
+├── brands/
+│   ├── BrandCard.tsx
+│   ├── BrandDetail.tsx
+│   └── BrandSearch.tsx
+├── designer/
+│   ├── Canvas.tsx
+│   ├── TemplateSelector.tsx
+│   ├── BrandSelector.tsx
+│   └── ExportPanel.tsx
+└── templates/
+    ├── TemplateCard.tsx
+    └── TemplateGrid.tsx
+```
+
+### Components to Delete
+- All `components/contracts/`
+- All `components/collaboration/` (Phase 2)
+- All `components/approvals/`
+- All `components/projects/` (replaced by Brands)
+- Complex navigation components
+
+---
+
+## Phase 7: Polish & Testing
+
+### UI Polish
+- [ ] Consistent styling across all pages
+- [ ] Loading states for all async operations
+- [ ] Error boundaries and error messages
+- [ ] Empty states for lists
+
+### Testing Checklist
+- [ ] Auth flow (sign up, sign in, sign out)
+- [ ] Create new Brand (via Brandfetch)
+- [ ] Upload manual brand assets
+- [ ] Browse templates
+- [ ] Create CardMock in designer
+- [ ] Export PNG
+- [ ] Export PDF
+- [ ] Basic settings work
+
+---
+
+## Implementation Order
+
+1. **Auth Migration** — Foundation for everything else
+2. **Route Cleanup** — Remove unused routes first
+3. **Code Cleanup** — Delete unused code
+4. **UI Rebuild** — New header/sidebar/layout
+5. **Page Updates** — Update remaining pages
+6. **Database Cleanup** — Clean up tables last
+7. **Polish** — Final testing and fixes
+
+---
+
+## Success Criteria
+
+- [ ] Clean Figma-inspired UI
+- [ ] Supabase Auth working
+- [ ] Brands contain CardMocks (replaces Projects)
+- [ ] Designer works with templates
+- [ ] PNG + PDF export functional
+- [ ] No dead code or unused routes
+- [ ] Fast, responsive experience
+
+---
+
+## Notes
+
+- Keep approval/workflow tables dormant for Phase 2
+- Focus on core CardMock creation flow
+- Prioritize simplicity over features
+- Reference `cardmock-scope.md` for any scope questions
+
+---
+
+**This plan should be updated as work progresses.**
