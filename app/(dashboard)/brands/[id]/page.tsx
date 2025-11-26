@@ -90,16 +90,22 @@ export default function BrandDetailPage() {
       });
 
       // Fetch assets (CardMocks) for this brand
-      const { data: assetsData, error: assetsError } = await supabase
-        .from('assets')
-        .select('*')
-        .eq('brand_id', brandId)
-        .eq('organization_id', organization.id)
-        .order('updated_at', { ascending: false });
+      // Assets link to brands through logo_variants: assets.logo_id -> logo_variants.id -> logo_variants.brand_id
+      const logoVariantIds = brandData.logo_variants?.map((lv: LogoVariant) => lv.id) || [];
 
-      if (assetsError) throw assetsError;
+      if (logoVariantIds.length > 0) {
+        const { data: assetsData, error: assetsError } = await supabase
+          .from('assets')
+          .select('*')
+          .in('logo_id', logoVariantIds)
+          .eq('organization_id', organization.id)
+          .order('updated_at', { ascending: false });
 
-      setAssets(assetsData || []);
+        if (assetsError) throw assetsError;
+        setAssets(assetsData || []);
+      } else {
+        setAssets([]);
+      }
     } catch (err) {
       console.error('Error fetching brand data:', err);
       showToast('Failed to load brand', 'error');
