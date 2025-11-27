@@ -201,6 +201,12 @@ export interface CardTemplate {
   original_width?: number;
   original_height?: number;
   scale_factor?: number;
+  // Template types and tags (added in migration 41)
+  template_type_id?: string;
+  tags?: string[];
+  is_archived?: boolean;
+  upload_quality?: string;
+  description?: string;
 }
 
 export interface CardMockup {

@@ -97,6 +97,25 @@ export default function TemplateCard({ template, isSelected, onClick }: Template
           <CalendarDays size={12} />
           <span>{formatDate(template.uploaded_date)}</span>
         </div>
+
+        {/* Tags */}
+        {template.tags && template.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-2">
+            {template.tags.slice(0, 3).map(tag => (
+              <span
+                key={tag}
+                className="inline-flex px-1.5 py-0.5 text-xs bg-gray-100 text-gray-600 rounded"
+              >
+                {tag}
+              </span>
+            ))}
+            {template.tags.length > 3 && (
+              <span className="text-xs text-gray-400">
+                +{template.tags.length - 3}
+              </span>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

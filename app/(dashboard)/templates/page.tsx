@@ -83,8 +83,8 @@ export default function TemplatesPage() {
   };
 
   const handleSelectTemplate = (template: CardTemplate) => {
-    // Navigate to designer with template pre-selected
-    router.push(`/designer?templateId=${template.id}`);
+    // Navigate to template detail page
+    router.push(`/templates/${template.id}`);
   };
 
   return (
