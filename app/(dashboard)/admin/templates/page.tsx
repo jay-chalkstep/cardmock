@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAdminStatus } from '@/lib/hooks/useAuth';
 import GmailLayout from '@/components/layout/GmailLayout';
 import Toast from '@/components/Toast';
 import {
@@ -39,8 +38,6 @@ interface Pagination {
 
 export default function AdminTemplatesListPage() {
   const router = useRouter();
-  // Use dedicated admin status hook for consistent checking
-  const { isAdmin, isLoaded, organization } = useAdminStatus();
 
   // Data state
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -77,8 +74,6 @@ export default function AdminTemplatesListPage() {
 
   // Fetch templates
   const fetchTemplates = useCallback(async () => {
-    if (!isAdmin) return;
-
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -107,12 +102,10 @@ export default function AdminTemplatesListPage() {
     } finally {
       setLoading(false);
     }
-  }, [isAdmin, pagination.page, pagination.limit, selectedType, showArchived, selectedTags, searchQuery]);
+  }, [pagination.page, pagination.limit, selectedType, showArchived, selectedTags, searchQuery]);
 
   // Fetch available tags
   const fetchTags = useCallback(async () => {
-    if (!isAdmin) return;
-
     try {
       const response = await fetch('/api/admin/templates/tags');
       const result = await response.json();
@@ -123,14 +116,12 @@ export default function AdminTemplatesListPage() {
     } catch (error) {
       console.error('Failed to fetch tags:', error);
     }
-  }, [isAdmin]);
+  }, []);
 
   useEffect(() => {
-    if (isLoaded && isAdmin) {
-      fetchTemplates();
-      fetchTags();
-    }
-  }, [isLoaded, isAdmin, fetchTemplates, fetchTags]);
+    fetchTemplates();
+    fetchTags();
+  }, [fetchTemplates, fetchTags]);
 
   // Handle archive/restore
   const handleArchive = async (templateId: string, archive: boolean) => {
@@ -215,40 +206,6 @@ export default function AdminTemplatesListPage() {
         return 'bg-gray-100 text-gray-600';
     }
   };
-
-  // Loading state
-  if (!isLoaded) {
-    return (
-      <GmailLayout>
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
-        </div>
-      </GmailLayout>
-    );
-  }
-
-  // Access denied
-  if (!isAdmin) {
-    return (
-      <GmailLayout>
-        <div className="max-w-2xl mx-auto text-center py-16">
-          <div className="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
-            <X className="h-8 w-8 text-red-600" />
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
-          <p className="text-gray-600 mb-6">
-            You need administrator privileges to manage templates.
-          </p>
-          <button
-            onClick={() => router.push('/templates')}
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-          >
-            Back to Templates
-          </button>
-        </div>
-      </GmailLayout>
-    );
-  }
 
   return (
     <GmailLayout>

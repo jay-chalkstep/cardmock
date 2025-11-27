@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAdminStatus } from '@/lib/hooks/useAuth';
 import GmailLayout from '@/components/layout/GmailLayout';
 import Toast from '@/components/Toast';
 import TemplateUploadFeedbackModal from '@/components/templates/TemplateUploadFeedbackModal';
@@ -58,8 +57,6 @@ interface UploadResult {
 
 export default function AdminTemplateUploadPage() {
   const router = useRouter();
-  // Use dedicated admin status hook for consistent checking
-  const { isAdmin, isLoaded, organization } = useAdminStatus();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Form state
@@ -110,10 +107,8 @@ export default function AdminTemplateUploadPage() {
         setAvailableTags(getAllSuggestedTags());
       }
     };
-    if (isAdmin) {
-      fetchTags();
-    }
-  }, [isAdmin]);
+    fetchTags();
+  }, []);
 
   // Analyze image when file or template type changes
   useEffect(() => {
@@ -323,40 +318,6 @@ export default function AdminTemplateUploadPage() {
       </div>
     );
   };
-
-  // Loading state
-  if (!isLoaded) {
-    return (
-      <GmailLayout>
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
-        </div>
-      </GmailLayout>
-    );
-  }
-
-  // Access denied
-  if (!isAdmin) {
-    return (
-      <GmailLayout>
-        <div className="max-w-2xl mx-auto text-center py-16">
-          <div className="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
-            <X className="h-8 w-8 text-red-600" />
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
-          <p className="text-gray-600 mb-6">
-            You need administrator privileges to upload templates.
-          </p>
-          <button
-            onClick={() => router.push('/templates')}
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-          >
-            Back to Templates
-          </button>
-        </div>
-      </GmailLayout>
-    );
-  }
 
   const selectedType = TEMPLATE_TYPES[templateTypeId];
 

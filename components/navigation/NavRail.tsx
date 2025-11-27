@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useOrganization, useUser, useAdminStatus } from '@/lib/hooks/useAuth';
+import { useOrganization, useUser } from '@/lib/hooks/useAuth';
 import { useClerk } from '@clerk/nextjs';
 import {
   Clock,
@@ -39,8 +39,6 @@ export default function NavRail() {
   const { user } = useUser();
   const { signOut } = useClerk();
 
-  // Use dedicated admin status hook for consistent checking
-  const { isAdmin, isLoaded: adminLoaded } = useAdminStatus();
   const { setActiveNav } = usePanelContext();
   const [searchQuery, setSearchQuery] = useState('');
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -149,34 +147,32 @@ export default function NavRail() {
           </ul>
         </nav>
 
-        {/* Admin Section - Only visible to org admins */}
-        {adminLoaded && isAdmin && (
-          <div className="px-2 py-2 border-t border-[#333]">
-            <div className="px-3 mb-2">
-              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1">
-                <Shield size={12} />
-                Admin
-              </span>
-            </div>
-            <ul className="space-y-0.5">
-              <li>
-                <Link
-                  href="/admin/templates"
-                  className={`
-                    flex items-center gap-3 px-3 py-2 rounded-md transition-all text-sm
-                    ${pathname?.startsWith('/admin/templates')
-                      ? 'bg-[#37373d] text-white'
-                      : 'text-gray-400 hover:bg-[#2d2d2d] hover:text-white'
-                    }
-                  `}
-                >
-                  <LayoutTemplate size={18} className="flex-shrink-0" />
-                  <span className="font-medium">Manage Templates</span>
-                </Link>
-              </li>
-            </ul>
+        {/* Template Management Section */}
+        <div className="px-2 py-2 border-t border-[#333]">
+          <div className="px-3 mb-2">
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1">
+              <Shield size={12} />
+              Management
+            </span>
           </div>
-        )}
+          <ul className="space-y-0.5">
+            <li>
+              <Link
+                href="/admin/templates"
+                className={`
+                  flex items-center gap-3 px-3 py-2 rounded-md transition-all text-sm
+                  ${pathname?.startsWith('/admin/templates')
+                    ? 'bg-[#37373d] text-white'
+                    : 'text-gray-400 hover:bg-[#2d2d2d] hover:text-white'
+                  }
+                `}
+              >
+                <LayoutTemplate size={18} className="flex-shrink-0" />
+                <span className="font-medium">Manage Templates</span>
+              </Link>
+            </li>
+          </ul>
+        </div>
 
         {/* User Menu */}
         <div className="border-t border-[#333] p-3 relative">

@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { useAdminStatus } from '@/lib/hooks/useAuth';
 import GmailLayout from '@/components/layout/GmailLayout';
 import Toast from '@/components/Toast';
 import TagsInput from '@/components/templates/TagsInput';
@@ -38,8 +37,6 @@ export default function AdminTemplateDetailPage() {
   const router = useRouter();
   const params = useParams();
   const templateId = params.id as string;
-  // Use dedicated admin status hook for consistent checking
-  const { isAdmin, isLoaded } = useAdminStatus();
 
   // Template data
   const [template, setTemplate] = useState<Template | null>(null);
@@ -69,7 +66,7 @@ export default function AdminTemplateDetailPage() {
 
   // Fetch template
   const fetchTemplate = useCallback(async () => {
-    if (!isAdmin || !templateId) return;
+    if (!templateId) return;
 
     setLoading(true);
     try {
@@ -91,12 +88,10 @@ export default function AdminTemplateDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [isAdmin, templateId, router]);
+  }, [templateId, router]);
 
   // Fetch available tags
   const fetchTags = useCallback(async () => {
-    if (!isAdmin) return;
-
     try {
       const response = await fetch('/api/admin/templates/tags');
       const result = await response.json();
@@ -108,14 +103,12 @@ export default function AdminTemplateDetailPage() {
     } catch (error) {
       setAvailableTags(getAllSuggestedTags());
     }
-  }, [isAdmin]);
+  }, []);
 
   useEffect(() => {
-    if (isLoaded && isAdmin) {
-      fetchTemplate();
-      fetchTags();
-    }
-  }, [isLoaded, isAdmin, fetchTemplate, fetchTags]);
+    fetchTemplate();
+    fetchTags();
+  }, [fetchTemplate, fetchTags]);
 
   // Track changes
   useEffect(() => {
@@ -256,28 +249,11 @@ export default function AdminTemplateDetailPage() {
   };
 
   // Loading state
-  if (!isLoaded || loading) {
+  if (loading) {
     return (
       <GmailLayout>
         <div className="flex items-center justify-center h-64">
           <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
-        </div>
-      </GmailLayout>
-    );
-  }
-
-  // Access denied
-  if (!isAdmin) {
-    return (
-      <GmailLayout>
-        <div className="max-w-2xl mx-auto text-center py-16">
-          <div className="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
-            <X className="h-8 w-8 text-red-600" />
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
-          <p className="text-gray-600">
-            You need administrator privileges to view this page.
-          </p>
         </div>
       </GmailLayout>
     );
