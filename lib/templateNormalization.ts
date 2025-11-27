@@ -18,8 +18,8 @@ import {
 } from './templateTypes';
 
 // Re-export for backwards compatibility
-export { analyzeUploadForType, UploadAnalysis, UploadStatus, UploadQuality, CropRect };
-export type { TemplateTypeId, TemplateType };
+export { analyzeUploadForType };
+export type { UploadAnalysis, UploadStatus, UploadQuality, CropRect, TemplateTypeId, TemplateType };
 
 /**
  * CR80 Prepaid Card Specifications
