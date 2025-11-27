@@ -5,6 +5,7 @@ import { useOrganization } from '@/lib/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import Toast from '@/components/Toast';
 import GmailLayout from '@/components/layout/GmailLayout';
+import BrandAssetModal from '@/components/brand/BrandAssetModal';
 import { Search, Loader2, Trash2, Package, Plus, Globe } from 'lucide-react';
 import { supabase, Brand } from '@/lib/supabase';
 import { deleteBrand as deleteBrandAction, saveBrand } from '@/app/actions/brands';
@@ -52,6 +53,10 @@ export default function BrandsPage() {
   const [searchingBrandfetch, setSearchingBrandfetch] = useState(false);
   const [brandfetchError, setBrandfetchError] = useState<string | null>(null);
   const [savingBrand, setSavingBrand] = useState(false);
+
+  // Modal state
+  const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Fetch brands on mount
   useEffect(() => {
@@ -265,6 +270,25 @@ export default function BrandsPage() {
     return format?.src || brandfetchResults.logos[0]?.formats?.[0]?.src;
   };
 
+  // Handle opening brand modal
+  const handleOpenBrandModal = (brand: Brand) => {
+    setSelectedBrand(brand);
+    setIsModalOpen(true);
+  };
+
+  // Handle closing brand modal
+  const handleCloseBrandModal = () => {
+    setIsModalOpen(false);
+    setSelectedBrand(null);
+  };
+
+  // Handle editing brand (navigate to edit page)
+  const handleEditBrand = () => {
+    if (selectedBrand) {
+      router.push(`/brands/${selectedBrand.id}/edit`);
+    }
+  };
+
   return (
     <GmailLayout>
       <div className="max-w-7xl mx-auto">
@@ -428,7 +452,7 @@ export default function BrandsPage() {
 
                     {/* Card Content */}
                     <button
-                      onClick={() => router.push(`/brands/${brand.id}`)}
+                      onClick={() => handleOpenBrandModal(brand)}
                       disabled={isDeleting}
                       className="w-full text-left disabled:opacity-50"
                     >
@@ -495,6 +519,16 @@ export default function BrandsPage() {
         ) : null}
 
       </div>
+
+      {/* Brand Asset Modal */}
+      {selectedBrand && (
+        <BrandAssetModal
+          brand={selectedBrand}
+          isOpen={isModalOpen}
+          onClose={handleCloseBrandModal}
+          onEdit={handleEditBrand}
+        />
+      )}
 
       {/* Toast Notifications */}
       {toasts.map(toast => (
