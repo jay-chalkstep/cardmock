@@ -2,8 +2,24 @@
  * Template Normalization Utilities
  *
  * Handles classification and normalization of uploaded card templates
- * to conform to CR80 prepaid card specifications.
+ * to conform to various template type specifications (CR80, Apple Wallet, etc.).
  */
+
+import {
+  TemplateTypeId,
+  TemplateType,
+  TEMPLATE_TYPES,
+  getTemplateType,
+  analyzeUpload as analyzeUploadForType,
+  UploadAnalysis,
+  UploadStatus,
+  UploadQuality,
+  CropRect,
+} from './templateTypes';
+
+// Re-export for backwards compatibility
+export { analyzeUploadForType, UploadAnalysis, UploadStatus, UploadQuality, CropRect };
+export type { TemplateTypeId, TemplateType };
 
 /**
  * CR80 Prepaid Card Specifications
@@ -12,8 +28,8 @@
 export const CR80_SPECS = {
   // 300 DPI dimensions (standard print quality)
   DPI_300: {
-    width: 1013,
-    height: 638,
+    width: TEMPLATE_TYPES['prepaid-cr80'].width,
+    height: TEMPLATE_TYPES['prepaid-cr80'].height,
     dpi: 300,
   },
   // 600 DPI dimensions (high quality)
@@ -23,7 +39,7 @@ export const CR80_SPECS = {
     dpi: 600,
   },
   // Target aspect ratio (width / height)
-  ASPECT_RATIO: 1.588,
+  ASPECT_RATIO: TEMPLATE_TYPES['prepaid-cr80'].aspectRatio,
   // Tolerance for aspect ratio matching (±0.5%)
   ASPECT_RATIO_TOLERANCE: 0.005,
   // Physical dimensions
@@ -298,4 +314,69 @@ export function formatRatio(ratio: number): string {
  */
 export function getRatioDeviationPercent(aspectRatio: number): number {
   return Math.abs(aspectRatio - CR80_SPECS.ASPECT_RATIO) / CR80_SPECS.ASPECT_RATIO * 100;
+}
+
+// ============================================================================
+// MULTI-TYPE NORMALIZATION UTILITIES
+// ============================================================================
+
+/**
+ * Analyze upload for a specific template type (wrapper for backwards compatibility)
+ */
+export function analyzeForTemplateType(
+  width: number,
+  height: number,
+  templateTypeId: TemplateTypeId = 'prepaid-cr80'
+): UploadAnalysis {
+  return analyzeUploadForType(width, height, templateTypeId);
+}
+
+/**
+ * Get the best matching template type for an uploaded image
+ * Returns the template type that requires the least modification
+ */
+export function suggestTemplateType(width: number, height: number): {
+  suggested: TemplateTypeId;
+  analysis: UploadAnalysis;
+  alternatives: Array<{ typeId: TemplateTypeId; analysis: UploadAnalysis }>;
+} {
+  const analyses: Array<{ typeId: TemplateTypeId; analysis: UploadAnalysis }> = [];
+
+  // Analyze for each template type
+  for (const typeId of Object.keys(TEMPLATE_TYPES) as TemplateTypeId[]) {
+    analyses.push({
+      typeId,
+      analysis: analyzeUploadForType(width, height, typeId),
+    });
+  }
+
+  // Sort by best match (exact > correct_ratio > wrong_ratio > too_small > not_compatible)
+  const statusPriority: Record<UploadStatus, number> = {
+    exact: 0,
+    correct_ratio: 1,
+    wrong_ratio: 2,
+    too_small: 3,
+    not_compatible: 4,
+  };
+
+  analyses.sort((a, b) => {
+    // First by status priority
+    const statusDiff = statusPriority[a.analysis.status] - statusPriority[b.analysis.status];
+    if (statusDiff !== 0) return statusDiff;
+
+    // Then by quality rating
+    const qualityPriority: Record<UploadQuality, number> = {
+      excellent: 0,
+      good: 1,
+      fair: 2,
+      poor: 3,
+    };
+    return qualityPriority[a.analysis.qualityRating] - qualityPriority[b.analysis.qualityRating];
+  });
+
+  return {
+    suggested: analyses[0].typeId,
+    analysis: analyses[0].analysis,
+    alternatives: analyses.slice(1),
+  };
 }
