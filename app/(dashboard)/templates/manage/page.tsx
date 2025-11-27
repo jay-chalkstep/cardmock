@@ -85,7 +85,7 @@ export default function AdminTemplatesListPage() {
       if (selectedTags.length > 0) params.set('tags', selectedTags.join(','));
       if (searchQuery) params.set('search', searchQuery);
 
-      const response = await fetch(`/api/templates/manage?${params}`);
+      const response = await fetch(`/api/admin/templates?${params}`);
       const result = await response.json();
 
       if (result.success) {
@@ -107,7 +107,7 @@ export default function AdminTemplatesListPage() {
   // Fetch available tags
   const fetchTags = useCallback(async () => {
     try {
-      const response = await fetch('/api/templates/manage/tags');
+      const response = await fetch('/api/admin/templates/tags');
       const result = await response.json();
 
       if (result.success) {
@@ -126,7 +126,7 @@ export default function AdminTemplatesListPage() {
   // Handle archive/restore
   const handleArchive = async (templateId: string, archive: boolean) => {
     try {
-      const response = await fetch('/api/templates/manage', {
+      const response = await fetch('/api/admin/templates', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: templateId, is_archived: archive }),
@@ -152,7 +152,7 @@ export default function AdminTemplatesListPage() {
       const params = new URLSearchParams({ id: templateId });
       if (force) params.set('force', 'true');
 
-      const response = await fetch(`/api/templates/manage?${params}`, {
+      const response = await fetch(`/api/admin/templates?${params}`, {
         method: 'DELETE',
       });
 
