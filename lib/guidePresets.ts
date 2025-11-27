@@ -7,11 +7,12 @@
 
 /**
  * Standard prepaid card physical and digital dimensions
+ * CR80 standard: 3.375" × 2.125" (85.6mm × 53.98mm)
  */
 export const PREPAID_CARD_SPECS = {
   // Pixel dimensions at 300 DPI (print quality)
-  width: 1012,
-  height: 637,
+  width: 1013,
+  height: 638,
   dpi: 300,
 
   // Physical dimensions in millimeters
@@ -24,9 +25,9 @@ export const PREPAID_CARD_SPECS = {
 };
 
 /**
- * Standard aspect ratio for credit/prepaid cards
+ * Standard aspect ratio for credit/prepaid cards (CR80)
  */
-export const CARD_ASPECT_RATIO = 1.586; // width / height
+export const CARD_ASPECT_RATIO = 1.588; // width / height (1013/638)
 
 /**
  * Guide type definition
