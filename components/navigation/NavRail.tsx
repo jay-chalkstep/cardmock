@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useOrganization, useUser } from '@/lib/hooks/useAuth';
+import { useOrganization, useUser, useAdminStatus } from '@/lib/hooks/useAuth';
 import { useClerk } from '@clerk/nextjs';
 import {
   Clock,
@@ -35,12 +35,12 @@ const mainNavItems: NavItem[] = [
 export default function NavRail() {
   const pathname = usePathname();
   const router = useRouter();
-  const { organization, membership } = useOrganization();
+  const { organization } = useOrganization();
   const { user } = useUser();
   const { signOut } = useClerk();
 
-  // Check if user is org admin
-  const isAdmin = membership?.role === 'org:admin';
+  // Use dedicated admin status hook for consistent checking
+  const { isAdmin, isLoaded: adminLoaded } = useAdminStatus();
   const { setActiveNav } = usePanelContext();
   const [searchQuery, setSearchQuery] = useState('');
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -150,7 +150,7 @@ export default function NavRail() {
         </nav>
 
         {/* Admin Section - Only visible to org admins */}
-        {isAdmin && (
+        {adminLoaded && isAdmin && (
           <div className="px-2 py-2 border-t border-[#333]">
             <div className="px-3 mb-2">
               <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1">
@@ -160,10 +160,10 @@ export default function NavRail() {
             </div>
             <ul className="space-y-0.5">
               <li>
-                <button
-                  onClick={() => router.push('/admin/templates')}
+                <Link
+                  href="/admin/templates"
                   className={`
-                    w-full flex items-center gap-3 px-3 py-2 rounded-md transition-all text-sm
+                    flex items-center gap-3 px-3 py-2 rounded-md transition-all text-sm
                     ${pathname?.startsWith('/admin/templates')
                       ? 'bg-[#37373d] text-white'
                       : 'text-gray-400 hover:bg-[#2d2d2d] hover:text-white'
@@ -172,7 +172,7 @@ export default function NavRail() {
                 >
                   <LayoutTemplate size={18} className="flex-shrink-0" />
                   <span className="font-medium">Manage Templates</span>
-                </button>
+                </Link>
               </li>
             </ul>
           </div>
