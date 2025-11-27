@@ -95,7 +95,7 @@ export default function AdminTemplateUploadPage() {
   useEffect(() => {
     const fetchTags = async () => {
       try {
-        const response = await fetch('/api/admin/templates/tags');
+        const response = await fetch('/api/templates/manage/tags');
         const result = await response.json();
         if (result.success) {
           const used = result.data.usedTags.map((t: { tag: string }) => t.tag);
@@ -223,7 +223,7 @@ export default function AdminTemplateUploadPage() {
         formData.append('tags', JSON.stringify(tags));
       }
 
-      const response = await fetch('/api/admin/templates', {
+      const response = await fetch('/api/templates/manage', {
         method: 'POST',
         body: formData,
       });
@@ -256,7 +256,7 @@ export default function AdminTemplateUploadPage() {
 
     // Redirect to templates list
     setTimeout(() => {
-      router.push('/admin/templates');
+      router.push('/templates/manage');
     }, 1000);
   };
 
@@ -265,7 +265,7 @@ export default function AdminTemplateUploadPage() {
     // Delete the uploaded template
     if (uploadResult?.template.id) {
       try {
-        await fetch(`/api/admin/templates?id=${uploadResult.template.id}`, {
+        await fetch(`/api/templates/manage?id=${uploadResult.template.id}`, {
           method: 'DELETE',
         });
       } catch (err) {
@@ -326,7 +326,7 @@ export default function AdminTemplateUploadPage() {
       <div className="max-w-2xl mx-auto">
         {/* Back Link */}
         <button
-          onClick={() => router.push('/admin/templates')}
+          onClick={() => router.push('/templates/manage')}
           className="flex items-center gap-1 text-gray-600 hover:text-gray-900 mb-4"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -493,7 +493,7 @@ export default function AdminTemplateUploadPage() {
           {/* Upload Button */}
           <div className="flex gap-3">
             <button
-              onClick={() => router.push('/admin/templates')}
+              onClick={() => router.push('/templates/manage')}
               className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
             >
               Cancel

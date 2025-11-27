@@ -85,7 +85,7 @@ export default function AdminTemplatesListPage() {
       if (selectedTags.length > 0) params.set('tags', selectedTags.join(','));
       if (searchQuery) params.set('search', searchQuery);
 
-      const response = await fetch(`/api/admin/templates?${params}`);
+      const response = await fetch(`/api/templates/manage?${params}`);
       const result = await response.json();
 
       if (result.success) {
@@ -107,7 +107,7 @@ export default function AdminTemplatesListPage() {
   // Fetch available tags
   const fetchTags = useCallback(async () => {
     try {
-      const response = await fetch('/api/admin/templates/tags');
+      const response = await fetch('/api/templates/manage/tags');
       const result = await response.json();
 
       if (result.success) {
@@ -126,7 +126,7 @@ export default function AdminTemplatesListPage() {
   // Handle archive/restore
   const handleArchive = async (templateId: string, archive: boolean) => {
     try {
-      const response = await fetch('/api/admin/templates', {
+      const response = await fetch('/api/templates/manage', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: templateId, is_archived: archive }),
@@ -152,7 +152,7 @@ export default function AdminTemplatesListPage() {
       const params = new URLSearchParams({ id: templateId });
       if (force) params.set('force', 'true');
 
-      const response = await fetch(`/api/admin/templates?${params}`, {
+      const response = await fetch(`/api/templates/manage?${params}`, {
         method: 'DELETE',
       });
 
@@ -219,7 +219,7 @@ export default function AdminTemplatesListPage() {
             </p>
           </div>
           <button
-            onClick={() => router.push('/admin/templates/new')}
+            onClick={() => router.push('/templates/manage/new')}
             className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
           >
             <Plus className="h-5 w-5" />
@@ -366,7 +366,7 @@ export default function AdminTemplatesListPage() {
                 : 'Get started by uploading your first template'}
             </p>
             <button
-              onClick={() => router.push('/admin/templates/new')}
+              onClick={() => router.push('/templates/manage/new')}
               className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
             >
               <Plus className="h-5 w-5" />
@@ -418,7 +418,7 @@ export default function AdminTemplatesListPage() {
                   {actionMenuId === template.id && (
                     <div className="absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
                       <button
-                        onClick={() => router.push(`/admin/templates/${template.id}`)}
+                        onClick={() => router.push(`/templates/manage/${template.id}`)}
                         className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
                       >
                         <Edit className="h-4 w-4" />
@@ -454,7 +454,7 @@ export default function AdminTemplatesListPage() {
                 {/* Thumbnail */}
                 <div
                   className="aspect-[1.6/1] bg-gray-100 cursor-pointer"
-                  onClick={() => router.push(`/admin/templates/${template.id}`)}
+                  onClick={() => router.push(`/templates/manage/${template.id}`)}
                 >
                   <img
                     src={template.template_url}

@@ -70,7 +70,7 @@ export default function AdminTemplateDetailPage() {
 
     setLoading(true);
     try {
-      const response = await fetch(`/api/admin/templates/${templateId}`);
+      const response = await fetch(`/api/templates/manage/${templateId}`);
       const result = await response.json();
 
       if (result.success && result.data.template) {
@@ -81,7 +81,7 @@ export default function AdminTemplateDetailPage() {
         setTags(found.tags || []);
       } else {
         showToast('Template not found', 'error');
-        router.push('/admin/templates');
+        router.push('/templates/manage');
       }
     } catch (error) {
       showToast('Failed to fetch template', 'error');
@@ -93,7 +93,7 @@ export default function AdminTemplateDetailPage() {
   // Fetch available tags
   const fetchTags = useCallback(async () => {
     try {
-      const response = await fetch('/api/admin/templates/tags');
+      const response = await fetch('/api/templates/manage/tags');
       const result = await response.json();
       if (result.success) {
         const used = result.data.usedTags.map((t: { tag: string }) => t.tag);
@@ -128,7 +128,7 @@ export default function AdminTemplateDetailPage() {
 
     setSaving(true);
     try {
-      const response = await fetch('/api/admin/templates', {
+      const response = await fetch('/api/templates/manage', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -160,7 +160,7 @@ export default function AdminTemplateDetailPage() {
     if (!template) return;
 
     try {
-      const response = await fetch('/api/admin/templates', {
+      const response = await fetch('/api/templates/manage', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -193,7 +193,7 @@ export default function AdminTemplateDetailPage() {
       const params = new URLSearchParams({ id: template.id });
       if (force) params.set('force', 'true');
 
-      const response = await fetch(`/api/admin/templates?${params}`, {
+      const response = await fetch(`/api/templates/manage?${params}`, {
         method: 'DELETE',
       });
 
@@ -201,7 +201,7 @@ export default function AdminTemplateDetailPage() {
 
       if (result.success) {
         showToast('Template deleted', 'success');
-        setTimeout(() => router.push('/admin/templates'), 1000);
+        setTimeout(() => router.push('/templates/manage'), 1000);
       } else if (result.error?.includes('used in')) {
         setShowDeleteConfirm(true);
       } else {
@@ -267,7 +267,7 @@ export default function AdminTemplateDetailPage() {
             Template Not Found
           </h1>
           <button
-            onClick={() => router.push('/admin/templates')}
+            onClick={() => router.push('/templates/manage')}
             className="text-purple-600 hover:underline"
           >
             Back to Templates
@@ -284,7 +284,7 @@ export default function AdminTemplateDetailPage() {
       <div className="max-w-5xl mx-auto">
         {/* Back Link */}
         <button
-          onClick={() => router.push('/admin/templates')}
+          onClick={() => router.push('/templates/manage')}
           className="flex items-center gap-1 text-gray-600 hover:text-gray-900 mb-4"
         >
           <ArrowLeft className="h-4 w-4" />
