@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useOrganization } from '@/lib/hooks/useAuth';
+import { useAdminStatus } from '@/lib/hooks/useAuth';
 import GmailLayout from '@/components/layout/GmailLayout';
 import Toast from '@/components/Toast';
 import TemplateUploadFeedbackModal from '@/components/templates/TemplateUploadFeedbackModal';
@@ -58,7 +58,8 @@ interface UploadResult {
 
 export default function AdminTemplateUploadPage() {
   const router = useRouter();
-  const { organization, membership, isLoaded } = useOrganization();
+  // Use dedicated admin status hook for consistent checking
+  const { isAdmin, isLoaded, organization } = useAdminStatus();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Form state
@@ -83,9 +84,6 @@ export default function AdminTemplateUploadPage() {
 
   // Available tags
   const [availableTags, setAvailableTags] = useState<string[]>([]);
-
-  // Check if user is admin
-  const isAdmin = membership?.role === 'org:admin';
 
   const showToast = (message: string, type: 'success' | 'error') => {
     const id = Date.now();

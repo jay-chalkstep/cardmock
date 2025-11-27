@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { useOrganization } from '@/lib/hooks/useAuth';
+import { useAdminStatus } from '@/lib/hooks/useAuth';
 import GmailLayout from '@/components/layout/GmailLayout';
 import Toast from '@/components/Toast';
 import TagsInput from '@/components/templates/TagsInput';
@@ -38,7 +38,8 @@ export default function AdminTemplateDetailPage() {
   const router = useRouter();
   const params = useParams();
   const templateId = params.id as string;
-  const { membership, isLoaded } = useOrganization();
+  // Use dedicated admin status hook for consistent checking
+  const { isAdmin, isLoaded } = useAdminStatus();
 
   // Template data
   const [template, setTemplate] = useState<Template | null>(null);
@@ -56,8 +57,6 @@ export default function AdminTemplateDetailPage() {
   const [showFullPreview, setShowFullPreview] = useState(false);
   const [availableTags, setAvailableTags] = useState<string[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
-
-  const isAdmin = membership?.role === 'org:admin';
 
   const showToast = (message: string, type: 'success' | 'error') => {
     const id = Date.now();

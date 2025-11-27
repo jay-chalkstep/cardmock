@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useOrganization } from '@/lib/hooks/useAuth';
+import { useAdminStatus } from '@/lib/hooks/useAuth';
 import GmailLayout from '@/components/layout/GmailLayout';
 import Toast from '@/components/Toast';
 import {
@@ -39,7 +39,8 @@ interface Pagination {
 
 export default function AdminTemplatesListPage() {
   const router = useRouter();
-  const { organization, membership, isLoaded } = useOrganization();
+  // Use dedicated admin status hook for consistent checking
+  const { isAdmin, isLoaded, organization } = useAdminStatus();
 
   // Data state
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -64,9 +65,6 @@ export default function AdminTemplatesListPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [actionMenuId, setActionMenuId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-
-  // Check if user is admin
-  const isAdmin = membership?.role === 'org:admin';
 
   const showToast = (message: string, type: 'success' | 'error') => {
     const id = Date.now();
