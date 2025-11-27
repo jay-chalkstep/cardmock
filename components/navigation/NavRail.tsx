@@ -160,10 +160,10 @@ export default function NavRail() {
             </div>
             <ul className="space-y-0.5">
               <li>
-                <Link
-                  href="/admin/templates"
+                <button
+                  onClick={() => router.push('/admin/templates')}
                   className={`
-                    flex items-center gap-3 px-3 py-2 rounded-md transition-all text-sm
+                    w-full flex items-center gap-3 px-3 py-2 rounded-md transition-all text-sm
                     ${pathname?.startsWith('/admin/templates')
                       ? 'bg-[#37373d] text-white'
                       : 'text-gray-400 hover:bg-[#2d2d2d] hover:text-white'
@@ -172,7 +172,7 @@ export default function NavRail() {
                 >
                   <LayoutTemplate size={18} className="flex-shrink-0" />
                   <span className="font-medium">Manage Templates</span>
-                </Link>
+                </button>
               </li>
             </ul>
           </div>
