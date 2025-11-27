@@ -70,7 +70,7 @@ export default function AdminTemplateDetailPage() {
 
     setLoading(true);
     try {
-      const response = await fetch(`/api/templates/manage/${templateId}`);
+      const response = await fetch(`/api/admin/templates/${templateId}`);
       const result = await response.json();
 
       if (result.success && result.data.template) {
@@ -93,7 +93,7 @@ export default function AdminTemplateDetailPage() {
   // Fetch available tags
   const fetchTags = useCallback(async () => {
     try {
-      const response = await fetch('/api/templates/manage/tags');
+      const response = await fetch('/api/admin/templates/tags');
       const result = await response.json();
       if (result.success) {
         const used = result.data.usedTags.map((t: { tag: string }) => t.tag);
@@ -128,7 +128,7 @@ export default function AdminTemplateDetailPage() {
 
     setSaving(true);
     try {
-      const response = await fetch('/api/templates/manage', {
+      const response = await fetch('/api/admin/templates', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -160,7 +160,7 @@ export default function AdminTemplateDetailPage() {
     if (!template) return;
 
     try {
-      const response = await fetch('/api/templates/manage', {
+      const response = await fetch('/api/admin/templates', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -193,7 +193,7 @@ export default function AdminTemplateDetailPage() {
       const params = new URLSearchParams({ id: template.id });
       if (force) params.set('force', 'true');
 
-      const response = await fetch(`/api/templates/manage?${params}`, {
+      const response = await fetch(`/api/admin/templates?${params}`, {
         method: 'DELETE',
       });
 

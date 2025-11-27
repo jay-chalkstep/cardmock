@@ -95,7 +95,7 @@ export default function AdminTemplateUploadPage() {
   useEffect(() => {
     const fetchTags = async () => {
       try {
-        const response = await fetch('/api/templates/manage/tags');
+        const response = await fetch('/api/admin/templates/tags');
         const result = await response.json();
         if (result.success) {
           const used = result.data.usedTags.map((t: { tag: string }) => t.tag);
@@ -223,7 +223,7 @@ export default function AdminTemplateUploadPage() {
         formData.append('tags', JSON.stringify(tags));
       }
 
-      const response = await fetch('/api/templates/manage', {
+      const response = await fetch('/api/admin/templates', {
         method: 'POST',
         body: formData,
       });
@@ -265,7 +265,7 @@ export default function AdminTemplateUploadPage() {
     // Delete the uploaded template
     if (uploadResult?.template.id) {
       try {
-        await fetch(`/api/templates/manage?id=${uploadResult.template.id}`, {
+        await fetch(`/api/admin/templates?id=${uploadResult.template.id}`, {
           method: 'DELETE',
         });
       } catch (err) {
