@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { clerkClient } from '@clerk/nextjs/server';
-import { getAuthContext, requireAdmin } from '@/lib/api/auth';
-import { successResponse, errorResponse, notFoundResponse } from '@/lib/api/response';
+import { getAuthContext, isAdmin } from '@/lib/api/auth';
+import { successResponse, errorResponse, notFoundResponse, forbiddenResponse } from '@/lib/api/response';
 import { logger } from '@/lib/utils/logger';
 
 export const dynamic = 'force-dynamic';
@@ -25,8 +25,9 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     if (authResult instanceof Response) return authResult;
     const { orgId, userId } = authResult;
 
-    const adminCheck = await requireAdmin();
-    if (adminCheck instanceof Response) return adminCheck;
+    if (!(await isAdmin())) {
+      return forbiddenResponse('Admin access required');
+    }
 
     logger.api('/api/admin/users/invite/[invitationId]', 'DELETE', { orgId, invitationId });
 
