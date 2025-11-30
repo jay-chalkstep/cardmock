@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { clerkClient } from '@clerk/nextjs/server';
-import { getAuthContext, requireAdmin } from '@/lib/api/auth';
+import { getAuthContext, isAdmin } from '@/lib/api/auth';
 import { successResponse, errorResponse, badRequestResponse, forbiddenResponse } from '@/lib/api/response';
 import { logger } from '@/lib/utils/logger';
 
@@ -27,8 +27,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     if (authResult instanceof Response) return authResult;
     const { orgId, userId: currentUserId } = authResult;
 
-    const adminCheck = await requireAdmin();
-    if (adminCheck instanceof Response) return adminCheck;
+    if (!(await isAdmin())) {
+      return forbiddenResponse('Admin access required');
+    }
 
     // Parse request body
     const body = await request.json();
@@ -100,8 +101,9 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     if (authResult instanceof Response) return authResult;
     const { orgId, userId: currentUserId } = authResult;
 
-    const adminCheck = await requireAdmin();
-    if (adminCheck instanceof Response) return adminCheck;
+    if (!(await isAdmin())) {
+      return forbiddenResponse('Admin access required');
+    }
 
     // Prevent self-removal
     if (targetUserId === currentUserId) {

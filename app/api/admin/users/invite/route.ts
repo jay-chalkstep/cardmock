@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { clerkClient } from '@clerk/nextjs/server';
-import { getAuthContext, requireAdmin } from '@/lib/api/auth';
-import { successResponse, errorResponse, badRequestResponse } from '@/lib/api/response';
+import { getAuthContext, isAdmin } from '@/lib/api/auth';
+import { successResponse, errorResponse, badRequestResponse, forbiddenResponse } from '@/lib/api/response';
 import { logger } from '@/lib/utils/logger';
 
 export const dynamic = 'force-dynamic';
@@ -21,8 +21,9 @@ export async function POST(request: NextRequest) {
     if (authResult instanceof Response) return authResult;
     const { orgId, userId } = authResult;
 
-    const adminCheck = await requireAdmin();
-    if (adminCheck instanceof Response) return adminCheck;
+    if (!(await isAdmin())) {
+      return forbiddenResponse('Admin access required');
+    }
 
     // Parse request body
     const body = await request.json();
