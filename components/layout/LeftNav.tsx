@@ -33,7 +33,7 @@ const mainNavItems: NavItem[] = [
 // Admin navigation items
 const adminNavItems: NavItem[] = [
   { id: 'manage-templates', name: 'Manage Templates', href: '/templates/manage', icon: Settings },
-  { id: 'manage-users', name: 'Manage Users', href: '/admin/users', icon: Users },
+  { id: 'manage-users', name: 'Manage Users', href: '/settings/users', icon: Users },
 ];
 
 export function LeftNav() {
@@ -84,7 +84,7 @@ export function LeftNav() {
       return pathname?.startsWith('/templates/manage') || false;
     }
     if (item.id === 'manage-users') {
-      return pathname?.startsWith('/admin/users') || false;
+      return pathname?.startsWith('/settings/users') || false;
     }
     return false;
   };
