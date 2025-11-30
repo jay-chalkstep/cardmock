@@ -132,21 +132,24 @@ export default function HomePage() {
   return (
     <>
       <GmailLayout>
-        <div className="h-full flex flex-col bg-[#f8f9fa]">
+        <div className="h-full flex flex-col">
           {/* Header */}
-          <div className="bg-white border-b border-gray-200 px-6 py-4">
-            <h1 className="text-2xl font-semibold text-gray-900">Recents</h1>
-            <p className="text-sm text-gray-500 mt-1">Your recently edited CardMocks</p>
+          <div className="bg-[var(--bg-elevated)] border-b border-[var(--border-default)] px-6 py-4">
+            <h1 className="text-[18px] font-semibold text-[var(--text-primary)]">Recents</h1>
+            <p className="text-[13px] text-[var(--text-secondary)] mt-1">Your recently edited CardMocks</p>
           </div>
 
           {/* Toolbar */}
-          <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
+          <div className="bg-[var(--bg-elevated)] border-b border-[var(--border-default)] px-6 py-3 flex items-center justify-between">
             <div className="flex items-center gap-3">
               {/* Sort */}
               <div className="relative">
                 <button
                   onClick={() => setShowSortDropdown(!showSortDropdown)}
-                  className="flex items-center gap-2 px-3 py-1.5 text-sm border border-gray-300 rounded-md hover:bg-gray-50"
+                  className="flex items-center gap-2 px-3 py-1.5 text-[13px]
+                             text-[var(--text-secondary)] border border-[var(--border-default)]
+                             rounded-[var(--radius-sm)] hover:bg-[var(--bg-surface)]
+                             hover:text-[var(--text-primary)] transition-colors"
                 >
                   {sortBy === 'updated' && 'Last edited'}
                   {sortBy === 'created' && 'Date created'}
@@ -156,22 +159,33 @@ export default function HomePage() {
                 {showSortDropdown && (
                   <>
                     <div className="fixed inset-0 z-10" onClick={() => setShowSortDropdown(false)} />
-                    <div className="absolute top-full left-0 mt-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1">
+                    <div className="absolute top-full left-0 mt-1 w-40
+                                    bg-[var(--bg-elevated)] border border-[var(--border-default)]
+                                    rounded-[var(--radius-md)] shadow-[var(--shadow-lg)] z-20 py-1">
                       <button
                         onClick={() => { setSortBy('updated'); setShowSortDropdown(false); }}
-                        className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 ${sortBy === 'updated' ? 'bg-blue-50 text-blue-600' : ''}`}
+                        className={`w-full px-4 py-2 text-left text-[13px] transition-colors
+                                   ${sortBy === 'updated'
+                                     ? 'bg-[var(--status-info-muted)] text-[var(--accent-primary)]'
+                                     : 'text-[var(--text-secondary)] hover:bg-[var(--bg-surface)]'}`}
                       >
                         Last edited
                       </button>
                       <button
                         onClick={() => { setSortBy('created'); setShowSortDropdown(false); }}
-                        className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 ${sortBy === 'created' ? 'bg-blue-50 text-blue-600' : ''}`}
+                        className={`w-full px-4 py-2 text-left text-[13px] transition-colors
+                                   ${sortBy === 'created'
+                                     ? 'bg-[var(--status-info-muted)] text-[var(--accent-primary)]'
+                                     : 'text-[var(--text-secondary)] hover:bg-[var(--bg-surface)]'}`}
                       >
                         Date created
                       </button>
                       <button
                         onClick={() => { setSortBy('name'); setShowSortDropdown(false); }}
-                        className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 ${sortBy === 'name' ? 'bg-blue-50 text-blue-600' : ''}`}
+                        className={`w-full px-4 py-2 text-left text-[13px] transition-colors
+                                   ${sortBy === 'name'
+                                     ? 'bg-[var(--status-info-muted)] text-[var(--accent-primary)]'
+                                     : 'text-[var(--text-secondary)] hover:bg-[var(--bg-surface)]'}`}
                       >
                         Name
                       </button>
@@ -182,20 +196,26 @@ export default function HomePage() {
             </div>
 
             {/* View Toggle */}
-            <div className="flex items-center gap-1 bg-gray-100 rounded-md p-0.5">
+            <div className="flex items-center gap-1 bg-[var(--bg-surface)] rounded-[var(--radius-sm)] p-0.5">
               <button
                 onClick={() => setViewType('grid')}
-                className={`p-1.5 rounded ${viewType === 'grid' ? 'bg-white shadow-sm' : 'hover:bg-gray-200'}`}
+                className={`p-1.5 rounded-[var(--radius-sm)] transition-colors
+                           ${viewType === 'grid'
+                             ? 'bg-[var(--bg-elevated)] shadow-sm'
+                             : 'hover:bg-[var(--bg-elevated)]'}`}
                 title="Grid view"
               >
-                <Grid3X3 size={18} className={viewType === 'grid' ? 'text-gray-900' : 'text-gray-500'} />
+                <Grid3X3 size={16} className={viewType === 'grid' ? 'text-[var(--text-primary)]' : 'text-[var(--text-tertiary)]'} />
               </button>
               <button
                 onClick={() => setViewType('list')}
-                className={`p-1.5 rounded ${viewType === 'list' ? 'bg-white shadow-sm' : 'hover:bg-gray-200'}`}
+                className={`p-1.5 rounded-[var(--radius-sm)] transition-colors
+                           ${viewType === 'list'
+                             ? 'bg-[var(--bg-elevated)] shadow-sm'
+                             : 'hover:bg-[var(--bg-elevated)]'}`}
                 title="List view"
               >
-                <List size={18} className={viewType === 'list' ? 'text-gray-900' : 'text-gray-500'} />
+                <List size={16} className={viewType === 'list' ? 'text-[var(--text-primary)]' : 'text-[var(--text-tertiary)]'} />
               </button>
             </div>
           </div>
@@ -204,22 +224,24 @@ export default function HomePage() {
           <div className="flex-1 overflow-y-auto p-6">
             {loading ? (
               <div className="flex items-center justify-center h-64">
-                <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+                <Loader2 className="h-8 w-8 animate-spin text-[var(--accent-primary)]" />
               </div>
             ) : sortedCardMocks.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-64 text-center">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                  <ImageIcon size={32} className="text-gray-400" />
+                <div className="w-16 h-16 bg-[var(--bg-surface)] rounded-full flex items-center justify-center mb-4">
+                  <ImageIcon size={32} className="text-[var(--text-tertiary)]" />
                 </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No CardMocks yet</h3>
-                <p className="text-gray-500 mb-4 max-w-md">
+                <h3 className="text-[16px] font-medium text-[var(--text-primary)] mb-2">No CardMocks yet</h3>
+                <p className="text-[var(--text-secondary)] mb-4 max-w-md text-[13px]">
                   Create your first CardMock to get started. Your recent work will appear here.
                 </p>
                 <button
                   onClick={() => router.push('/designer')}
-                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
+                  className="flex items-center gap-2 px-4 py-2
+                             bg-[var(--accent-primary)] text-white text-[13px] font-medium
+                             rounded-[var(--radius-sm)] hover:bg-[var(--accent-primary-hover)] transition-colors"
                 >
-                  <Plus size={18} />
+                  <Plus size={16} />
                   New CardMock
                 </button>
               </div>
@@ -235,7 +257,7 @@ export default function HomePage() {
               </div>
             ) : (
               // List view
-              <div className="bg-white rounded-lg border border-gray-200 divide-y divide-gray-200">
+              <div className="bg-[var(--bg-elevated)] rounded-[var(--radius-lg)] border border-[var(--border-default)] divide-y divide-[var(--border-default)]">
                 {sortedCardMocks.map(cardMock => {
                   const name = cardMock.name || cardMock.mockup_name || 'Untitled';
                   const thumbnailUrl = cardMock.preview_url || cardMock.mockup_image_url;
@@ -244,20 +266,20 @@ export default function HomePage() {
                     <div
                       key={cardMock.id}
                       onClick={() => router.push(`/mockups/${cardMock.id}`)}
-                      className="flex items-center gap-4 p-4 hover:bg-gray-50 cursor-pointer"
+                      className="flex items-center gap-4 p-4 hover:bg-[var(--bg-surface)] cursor-pointer transition-colors"
                     >
-                      <div className="w-16 h-12 bg-gray-100 rounded overflow-hidden flex-shrink-0">
+                      <div className="w-16 h-12 bg-[var(--bg-surface)] rounded-[var(--radius-sm)] overflow-hidden flex-shrink-0">
                         {thumbnailUrl ? (
                           <img src={thumbnailUrl} alt={name} className="w-full h-full object-cover" />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
-                            <ImageIcon size={20} className="text-gray-400" />
+                            <ImageIcon size={20} className="text-[var(--text-tertiary)]" />
                           </div>
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h3 className="text-sm font-medium text-gray-900 truncate">{name}</h3>
-                        <p className="text-xs text-gray-500">
+                        <h3 className="text-[13px] font-medium text-[var(--text-primary)] truncate">{name}</h3>
+                        <p className="text-[11px] text-[var(--text-tertiary)]">
                           Edited {new Date(cardMock.updated_at).toLocaleDateString()}
                         </p>
                       </div>

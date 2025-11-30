@@ -1,7 +1,7 @@
 'use client';
 
 import { PanelProvider } from '@/lib/contexts/PanelContext';
-import AppHeader from '@/components/layout/AppHeader';
+import { AppShell } from '@/components/layout/AppShell';
 
 export default function DashboardLayout({
   children,
@@ -10,8 +10,9 @@ export default function DashboardLayout({
 }) {
   return (
     <PanelProvider>
-      <AppHeader />
-      {children}
+      <AppShell>
+        {children}
+      </AppShell>
     </PanelProvider>
   );
 }
