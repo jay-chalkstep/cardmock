@@ -20,10 +20,11 @@ export async function GET(request: NextRequest) {
     const supabase = createServerAdminClient();
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit') || '50');
+    const mine = searchParams.get('mine') === 'true';
 
-    logger.api('/api/mockups', 'GET', { orgId, userId, limit });
+    logger.api('/api/mockups', 'GET', { orgId, userId, limit, mine });
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('assets')
       .select(`
         *,
@@ -38,7 +39,14 @@ export async function GET(request: NextRequest) {
           template_url
         )
       `)
-      .eq('organization_id', orgId)
+      .eq('organization_id', orgId);
+
+    // Filter by current user if requested (for Recents)
+    if (mine) {
+      query = query.eq('created_by', userId);
+    }
+
+    const { data, error } = await query
       .order('updated_at', { ascending: false })
       .limit(limit);
 
