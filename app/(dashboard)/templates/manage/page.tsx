@@ -20,6 +20,7 @@ import {
   Tag,
   ChevronLeft,
   ChevronRight,
+  Ruler,
 } from 'lucide-react';
 import { TEMPLATE_TYPES, type TemplateTypeId, type Template } from '@/lib/templateTypes';
 
@@ -218,13 +219,22 @@ export default function AdminTemplatesListPage() {
               Manage templates for cards and digital wallets
             </p>
           </div>
-          <button
-            onClick={() => router.push('/templates/manage/new')}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-          >
-            <Plus className="h-5 w-5" />
-            New Template
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => router.push('/templates/manage/types')}
+              className="flex items-center gap-2 px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <Ruler className="h-5 w-5" />
+              Guide Settings
+            </button>
+            <button
+              onClick={() => router.push('/templates/manage/new')}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+            >
+              <Plus className="h-5 w-5" />
+              New Template
+            </button>
+          </div>
         </div>
 
         {/* Filters Bar */}

@@ -119,6 +119,7 @@ function DesignerPageContent() {
   const [showMeasurements, setShowMeasurements] = useState(true);
   const [showGuides, setShowGuides] = useState(true);
   const [snapEnabled, setSnapEnabled] = useState(true);
+  const [currentTemplateTypeId, setCurrentTemplateTypeId] = useState<string>('prepaid-cr80');
   const [verticalGuides, setVerticalGuides] = useState<Guide[]>(() => {
     const defaults = getDefaultGuides();
     return defaults.vertical;
@@ -164,12 +165,14 @@ function DesignerPageContent() {
     setToasts(prev => prev.filter(toast => toast.id !== id));
   };
 
-  // Load logos, templates, and folders when organization loads
+  // Load logos, templates, folders, and guide presets when organization loads
   useEffect(() => {
     if (organization?.id && user?.id) {
       fetchLogos();
       fetchTemplates();
       fetchFolders();
+      // Load guide presets for the default template type
+      fetchGuidePresets(currentTemplateTypeId);
     }
   }, [organization?.id, user?.id]);
 
@@ -332,6 +335,33 @@ function DesignerPageContent() {
     }
   };
 
+  // Fetch guide presets for a template type from the database
+  const fetchGuidePresets = async (templateTypeId: string) => {
+    try {
+      const response = await fetch(`/api/template-types/${templateTypeId}/guides`);
+      const result = await response.json();
+
+      if (result.success && result.data?.guides) {
+        const { vertical, horizontal } = result.data.guides;
+        setVerticalGuides(vertical);
+        setHorizontalGuides(horizontal);
+        setCurrentTemplateTypeId(templateTypeId);
+      } else {
+        // Fallback to default guides if fetch fails
+        console.warn('Failed to fetch guide presets, using defaults');
+        const defaults = getDefaultGuides();
+        setVerticalGuides(defaults.vertical);
+        setHorizontalGuides(defaults.horizontal);
+      }
+    } catch (error) {
+      console.error('Error fetching guide presets:', error);
+      // Fallback to default guides
+      const defaults = getDefaultGuides();
+      setVerticalGuides(defaults.vertical);
+      setHorizontalGuides(defaults.horizontal);
+    }
+  };
+
   // Handle create folder
   const handleCreateFolder = async (name: string) => {
     if (!organization?.id || !user?.id) return;
@@ -385,6 +415,12 @@ function DesignerPageContent() {
     img.src = template.template_url;
     setSelectedTemplate(template);
     setShowTemplateSelector(false);
+
+    // Load guide presets for this template type
+    const templateTypeId = template.template_type_id || 'prepaid-cr80';
+    if (templateTypeId !== currentTemplateTypeId) {
+      fetchGuidePresets(templateTypeId);
+    }
   };
 
   // Handle drag end
@@ -535,11 +571,9 @@ function DesignerPageContent() {
     setHorizontalGuides(prev => prev.filter(g => g.id !== guideId));
   };
 
-  // Reset to preset guides
+  // Reset to preset guides (fetches from database)
   const handleResetToPresets = () => {
-    const defaults = getDefaultGuides();
-    setVerticalGuides(defaults.vertical);
-    setHorizontalGuides(defaults.horizontal);
+    fetchGuidePresets(currentTemplateTypeId);
   };
 
   // Handle position change from measurements panel
