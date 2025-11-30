@@ -17,21 +17,35 @@ export function UserMenu() {
   }
 
   const initials = user?.firstName?.[0] || user?.username?.[0]?.toUpperCase() || 'U';
-  const displayName = user?.firstName || user?.username || 'User';
+  const fullName = [user?.firstName, user?.lastName].filter(Boolean).join(' ') || user?.username || 'User';
+  const avatarUrl = user?.imageUrl;
   const email = user?.primaryEmailAddress?.emailAddress || organization?.name || '';
 
   return (
     <div className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 p-1 rounded-[var(--radius-sm)]
+        className="flex items-center gap-2 px-2 py-1 rounded-[var(--radius-sm)]
                    hover:bg-[var(--bg-surface)] transition-colors"
         aria-label="User menu"
       >
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--accent-primary)] to-[var(--accent-secondary)]
-                        flex items-center justify-center flex-shrink-0">
-          <span className="text-white text-[13px] font-medium">{initials}</span>
-        </div>
+        {/* Avatar */}
+        {avatarUrl ? (
+          <img
+            src={avatarUrl}
+            alt={fullName}
+            className="w-7 h-7 rounded-full object-cover flex-shrink-0"
+          />
+        ) : (
+          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[var(--accent-primary)] to-[var(--accent-secondary)]
+                          flex items-center justify-center flex-shrink-0">
+            <span className="text-white text-[12px] font-medium">{initials}</span>
+          </div>
+        )}
+        {/* Name */}
+        <span className="text-[13px] font-medium text-[var(--text-primary)] hidden sm:inline max-w-[120px] truncate">
+          {fullName}
+        </span>
         <ChevronDown
           size={14}
           className={`text-[var(--text-tertiary)] transition-transform ${open ? 'rotate-180' : ''}`}
@@ -50,7 +64,7 @@ export function UserMenu() {
             {/* User info header */}
             <div className="px-3 py-2 border-b border-[var(--border-default)]">
               <p className="text-[13px] font-medium text-[var(--text-primary)] truncate">
-                {displayName}
+                {fullName}
               </p>
               <p className="text-[11px] text-[var(--text-tertiary)] truncate">
                 {email}
