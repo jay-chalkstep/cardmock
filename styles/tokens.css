@@ -1,0 +1,180 @@
+/* Linear-Inspired Design Tokens */
+
+/* Typography */
+:root {
+  /* Font sizes */
+  --text-xs: 11px;
+  --text-sm: 13px;
+  --text-base: 14px;
+  --text-lg: 16px;
+  --text-xl: 18px;
+  --text-2xl: 24px;
+
+  /* Font weights */
+  --font-normal: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+
+  /* Line heights */
+  --leading-tight: 1.25;
+  --leading-normal: 1.5;
+
+  /* Spacing - Base unit: 4px */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* Radii */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.6);
+
+  /* Layout */
+  --nav-width: 208px;
+  --header-height: 48px;
+}
+
+/* Dark mode (default) */
+:root,
+[data-theme="dark"] {
+  /* Background hierarchy */
+  --bg-base: #0a0a0b;
+  --bg-elevated: #111113;
+  --bg-surface: #18181b;
+  --bg-overlay: rgba(0, 0, 0, 0.5);
+
+  /* Border */
+  --border-default: #27272a;
+  --border-subtle: #1f1f23;
+  --border-focus: #6366f1;
+
+  /* Text */
+  --text-primary: #fafafa;
+  --text-secondary: #a1a1aa;
+  --text-tertiary: #71717a;
+  --text-disabled: #52525b;
+
+  /* Accent */
+  --accent-primary: #6366f1;
+  --accent-primary-hover: #818cf8;
+  --accent-secondary: #4f46e5;
+
+  /* Status */
+  --status-success: #22c55e;
+  --status-success-muted: rgba(34, 197, 94, 0.15);
+  --status-warning: #f59e0b;
+  --status-warning-muted: rgba(245, 158, 11, 0.15);
+  --status-error: #ef4444;
+  --status-error-muted: rgba(239, 68, 68, 0.15);
+  --status-info: #6366f1;
+  --status-info-muted: rgba(99, 102, 241, 0.15);
+
+  /* Scrollbar */
+  --scrollbar-track: #111113;
+  --scrollbar-thumb: #3f3f46;
+  --scrollbar-thumb-hover: #52525b;
+}
+
+/* Light mode */
+[data-theme="light"] {
+  /* Background hierarchy */
+  --bg-base: #ffffff;
+  --bg-elevated: #ffffff;
+  --bg-surface: #f4f4f5;
+  --bg-overlay: rgba(0, 0, 0, 0.3);
+
+  /* Border */
+  --border-default: #e4e4e7;
+  --border-subtle: #f4f4f5;
+  --border-focus: #6366f1;
+
+  /* Text */
+  --text-primary: #18181b;
+  --text-secondary: #52525b;
+  --text-tertiary: #71717a;
+  --text-disabled: #a1a1aa;
+
+  /* Accent - same across themes for brand consistency */
+  --accent-primary: #6366f1;
+  --accent-primary-hover: #4f46e5;
+  --accent-secondary: #818cf8;
+
+  /* Status - slightly adjusted for light backgrounds */
+  --status-success: #16a34a;
+  --status-success-muted: rgba(22, 163, 74, 0.1);
+  --status-warning: #d97706;
+  --status-warning-muted: rgba(217, 119, 6, 0.1);
+  --status-error: #dc2626;
+  --status-error-muted: rgba(220, 38, 38, 0.1);
+  --status-info: #4f46e5;
+  --status-info-muted: rgba(79, 70, 229, 0.1);
+
+  /* Scrollbar */
+  --scrollbar-track: #f4f4f5;
+  --scrollbar-thumb: #d4d4d8;
+  --scrollbar-thumb-hover: #a1a1aa;
+
+  /* Shadows - lighter for light mode */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+/* System preference fallback */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    /* Background hierarchy */
+    --bg-base: #ffffff;
+    --bg-elevated: #ffffff;
+    --bg-surface: #f4f4f5;
+    --bg-overlay: rgba(0, 0, 0, 0.3);
+
+    /* Border */
+    --border-default: #e4e4e7;
+    --border-subtle: #f4f4f5;
+    --border-focus: #6366f1;
+
+    /* Text */
+    --text-primary: #18181b;
+    --text-secondary: #52525b;
+    --text-tertiary: #71717a;
+    --text-disabled: #a1a1aa;
+
+    /* Accent */
+    --accent-primary: #6366f1;
+    --accent-primary-hover: #4f46e5;
+    --accent-secondary: #818cf8;
+
+    /* Status */
+    --status-success: #16a34a;
+    --status-success-muted: rgba(22, 163, 74, 0.1);
+    --status-warning: #d97706;
+    --status-warning-muted: rgba(217, 119, 6, 0.1);
+    --status-error: #dc2626;
+    --status-error-muted: rgba(220, 38, 38, 0.1);
+    --status-info: #4f46e5;
+    --status-info-muted: rgba(79, 70, 229, 0.1);
+
+    /* Scrollbar */
+    --scrollbar-track: #f4f4f5;
+    --scrollbar-thumb: #d4d4d8;
+    --scrollbar-thumb-hover: #a1a1aa;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.15);
+  }
+}

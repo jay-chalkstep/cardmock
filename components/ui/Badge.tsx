@@ -16,19 +16,19 @@ interface BadgeProps {
 }
 
 const variantStyles: Record<BadgeVariant, string> = {
-  default: 'bg-[#F3F4F6] text-[var(--text-secondary)]',
-  success: 'bg-[#DBEAFE] text-[var(--accent-blue)]',
-  warning: 'bg-[#FEF3C7] text-[var(--accent-yellow)]',
-  error: 'bg-[#FEE2E2] text-[var(--accent-red)]',
-  info: 'bg-[#DBEAFE] text-[var(--accent-blue)]',
-  purple: 'bg-[#F3E8FF] text-[var(--accent-purple)]',
-  ai: 'bg-[#F3E8FF] text-[var(--accent-purple)]',
+  default: 'bg-[var(--bg-surface)] text-[var(--text-secondary)]',
+  success: 'bg-[var(--status-success-muted)] text-[var(--status-success)]',
+  warning: 'bg-[var(--status-warning-muted)] text-[var(--status-warning)]',
+  error: 'bg-[var(--status-error-muted)] text-[var(--status-error)]',
+  info: 'bg-[var(--status-info-muted)] text-[var(--status-info)]',
+  purple: 'bg-[var(--status-info-muted)] text-[var(--accent-primary)]',
+  ai: 'bg-[var(--status-info-muted)] text-[var(--accent-primary)]',
 };
 
 const sizeStyles: Record<BadgeSize, string> = {
-  sm: 'px-2 py-0.5 text-xs',
-  md: 'px-2.5 py-1 text-sm',
-  lg: 'px-3 py-1.5 text-base',
+  sm: 'px-2 py-0.5 text-[11px]',
+  md: 'px-2.5 py-1 text-[13px]',
+  lg: 'px-3 py-1.5 text-[14px]',
 };
 
 export default function Badge({
@@ -42,7 +42,7 @@ export default function Badge({
   return (
     <span
       className={`
-        inline-flex items-center gap-1 rounded-full font-medium
+        inline-flex items-center gap-1 rounded-[var(--radius-sm)] font-medium
         ${variantStyles[variant]}
         ${sizeStyles[size]}
         ${className}

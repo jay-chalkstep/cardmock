@@ -89,84 +89,90 @@ export default function TemplatesPage() {
 
   return (
     <GmailLayout>
-      <div className="max-w-7xl mx-auto">
+      <div className="h-full flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Templates</h1>
-            <p className="text-gray-500 mt-1">
-              Choose a card template to start designing
-            </p>
-          </div>
+        <div className="bg-[var(--bg-elevated)] border-b border-[var(--border-default)] px-6 py-4">
+          <h1 className="text-[18px] font-semibold text-[var(--text-primary)]">Templates</h1>
+          <p className="text-[13px] text-[var(--text-secondary)] mt-1">Choose a card template to start designing</p>
         </div>
 
         {/* Search and Sort */}
-        <div className="flex items-center gap-4 mb-6">
+        <div className="bg-[var(--bg-elevated)] border-b border-[var(--border-default)] px-6 py-4
+                        flex items-center gap-4">
           <div className="relative flex-1 max-w-md">
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search templates..."
-              className="w-full px-4 py-2 pl-10 text-gray-900 bg-white border border-gray-300 rounded-lg focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-200 transition-all"
+              className="w-full px-4 py-2 pl-10 text-[13px]
+                         text-[var(--text-primary)] bg-[var(--bg-surface)]
+                         border border-[var(--border-default)] rounded-[var(--radius-md)]
+                         focus:outline-none focus:border-[var(--border-focus)]
+                         placeholder:text-[var(--text-tertiary)]"
             />
-            <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-[var(--text-tertiary)]" />
           </div>
 
           <button
             onClick={() => setSortBy(sortBy === 'date' ? 'name' : 'date')}
-            className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            className="flex items-center gap-2 px-3 py-2 text-[13px]
+                       text-[var(--text-secondary)] hover:text-[var(--text-primary)]
+                       border border-[var(--border-default)] rounded-[var(--radius-md)]
+                       hover:bg-[var(--bg-surface)] transition-colors"
           >
-            <ArrowUpDown size={16} />
-            <span className="text-sm">
+            <ArrowUpDown size={14} />
+            <span>
               {sortBy === 'date' ? 'Sort by date' : 'Sort by name'}
             </span>
           </button>
         </div>
 
-        {/* Templates Grid */}
-        {loading ? (
-          <div className="flex items-center justify-center h-64">
-            <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
-          </div>
-        ) : filteredTemplates.length === 0 ? (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
-            <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-              <LayoutTemplate className="h-8 w-8 text-gray-400" />
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6">
+          {loading ? (
+            <div className="flex items-center justify-center h-64">
+              <Loader2 className="h-8 w-8 animate-spin text-[var(--accent-primary)]" />
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              {searchTerm ? 'No templates found' : 'No templates available'}
-            </h3>
-            <p className="text-gray-500">
-              {searchTerm
-                ? 'Try adjusting your search terms'
-                : 'Templates will appear here when added by an administrator'}
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {filteredTemplates.map((template) => (
-              <div
-                key={template.id}
-                onClick={() => handleSelectTemplate(template)}
-                className="cursor-pointer"
-              >
-                <TemplateCard
-                  template={template}
-                  isSelected={false}
-                  onClick={() => handleSelectTemplate(template)}
-                />
+          ) : filteredTemplates.length === 0 ? (
+            <div className="bg-[var(--bg-elevated)] rounded-[var(--radius-lg)] border border-[var(--border-default)] p-12 text-center">
+              <div className="w-16 h-16 mx-auto mb-4 bg-[var(--bg-surface)] rounded-full flex items-center justify-center">
+                <LayoutTemplate className="h-8 w-8 text-[var(--text-tertiary)]" />
               </div>
-            ))}
-          </div>
-        )}
+              <h3 className="text-[16px] font-medium text-[var(--text-primary)] mb-2">
+                {searchTerm ? 'No templates found' : 'No templates available'}
+              </h3>
+              <p className="text-[var(--text-secondary)] text-[13px]">
+                {searchTerm
+                  ? 'Try adjusting your search terms'
+                  : 'Templates will appear here when added by an administrator'}
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {filteredTemplates.map((template) => (
+                <div
+                  key={template.id}
+                  onClick={() => handleSelectTemplate(template)}
+                  className="cursor-pointer"
+                >
+                  <TemplateCard
+                    template={template}
+                    isSelected={false}
+                    onClick={() => handleSelectTemplate(template)}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
 
-        {/* Template count */}
-        {!loading && filteredTemplates.length > 0 && (
-          <div className="mt-6 text-center text-sm text-gray-500">
-            Showing {filteredTemplates.length} of {templates.length} templates
-          </div>
-        )}
+          {/* Template count */}
+          {!loading && filteredTemplates.length > 0 && (
+            <div className="mt-6 text-center text-[11px] text-[var(--text-tertiary)]">
+              Showing {filteredTemplates.length} of {templates.length} templates
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Toast Notifications */}
