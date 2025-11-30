@@ -143,18 +143,6 @@ export default function BrandAssetModal({ brand, isOpen, onClose, onEdit }: Bran
   // Get primary logo
   const primaryLogo = logos.find(l => l.id === brand.primary_logo_variant_id) || logos[0];
 
-  // Handle new mockup
-  const handleNewMockup = () => {
-    if (logos.length === 1) {
-      router.push(`/designer?brandId=${brand.id}&logoVariantId=${logos[0].id}`);
-    } else if (logos.length > 1) {
-      router.push(`/designer?brandId=${brand.id}`);
-    } else {
-      router.push(`/designer`);
-    }
-    onClose();
-  };
-
   if (!isOpen) return null;
 
   return (
@@ -304,23 +292,38 @@ export default function BrandAssetModal({ brand, isOpen, onClose, onEdit }: Bran
                 {logos.length > 0 ? (
                   <div className="grid grid-cols-3 gap-4">
                     {logos.map((logo) => (
-                      <div
+                      <button
                         key={logo.id}
-                        className="group relative bg-white border border-gray-200 rounded-lg overflow-hidden hover:border-gray-300 transition-colors"
+                        onClick={() => {
+                          router.push(`/designer?brandId=${brand.id}&logoVariantId=${logo.id}`);
+                          onClose();
+                        }}
+                        className="group relative bg-white border border-gray-200 rounded-lg overflow-hidden hover:border-purple-300 hover:shadow-md transition-all text-left"
                       >
-                        <div className="h-20 bg-gray-50 flex items-center justify-center p-3">
+                        <div className="h-20 bg-gray-50 flex items-center justify-center p-3 relative">
                           <img
                             src={logo.logo_url}
                             alt={`${brand.company_name} logo`}
                             className="max-w-full max-h-full object-contain"
                           />
+                          {/* Hover overlay with actions */}
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors flex items-center justify-center gap-2">
+                            <span className="opacity-0 group-hover:opacity-100 transition-opacity bg-purple-600 text-white text-xs font-medium px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5">
+                              <Plus className="w-3.5 h-3.5" />
+                              Use
+                            </span>
+                          </div>
                         </div>
-                        <button
-                          onClick={() => downloadAsset(logo.logo_url, `${brand.company_name}-${logo.logo_type || 'logo'}.${logo.logo_format || 'png'}`)}
-                          className="absolute top-2 right-2 p-1.5 bg-white rounded-full shadow-sm opacity-0 group-hover:opacity-100 hover:bg-gray-50 transition-all"
+                        {/* Download button - stops propagation to prevent navigation */}
+                        <div
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            downloadAsset(logo.logo_url, `${brand.company_name}-${logo.logo_type || 'logo'}.${logo.logo_format || 'png'}`);
+                          }}
+                          className="absolute top-2 right-2 p-1.5 bg-white rounded-full shadow-sm opacity-0 group-hover:opacity-100 hover:bg-gray-100 transition-all cursor-pointer"
                         >
                           <Download className="w-3.5 h-3.5 text-gray-600" />
-                        </button>
+                        </div>
                         <div className="p-3 border-t border-gray-100">
                           <p className="text-xs font-medium text-gray-700 truncate">
                             {logo.logo_type || 'Logo'}
@@ -330,7 +333,7 @@ export default function BrandAssetModal({ brand, isOpen, onClose, onEdit }: Bran
                             {logo.theme && ` • ${logo.theme}`}
                           </p>
                         </div>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 ) : (
@@ -465,13 +468,9 @@ export default function BrandAssetModal({ brand, isOpen, onClose, onEdit }: Bran
             <p className="text-sm text-gray-500">
               Last updated {formatDate(brand.updated_at)}
             </p>
-            <button
-              onClick={handleNewMockup}
-              className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              New Mockup with Brand
-            </button>
+            <p className="text-sm text-gray-400">
+              Click any logo to create a mockup
+            </p>
           </div>
         </div>
       </div>
