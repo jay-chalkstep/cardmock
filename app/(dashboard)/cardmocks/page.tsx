@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useOrganization, useUser } from '@/lib/hooks/useAuth';
+import { useState, useEffect, useMemo } from 'react';
+import { useOrganization } from '@/lib/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { usePanelContext } from '@/lib/contexts/PanelContext';
 import GmailLayout from '@/components/layout/GmailLayout';
@@ -14,6 +14,7 @@ import {
   Loader2,
   Image as ImageIcon,
   Plus,
+  Search,
 } from 'lucide-react';
 
 interface ToastMessage {
@@ -36,9 +37,8 @@ interface CardMock {
 type ViewType = 'grid' | 'list';
 type SortType = 'updated' | 'created' | 'name';
 
-export default function HomePage() {
+export default function CardMocksPage() {
   const { organization, isLoaded } = useOrganization();
-  const { user } = useUser();
   const router = useRouter();
   const { setActiveNav } = usePanelContext();
 
@@ -46,6 +46,7 @@ export default function HomePage() {
   const [viewType, setViewType] = useState<ViewType>('grid');
   const [sortBy, setSortBy] = useState<SortType>('updated');
   const [showSortDropdown, setShowSortDropdown] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const [loading, setLoading] = useState(true);
   const [cardMocks, setCardMocks] = useState<CardMock[]>([]);
@@ -61,10 +62,10 @@ export default function HomePage() {
   };
 
   useEffect(() => {
-    setActiveNav('recents');
+    setActiveNav('cardmocks');
   }, [setActiveNav]);
 
-  // Fetch data
+  // Fetch all org CardMocks
   useEffect(() => {
     if (organization?.id) {
       fetchCardMocks();
@@ -76,8 +77,7 @@ export default function HomePage() {
 
     setLoading(true);
     try {
-      // Fetch user's recent CardMocks (only ones they created)
-      const response = await fetch('/api/mockups?limit=50&mine=true');
+      const response = await fetch('/api/mockups?limit=200');
       const result = await response.json();
       const mockupsList = result.data?.mockups || result.mockups || [];
       setCardMocks(mockupsList);
@@ -89,11 +89,21 @@ export default function HomePage() {
     }
   };
 
-  // Sort CardMocks
-  const getSortedCardMocks = () => {
-    const sorted = [...cardMocks];
+  // Filter and sort CardMocks
+  const filteredAndSortedCardMocks = useMemo(() => {
+    let filtered = [...cardMocks];
 
-    sorted.sort((a, b) => {
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(mock => {
+        const name = (mock.name || mock.mockup_name || '').toLowerCase();
+        return name.includes(query);
+      });
+    }
+
+    // Apply sort
+    filtered.sort((a, b) => {
       switch (sortBy) {
         case 'updated':
           return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
@@ -108,10 +118,8 @@ export default function HomePage() {
       }
     });
 
-    return sorted;
-  };
-
-  const sortedCardMocks = getSortedCardMocks();
+    return filtered;
+  }, [cardMocks, searchQuery, sortBy]);
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this CardMock?')) return;
@@ -135,12 +143,33 @@ export default function HomePage() {
         <div className="h-full flex flex-col">
           {/* Header */}
           <div className="bg-[var(--bg-elevated)] border-b border-[var(--border-default)] px-6 py-4">
-            <h1 className="text-[18px] font-semibold text-[var(--text-primary)]">Recents</h1>
-            <p className="text-[13px] text-[var(--text-secondary)] mt-1">CardMocks you've created, sorted by last edited</p>
+            <h1 className="text-[18px] font-semibold text-[var(--text-primary)]">CardMocks</h1>
+            <p className="text-[13px] text-[var(--text-secondary)] mt-1">
+              All CardMocks in your organization
+            </p>
           </div>
 
           {/* Toolbar */}
-          <div className="bg-[var(--bg-elevated)] border-b border-[var(--border-default)] px-6 py-3 flex items-center justify-between">
+          <div className="bg-[var(--bg-elevated)] border-b border-[var(--border-default)] px-6 py-3 flex items-center justify-between gap-4">
+            {/* Search */}
+            <div className="flex-1 max-w-md">
+              <div className="relative">
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]" />
+                <input
+                  type="text"
+                  placeholder="Search CardMocks..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-4 py-1.5 text-[13px]
+                             bg-[var(--bg-surface)] border border-[var(--border-default)]
+                             rounded-[var(--radius-sm)] text-[var(--text-primary)]
+                             placeholder:text-[var(--text-tertiary)]
+                             focus:outline-none focus:border-[var(--accent-primary)]
+                             transition-colors"
+                />
+              </div>
+            </div>
+
             <div className="flex items-center gap-3">
               {/* Sort */}
               <div className="relative">
@@ -159,7 +188,7 @@ export default function HomePage() {
                 {showSortDropdown && (
                   <>
                     <div className="fixed inset-0 z-10" onClick={() => setShowSortDropdown(false)} />
-                    <div className="absolute top-full left-0 mt-1 w-40
+                    <div className="absolute top-full right-0 mt-1 w-40
                                     bg-[var(--bg-elevated)] border border-[var(--border-default)]
                                     rounded-[var(--radius-md)] shadow-[var(--shadow-lg)] z-20 py-1">
                       <button
@@ -193,30 +222,30 @@ export default function HomePage() {
                   </>
                 )}
               </div>
-            </div>
 
-            {/* View Toggle */}
-            <div className="flex items-center gap-1 bg-[var(--bg-surface)] rounded-[var(--radius-sm)] p-0.5">
-              <button
-                onClick={() => setViewType('grid')}
-                className={`p-1.5 rounded-[var(--radius-sm)] transition-colors
-                           ${viewType === 'grid'
-                             ? 'bg-[var(--bg-elevated)] shadow-sm'
-                             : 'hover:bg-[var(--bg-elevated)]'}`}
-                title="Grid view"
-              >
-                <Grid3X3 size={16} className={viewType === 'grid' ? 'text-[var(--text-primary)]' : 'text-[var(--text-tertiary)]'} />
-              </button>
-              <button
-                onClick={() => setViewType('list')}
-                className={`p-1.5 rounded-[var(--radius-sm)] transition-colors
-                           ${viewType === 'list'
-                             ? 'bg-[var(--bg-elevated)] shadow-sm'
-                             : 'hover:bg-[var(--bg-elevated)]'}`}
-                title="List view"
-              >
-                <List size={16} className={viewType === 'list' ? 'text-[var(--text-primary)]' : 'text-[var(--text-tertiary)]'} />
-              </button>
+              {/* View Toggle */}
+              <div className="flex items-center gap-1 bg-[var(--bg-surface)] rounded-[var(--radius-sm)] p-0.5">
+                <button
+                  onClick={() => setViewType('grid')}
+                  className={`p-1.5 rounded-[var(--radius-sm)] transition-colors
+                             ${viewType === 'grid'
+                               ? 'bg-[var(--bg-elevated)] shadow-sm'
+                               : 'hover:bg-[var(--bg-elevated)]'}`}
+                  title="Grid view"
+                >
+                  <Grid3X3 size={16} className={viewType === 'grid' ? 'text-[var(--text-primary)]' : 'text-[var(--text-tertiary)]'} />
+                </button>
+                <button
+                  onClick={() => setViewType('list')}
+                  className={`p-1.5 rounded-[var(--radius-sm)] transition-colors
+                             ${viewType === 'list'
+                               ? 'bg-[var(--bg-elevated)] shadow-sm'
+                               : 'hover:bg-[var(--bg-elevated)]'}`}
+                  title="List view"
+                >
+                  <List size={16} className={viewType === 'list' ? 'text-[var(--text-primary)]' : 'text-[var(--text-tertiary)]'} />
+                </button>
+              </div>
             </div>
           </div>
 
@@ -226,28 +255,39 @@ export default function HomePage() {
               <div className="flex items-center justify-center h-64">
                 <Loader2 className="h-8 w-8 animate-spin text-[var(--accent-primary)]" />
               </div>
-            ) : sortedCardMocks.length === 0 ? (
+            ) : filteredAndSortedCardMocks.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-64 text-center">
                 <div className="w-16 h-16 bg-[var(--bg-surface)] rounded-full flex items-center justify-center mb-4">
                   <ImageIcon size={32} className="text-[var(--text-tertiary)]" />
                 </div>
-                <h3 className="text-[16px] font-medium text-[var(--text-primary)] mb-2">No CardMocks yet</h3>
-                <p className="text-[var(--text-secondary)] mb-4 max-w-md text-[13px]">
-                  Create your first CardMock to get started. Your recent work will appear here.
-                </p>
-                <button
-                  onClick={() => router.push('/designer')}
-                  className="flex items-center gap-2 px-4 py-2
-                             bg-[var(--accent-primary)] text-white text-[13px] font-medium
-                             rounded-[var(--radius-sm)] hover:bg-[var(--accent-primary-hover)] transition-colors"
-                >
-                  <Plus size={16} />
-                  New CardMock
-                </button>
+                {searchQuery ? (
+                  <>
+                    <h3 className="text-[16px] font-medium text-[var(--text-primary)] mb-2">No matches found</h3>
+                    <p className="text-[var(--text-secondary)] mb-4 max-w-md text-[13px]">
+                      No CardMocks match "{searchQuery}". Try a different search term.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <h3 className="text-[16px] font-medium text-[var(--text-primary)] mb-2">No CardMocks yet</h3>
+                    <p className="text-[var(--text-secondary)] mb-4 max-w-md text-[13px]">
+                      Create your first CardMock to get started.
+                    </p>
+                    <button
+                      onClick={() => router.push('/designer')}
+                      className="flex items-center gap-2 px-4 py-2
+                                 bg-[var(--accent-primary)] text-white text-[13px] font-medium
+                                 rounded-[var(--radius-sm)] hover:bg-[var(--accent-primary-hover)] transition-colors"
+                    >
+                      <Plus size={16} />
+                      New CardMock
+                    </button>
+                  </>
+                )}
               </div>
             ) : viewType === 'grid' ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                {sortedCardMocks.map(cardMock => (
+                {filteredAndSortedCardMocks.map(cardMock => (
                   <MockupGridCard
                     key={cardMock.id}
                     mockup={cardMock}
@@ -258,7 +298,7 @@ export default function HomePage() {
             ) : (
               // List view
               <div className="bg-[var(--bg-elevated)] rounded-[var(--radius-lg)] border border-[var(--border-default)] divide-y divide-[var(--border-default)]">
-                {sortedCardMocks.map(cardMock => {
+                {filteredAndSortedCardMocks.map(cardMock => {
                   const name = cardMock.name || cardMock.mockup_name || 'Untitled';
                   const thumbnailUrl = cardMock.preview_url || cardMock.mockup_image_url;
 
@@ -289,6 +329,17 @@ export default function HomePage() {
               </div>
             )}
           </div>
+
+          {/* Results count */}
+          {!loading && cardMocks.length > 0 && (
+            <div className="bg-[var(--bg-elevated)] border-t border-[var(--border-default)] px-6 py-2">
+              <p className="text-[11px] text-[var(--text-tertiary)]">
+                {searchQuery
+                  ? `${filteredAndSortedCardMocks.length} of ${cardMocks.length} CardMocks`
+                  : `${cardMocks.length} CardMocks`}
+              </p>
+            </div>
+          )}
         </div>
       </GmailLayout>
 
