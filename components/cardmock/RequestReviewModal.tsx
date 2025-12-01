@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Search, Loader2, Calendar, User, Check } from 'lucide-react';
+import { X, Search, Loader2, Calendar, User, Check, Mail, Plus } from 'lucide-react';
 import type { CardMockData } from './CardMockDetailModal';
 
 interface TeamMember {
@@ -9,6 +9,10 @@ interface TeamMember {
   name: string;
   email: string;
   avatar?: string;
+}
+
+interface ExternalReviewer {
+  email: string;
 }
 
 interface RequestReviewModalProps {
@@ -27,6 +31,8 @@ export default function RequestReviewModal({
   const [searchQuery, setSearchQuery] = useState('');
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [selectedReviewers, setSelectedReviewers] = useState<string[]>([]);
+  const [externalReviewers, setExternalReviewers] = useState<ExternalReviewer[]>([]);
+  const [externalEmail, setExternalEmail] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [message, setMessage] = useState('');
   const [reviewType, setReviewType] = useState<'all' | 'any'>('all');
@@ -65,8 +71,44 @@ export default function RequestReviewModal({
     );
   };
 
+  const isValidEmail = (email: string) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
+
+  const addExternalReviewer = () => {
+    const trimmedEmail = externalEmail.trim().toLowerCase();
+    if (!trimmedEmail) return;
+
+    if (!isValidEmail(trimmedEmail)) {
+      setError('Please enter a valid email address');
+      return;
+    }
+
+    // Check if already added as external reviewer
+    if (externalReviewers.some(r => r.email === trimmedEmail)) {
+      setError('This email has already been added');
+      return;
+    }
+
+    // Check if already a team member
+    if (teamMembers.some(m => m.email.toLowerCase() === trimmedEmail)) {
+      setError('This person is already a team member - select them from the list above');
+      return;
+    }
+
+    setExternalReviewers(prev => [...prev, { email: trimmedEmail }]);
+    setExternalEmail('');
+    setError('');
+  };
+
+  const removeExternalReviewer = (email: string) => {
+    setExternalReviewers(prev => prev.filter(r => r.email !== email));
+  };
+
+  const totalReviewers = selectedReviewers.length + externalReviewers.length;
+
   const handleSubmit = async () => {
-    if (selectedReviewers.length === 0) {
+    if (totalReviewers === 0) {
       setError('Please select at least one reviewer');
       return;
     }
@@ -81,6 +123,7 @@ export default function RequestReviewModal({
         body: JSON.stringify({
           mockupId: cardMock.id,
           reviewerIds: selectedReviewers,
+          externalEmails: externalReviewers.map(r => r.email),
           dueDate: dueDate || null,
           message,
           reviewType,
@@ -204,9 +247,74 @@ export default function RequestReviewModal({
                   </div>
                 )}
               </div>
-              {selectedReviewers.length > 0 && (
+              {/* External Reviewers Section */}
+              <div className="mt-4 pt-4 border-t border-[var(--border-default)]">
+                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
+                  Invite external reviewer by email
+                </label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Mail
+                      size={16}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]"
+                    />
+                    <input
+                      type="email"
+                      value={externalEmail}
+                      onChange={(e) => setExternalEmail(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          addExternalReviewer();
+                        }
+                      }}
+                      placeholder="colleague@company.com"
+                      className="w-full pl-9 pr-4 py-2.5 bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:border-[var(--accent-primary)]"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={addExternalReviewer}
+                    className="px-3 py-2.5 bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg hover:bg-[var(--bg-elevated)] transition-colors"
+                  >
+                    <Plus size={16} className="text-[var(--text-secondary)]" />
+                  </button>
+                </div>
+
+                {/* External Reviewers List */}
+                {externalReviewers.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    {externalReviewers.map((reviewer) => (
+                      <div
+                        key={reviewer.email}
+                        className="flex items-center gap-3 px-3 py-2 bg-[var(--status-info-muted)] rounded-lg"
+                      >
+                        <div className="w-8 h-8 rounded-full bg-[var(--bg-surface)] flex items-center justify-center">
+                          <Mail size={14} className="text-[var(--text-tertiary)]" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="text-sm text-[var(--text-primary)]">
+                            {reviewer.email}
+                          </div>
+                          <div className="text-xs text-[var(--text-tertiary)]">
+                            External reviewer
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => removeExternalReviewer(reviewer.email)}
+                          className="p-1 hover:bg-[var(--bg-surface)] rounded transition-colors"
+                        >
+                          <X size={14} className="text-[var(--text-tertiary)]" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {totalReviewers > 0 && (
                 <p className="mt-2 text-xs text-[var(--text-secondary)]">
-                  {selectedReviewers.length} reviewer{selectedReviewers.length > 1 ? 's' : ''} selected
+                  {totalReviewers} reviewer{totalReviewers > 1 ? 's' : ''} selected
                 </p>
               )}
             </div>
@@ -295,7 +403,7 @@ export default function RequestReviewModal({
             </button>
             <button
               onClick={handleSubmit}
-              disabled={isSubmitting || selectedReviewers.length === 0}
+              disabled={isSubmitting || totalReviewers === 0}
               className="flex items-center gap-2 px-4 py-2 bg-[var(--accent-primary)] text-white rounded-lg hover:bg-[var(--accent-primary-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {isSubmitting ? (

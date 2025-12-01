@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { getAuthContext, getUserInfo } from '@/lib/api/auth';
+import { getAuthContext, getUserInfo, getOrgMembers } from '@/lib/api/auth';
 import { successResponse, errorResponse, badRequestResponse, notFoundResponse } from '@/lib/api/response';
 import { handleSupabaseError } from '@/lib/api/error-handler';
 import { createServerAdminClient } from '@/lib/supabase/server';
@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
 
     const supabase = createServerAdminClient();
     const body = await request.json();
-    const { mockupId, reviewerIds, dueDate, message, reviewType } = body;
+    const { mockupId, reviewerIds = [], externalEmails = [], dueDate, message, reviewType } = body;
 
     logger.api('/api/mockups/request-review', 'POST', { orgId, userId, mockupId });
 
@@ -28,7 +28,10 @@ export async function POST(request: NextRequest) {
       return badRequestResponse('mockupId is required');
     }
 
-    if (!reviewerIds || reviewerIds.length === 0) {
+    const hasOrgReviewers = reviewerIds && reviewerIds.length > 0;
+    const hasExternalReviewers = externalEmails && externalEmails.length > 0;
+
+    if (!hasOrgReviewers && !hasExternalReviewers) {
       return badRequestResponse('At least one reviewer is required');
     }
 
@@ -44,15 +47,11 @@ export async function POST(request: NextRequest) {
       return notFoundResponse('Mockup not found');
     }
 
-    // Get reviewer details from org_memberships
-    const { data: reviewers, error: reviewersError } = await supabase
-      .from('org_memberships')
-      .select('user_id, user_name, user_email, user_image_url')
-      .eq('organization_id', orgId)
-      .in('user_id', reviewerIds);
-
-    if (reviewersError || !reviewers) {
-      return handleSupabaseError(reviewersError || new Error('Failed to fetch reviewers'));
+    // Get reviewer details from Clerk for org members
+    let orgReviewers: { id: string; name: string; email: string }[] = [];
+    if (hasOrgReviewers) {
+      const allMembers = await getOrgMembers(orgId);
+      orgReviewers = allMembers.filter(m => reviewerIds.includes(m.id));
     }
 
     // Create review request record
@@ -73,17 +72,27 @@ export async function POST(request: NextRequest) {
       return handleSupabaseError(reviewError);
     }
 
-    // Create review assignments for each reviewer
-    const assignments = reviewers.map((reviewer: { user_id: string; user_email: string }) => ({
+    // Create review assignments for org members
+    const orgAssignments = orgReviewers.map((reviewer) => ({
       review_id: review.id,
-      user_id: reviewer.user_id,
-      email: reviewer.user_email,
+      user_id: reviewer.id,
+      email: reviewer.email,
       status: 'pending',
     }));
 
+    // Create review assignments for external reviewers (no user_id)
+    const externalAssignments = (externalEmails as string[]).map((email: string) => ({
+      review_id: review.id,
+      user_id: null,
+      email: email,
+      status: 'pending',
+    }));
+
+    const allAssignments = [...orgAssignments, ...externalAssignments];
+
     const { error: assignmentsError } = await supabase
       .from('cardmock_review_assignments')
-      .insert(assignments);
+      .insert(allAssignments);
 
     if (assignmentsError) {
       // Rollback review if assignments fail
@@ -97,7 +106,7 @@ export async function POST(request: NextRequest) {
       .update({ status: 'in_review' })
       .eq('id', mockupId);
 
-    // Send email notifications to reviewers
+    // Send email notifications to all reviewers
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://cardmock.app';
     const reviewUrl = `${baseUrl}/mockups/${mockupId}`;
     const userInfo = await getUserInfo(userId);
@@ -135,18 +144,20 @@ export async function POST(request: NextRequest) {
       </div>
     `;
 
-    const reviewerEmails = reviewers
-      .filter((r: { user_email?: string }) => r.user_email)
-      .map((r: { user_email?: string }) => r.user_email) as string[];
+    // Combine all reviewer emails (org members + external)
+    const allReviewerEmails = [
+      ...orgReviewers.map(r => r.email).filter(Boolean),
+      ...(externalEmails as string[]),
+    ];
 
-    if (reviewerEmails.length > 0) {
+    if (allReviewerEmails.length > 0) {
       try {
         await sendEmail({
-          to: reviewerEmails,
+          to: allReviewerEmails,
           subject: `Review requested: ${mockup.mockup_name}`,
           html: htmlContent,
         });
-        logger.info('Review request emails sent', { mockupId, reviewerCount: reviewerEmails.length });
+        logger.info('Review request emails sent', { mockupId, reviewerCount: allReviewerEmails.length });
       } catch (emailError) {
         logger.error('Failed to send review request emails', emailError as Error, { mockupId });
         // Don't fail the whole request if email fails
@@ -160,7 +171,8 @@ export async function POST(request: NextRequest) {
       actor_id: userId,
       metadata: {
         review_id: review.id,
-        reviewer_count: reviewers.length,
+        reviewer_count: allAssignments.length,
+        external_count: externalAssignments.length,
         due_date: dueDate,
         review_type: reviewType,
       },
