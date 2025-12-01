@@ -163,7 +163,7 @@ export async function POST(request: NextRequest) {
         due_date: dueDate,
         review_type: reviewType,
       },
-    }).then(() => {}).catch(() => {});
+    }).then(() => {}, () => {});
 
     return successResponse({
       review,
