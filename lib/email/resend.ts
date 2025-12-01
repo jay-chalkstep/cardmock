@@ -3,8 +3,8 @@ import { logger } from '@/lib/utils/logger';
 
 // Initialize Resend with API key
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'noreply@assetstudio.com';
-const FROM_NAME = process.env.RESEND_FROM_NAME || 'Asset Studio';
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'noreply@cardmock.com';
+const FROM_NAME = process.env.RESEND_FROM_NAME || 'CardMock';
 
 let resend: Resend | null = null;
 
