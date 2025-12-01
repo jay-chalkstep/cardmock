@@ -35,17 +35,17 @@ export async function POST(request: NextRequest) {
       return successResponse({ logged: false });
     }
 
-    // Log to public_share_analytics
-    await supabase.from('public_share_analytics').insert({
+    // Log to public_share_analytics (fire and forget)
+    supabase.from('public_share_analytics').insert({
       link_id: shareLinkId,
       actions_taken: [action],
       viewer_ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
       user_agent: request.headers.get('user-agent'),
-    }).catch(() => {});
+    }).then(() => {}).catch(() => {});
 
     // Also log to cardmock_activity if it's a download
     if (action === 'download' && shareLink.asset_id) {
-      await supabase.from('cardmock_activity').insert({
+      supabase.from('cardmock_activity').insert({
         cardmock_id: shareLink.asset_id,
         action: 'downloaded',
         actor_id: null, // Public download, no authenticated user
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
           source: 'public_share',
           share_link_id: shareLinkId,
         },
-      }).catch(() => {});
+      }).then(() => {}).catch(() => {});
     }
 
     return successResponse({ logged: true });

@@ -152,8 +152,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Log activity
-    await supabase.from('cardmock_activity').insert({
+    // Log activity (fire and forget)
+    supabase.from('cardmock_activity').insert({
       cardmock_id: mockupId,
       action: 'review_requested',
       actor_id: userId,
@@ -163,7 +163,7 @@ export async function POST(request: NextRequest) {
         due_date: dueDate,
         review_type: reviewType,
       },
-    }).catch(() => {});
+    }).then(() => {}).catch(() => {});
 
     return successResponse({
       review,
