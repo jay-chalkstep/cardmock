@@ -7,6 +7,8 @@ import { usePanelContext } from '@/lib/contexts/PanelContext';
 import GmailLayout from '@/components/layout/GmailLayout';
 import MockupGridCard from '@/components/mockups/MockupGridCard';
 import Toast from '@/components/Toast';
+import { CardMockDetailModal } from '@/components/cardmock';
+import type { CardMockData } from '@/components/cardmock';
 import {
   Grid3X3,
   List,
@@ -31,7 +33,18 @@ interface CardMock {
   mockup_image_url?: string;
   updated_at: string;
   created_at: string;
+  created_by?: string;
   brand_id?: string;
+  status?: 'draft' | 'in_review' | 'approved' | 'needs_changes';
+  brand?: {
+    id: string;
+    company_name: string;
+  };
+  project?: {
+    id: string;
+    name: string;
+    color: string;
+  };
 }
 
 type ViewType = 'grid' | 'list';
@@ -51,6 +64,10 @@ export default function CardMocksPage() {
   const [loading, setLoading] = useState(true);
   const [cardMocks, setCardMocks] = useState<CardMock[]>([]);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  // Detail modal state
+  const [selectedCardMock, setSelectedCardMock] = useState<CardMock | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   const showToast = (message: string, type: 'success' | 'error') => {
     const id = Date.now();
@@ -122,19 +139,23 @@ export default function CardMocksPage() {
   }, [cardMocks, searchQuery, sortBy]);
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this CardMock?')) return;
+    setCardMocks(prev => prev.filter(m => m.id !== id));
+    showToast('CardMock deleted', 'success');
+  };
 
-    try {
-      const response = await fetch(`/api/mockups/${id}`, { method: 'DELETE' });
-      if (response.ok) {
-        setCardMocks(prev => prev.filter(m => m.id !== id));
-        showToast('CardMock deleted', 'success');
-      } else {
-        throw new Error('Failed to delete');
-      }
-    } catch (error) {
-      showToast('Failed to delete CardMock', 'error');
-    }
+  const openDetailModal = (cardMock: CardMock) => {
+    setSelectedCardMock(cardMock);
+    setIsDetailModalOpen(true);
+  };
+
+  const closeDetailModal = () => {
+    setIsDetailModalOpen(false);
+    setSelectedCardMock(null);
+  };
+
+  const handleUpdate = () => {
+    // Refetch after updates (e.g., move, status change)
+    fetchCardMocks();
   };
 
   return (
@@ -292,6 +313,7 @@ export default function CardMocksPage() {
                     key={cardMock.id}
                     mockup={cardMock}
                     onDelete={handleDelete}
+                    onClick={() => openDetailModal(cardMock)}
                   />
                 ))}
               </div>
@@ -305,7 +327,7 @@ export default function CardMocksPage() {
                   return (
                     <div
                       key={cardMock.id}
-                      onClick={() => router.push(`/mockups/${cardMock.id}`)}
+                      onClick={() => openDetailModal(cardMock)}
                       className="flex items-center gap-4 p-4 hover:bg-[var(--bg-surface)] cursor-pointer transition-colors"
                     >
                       <div className="w-16 h-12 bg-[var(--bg-surface)] rounded-[var(--radius-sm)] overflow-hidden flex-shrink-0">
@@ -354,6 +376,17 @@ export default function CardMocksPage() {
           />
         ))}
       </div>
+
+      {/* Detail Modal */}
+      {selectedCardMock && (
+        <CardMockDetailModal
+          cardMock={selectedCardMock as CardMockData}
+          isOpen={isDetailModalOpen}
+          onClose={closeDetailModal}
+          onDelete={handleDelete}
+          onUpdate={handleUpdate}
+        />
+      )}
     </>
   );
 }
