@@ -124,8 +124,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Log activity
-    await supabase.from('cardmock_activity').insert({
+    // Log activity (fire and forget)
+    supabase.from('cardmock_activity').insert({
       cardmock_id: mockupId,
       action: 'shared',
       actor_id: userId,
@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
         recipient_count: emailList.length,
         include_download: includeDownload,
       },
-    }).catch(() => {}); // Don't fail if activity logging fails
+    }).then(() => {}).catch(() => {});
 
     return successResponse({
       shareLink: shareUrl,

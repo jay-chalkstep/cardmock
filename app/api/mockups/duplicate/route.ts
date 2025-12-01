@@ -79,8 +79,8 @@ export async function POST(request: NextRequest) {
       newName: newName.trim(),
     });
 
-    // Log activity on original
-    await supabase.from('cardmock_activity').insert({
+    // Log activity on original (fire and forget, don't block response)
+    supabase.from('cardmock_activity').insert({
       cardmock_id: mockupId,
       action: 'duplicated',
       actor_id: userId,
@@ -88,17 +88,17 @@ export async function POST(request: NextRequest) {
         duplicate_id: duplicate.id,
         new_name: newName.trim(),
       },
-    }).catch(() => {});
+    }).then(() => {}).catch(() => {});
 
-    // Log activity on duplicate
-    await supabase.from('cardmock_activity').insert({
+    // Log activity on duplicate (fire and forget, don't block response)
+    supabase.from('cardmock_activity').insert({
       cardmock_id: duplicate.id,
       action: 'created',
       actor_id: userId,
       metadata: {
         duplicated_from: mockupId,
       },
-    }).catch(() => {});
+    }).then(() => {}).catch(() => {});
 
     return successResponse({ mockup: duplicate }, 201);
   } catch (error) {
