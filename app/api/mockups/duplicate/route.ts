@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
         duplicate_id: duplicate.id,
         new_name: newName.trim(),
       },
-    }).then(() => {}).catch(() => {});
+    }).then(() => {}, () => {});
 
     // Log activity on duplicate (fire and forget, don't block response)
     supabase.from('cardmock_activity').insert({
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
       metadata: {
         duplicated_from: mockupId,
       },
-    }).then(() => {}).catch(() => {});
+    }).then(() => {}, () => {});
 
     return successResponse({ mockup: duplicate }, 201);
   } catch (error) {

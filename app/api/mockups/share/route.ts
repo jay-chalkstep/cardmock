@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
         recipient_count: emailList.length,
         include_download: includeDownload,
       },
-    }).then(() => {}).catch(() => {});
+    }).then(() => {}, () => {});
 
     return successResponse({
       shareLink: shareUrl,

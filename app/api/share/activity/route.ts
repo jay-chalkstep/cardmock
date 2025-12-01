@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
       actions_taken: [action],
       viewer_ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
       user_agent: request.headers.get('user-agent'),
-    }).then(() => {}).catch(() => {});
+    }).then(() => {}, () => {});
 
     // Also log to cardmock_activity if it's a download
     if (action === 'download' && shareLink.asset_id) {
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
           source: 'public_share',
           share_link_id: shareLinkId,
         },
-      }).then(() => {}).catch(() => {});
+      }).then(() => {}, () => {});
     }
 
     return successResponse({ logged: true });
