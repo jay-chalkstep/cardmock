@@ -25,6 +25,7 @@ interface MockupGridCardProps {
   onDuplicate?: (id: string) => void;
   onMove?: (id: string) => void;
   onToggleFeatured?: (id: string) => void;
+  onClick?: () => void;
 }
 
 export default function MockupGridCard({
@@ -33,6 +34,7 @@ export default function MockupGridCard({
   onDuplicate,
   onMove,
   onToggleFeatured,
+  onClick,
 }: MockupGridCardProps) {
   const [showMenu, setShowMenu] = useState(false);
   const [imageError, setImageError] = useState(false);
@@ -52,60 +54,70 @@ export default function MockupGridCard({
   };
   const editedTime = getEditedTime();
 
+  const CardContent = (
+    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg hover:border-gray-300 transition-all cursor-pointer">
+      {/* Thumbnail */}
+      <div className="aspect-[4/3] bg-gray-50 relative overflow-hidden flex items-center justify-center p-3">
+        {thumbnailUrl && !imageError ? (
+          <img
+            src={thumbnailUrl}
+            alt={name}
+            className="max-w-full max-h-full object-contain rounded shadow-sm"
+            onError={() => setImageError(true)}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+            <div className="text-center">
+              <div className="w-12 h-12 mx-auto mb-2 rounded-lg bg-gray-300 flex items-center justify-center">
+                <span className="text-gray-500 text-xl font-bold">{name[0]?.toUpperCase()}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Featured badge */}
+        {mockup.is_featured && (
+          <div className="absolute top-2 left-2">
+            <Star size={16} className="text-yellow-500 fill-yellow-500" />
+          </div>
+        )}
+
+        {/* Project badge */}
+        {mockup.project && (
+          <div className="absolute top-2 right-2">
+            <span
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium text-white shadow-sm"
+              style={{ backgroundColor: mockup.project.color }}
+            >
+              {mockup.project.name}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Info */}
+      <div className="p-3">
+        <h3 className="text-sm font-medium text-gray-900 truncate mb-1">
+          {name}
+        </h3>
+        <p className="text-xs text-gray-500">
+          Edited {editedTime}
+        </p>
+      </div>
+    </div>
+  );
+
   return (
     <div className="group relative">
-      <Link href={`/mockups/${mockup.id}`}>
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg hover:border-gray-300 transition-all cursor-pointer">
-          {/* Thumbnail */}
-          <div className="aspect-[4/3] bg-gray-50 relative overflow-hidden flex items-center justify-center p-3">
-            {thumbnailUrl && !imageError ? (
-              <img
-                src={thumbnailUrl}
-                alt={name}
-                className="max-w-full max-h-full object-contain rounded shadow-sm"
-                onError={() => setImageError(true)}
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
-                <div className="text-center">
-                  <div className="w-12 h-12 mx-auto mb-2 rounded-lg bg-gray-300 flex items-center justify-center">
-                    <span className="text-gray-500 text-xl font-bold">{name[0]?.toUpperCase()}</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Featured badge */}
-            {mockup.is_featured && (
-              <div className="absolute top-2 left-2">
-                <Star size={16} className="text-yellow-500 fill-yellow-500" />
-              </div>
-            )}
-
-            {/* Project badge */}
-            {mockup.project && (
-              <div className="absolute top-2 right-2">
-                <span
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium text-white shadow-sm"
-                  style={{ backgroundColor: mockup.project.color }}
-                >
-                  {mockup.project.name}
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* Info */}
-          <div className="p-3">
-            <h3 className="text-sm font-medium text-gray-900 truncate mb-1">
-              {name}
-            </h3>
-            <p className="text-xs text-gray-500">
-              Edited {editedTime}
-            </p>
-          </div>
+      {onClick ? (
+        <div onClick={onClick}>
+          {CardContent}
         </div>
-      </Link>
+      ) : (
+        <Link href={`/mockups/${mockup.id}`}>
+          {CardContent}
+        </Link>
+      )}
 
       {/* Action Menu Button */}
       {(onDelete || onDuplicate || onMove || onToggleFeatured) && (
