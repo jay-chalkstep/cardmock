@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { getAuthContext } from '@/lib/api/auth';
+import { getAuthContext, getUserInfo } from '@/lib/api/auth';
 import { successResponse, errorResponse, badRequestResponse, notFoundResponse } from '@/lib/api/response';
 import { handleSupabaseError } from '@/lib/api/error-handler';
 import { createServerAdminClient } from '@/lib/supabase/server';
@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
   try {
     const authResult = await getAuthContext();
     if (authResult instanceof Response) return authResult;
-    const { userId, orgId, user } = authResult;
+    const { userId, orgId } = authResult;
 
     const supabase = createServerAdminClient();
     const body = await request.json();
@@ -100,7 +100,8 @@ export async function POST(request: NextRequest) {
     // Send email notifications to reviewers
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://cardmock.app';
     const reviewUrl = `${baseUrl}/mockups/${mockupId}`;
-    const userName = user?.firstName || user?.emailAddresses?.[0]?.emailAddress || 'Someone';
+    const userInfo = await getUserInfo(userId);
+    const userName = userInfo.name || 'Someone';
 
     const htmlContent = `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto;">
