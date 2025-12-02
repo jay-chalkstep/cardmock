@@ -1,8 +1,9 @@
 'use client';
 
 import { CardTemplate } from '@/lib/supabase';
-import { FileType, CalendarDays } from 'lucide-react';
+import { FileType, CalendarDays, CreditCard, Wallet } from 'lucide-react';
 import Image from 'next/image';
+import { TEMPLATE_TYPES, TemplateTypeId } from '@/lib/templateTypes';
 
 interface TemplateCardProps {
   template: CardTemplate;
@@ -34,6 +35,15 @@ export default function TemplateCard({ template, isSelected, onClick }: Template
     if (!fileType) return 'Unknown';
     return fileType.toUpperCase();
   };
+
+  // Get template type info
+  const getTemplateTypeInfo = (typeId?: string) => {
+    if (!typeId) return { name: 'Unknown', category: 'physical' as const };
+    const type = TEMPLATE_TYPES[typeId as TemplateTypeId];
+    return type || { name: 'Unknown', category: 'physical' as const };
+  };
+
+  const templateType = getTemplateTypeInfo(template.template_type_id);
 
   return (
     <div
@@ -73,6 +83,16 @@ export default function TemplateCard({ template, isSelected, onClick }: Template
 
       {/* Template Info */}
       <div className="p-3">
+        {/* Template Type */}
+        <div className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)] mb-1">
+          {templateType.category === 'digital' ? (
+            <Wallet size={12} className="text-purple-500" />
+          ) : (
+            <CreditCard size={12} className="text-blue-500" />
+          )}
+          <span className="font-medium">{templateType.name}</span>
+        </div>
+
         {/* Template Name */}
         <h3 className="font-medium text-sm text-[var(--text-primary)] truncate mb-2">
           {template.template_name}

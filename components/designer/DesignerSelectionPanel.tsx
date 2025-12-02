@@ -3,8 +3,9 @@
  * Contains brand and template selection UI
  */
 
-import { Layers, Image as ImageIcon, CreditCard, ChevronRight } from 'lucide-react';
+import { Layers, Image as ImageIcon, CreditCard, Wallet, ChevronRight } from 'lucide-react';
 import type { Logo, CardTemplate } from '@/lib/supabase';
+import { TEMPLATE_TYPES, TemplateTypeId } from '@/lib/templateTypes';
 
 interface DesignerSelectionPanelProps {
   selectedBrand: Logo | null;
@@ -48,10 +49,34 @@ export default function DesignerSelectionPanel({
           onClick={onShowTemplateSelector}
           className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-between"
         >
-          <span className="flex items-center gap-2">
-            <CreditCard className="h-4 w-4" />
-            {selectedTemplate ? selectedTemplate.template_name : 'Select Template'}
-          </span>
+          {selectedTemplate ? (
+            <span className="flex flex-col items-start gap-0.5">
+              <span className="flex items-center gap-1.5 text-xs text-gray-500">
+                {(() => {
+                  const templateType = selectedTemplate.template_type_id
+                    ? TEMPLATE_TYPES[selectedTemplate.template_type_id as TemplateTypeId]
+                    : null;
+                  if (!templateType) return null;
+                  return (
+                    <>
+                      {templateType.category === 'digital' ? (
+                        <Wallet className="h-3 w-3 text-purple-500" />
+                      ) : (
+                        <CreditCard className="h-3 w-3 text-blue-500" />
+                      )}
+                      <span>{templateType.name}</span>
+                    </>
+                  );
+                })()}
+              </span>
+              <span className="text-sm text-gray-900">{selectedTemplate.template_name}</span>
+            </span>
+          ) : (
+            <span className="flex items-center gap-2">
+              <CreditCard className="h-4 w-4" />
+              Select Template
+            </span>
+          )}
           <ChevronRight className="h-4 w-4" />
         </button>
       </div>

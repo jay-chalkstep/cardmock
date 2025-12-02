@@ -18,8 +18,10 @@ import PrecisionToolsPanel from '@/components/designer/PrecisionToolsPanel';
 import {
   Grid,
   Loader2,
-  CreditCard
+  CreditCard,
+  Wallet
 } from 'lucide-react';
+import { TEMPLATE_TYPES, TemplateTypeId } from '@/lib/templateTypes';
 import { KonvaEventObject } from 'konva/lib/Node';
 import type { KonvaCanvasRef } from '@/components/designer/KonvaCanvas';
 import {
@@ -151,6 +153,11 @@ function DesignerPageContent() {
   // Brand state for saving
   const [selectedBrandIdForSave, setSelectedBrandIdForSave] = useState<string | null>(null);
 
+  // Edit mode state
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingCardId, setEditingCardId] = useState<string | null>(null);
+  const [isLoadingCard, setIsLoadingCard] = useState(false);
+
   // Refs
   const canvasRef = useRef<KonvaCanvasRef>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -180,6 +187,10 @@ function DesignerPageContent() {
   useEffect(() => {
     const brandIdParam = searchParams?.get('brandId');
     const logoVariantIdParam = searchParams?.get('logoVariantId');
+    const cardIdParam = searchParams?.get('cardId');
+
+    // Don't process brand/logo params if we're loading a card for editing
+    if (cardIdParam) return;
 
     if (brandGroups.length > 0) {
       if (logoVariantIdParam) {
@@ -205,6 +216,80 @@ function DesignerPageContent() {
       }
     }
   }, [searchParams, brandGroups]);
+
+  // Handle cardId from query params (for editing existing card)
+  useEffect(() => {
+    const cardIdParam = searchParams?.get('cardId');
+
+    if (!cardIdParam || isLoadingCard || editingCardId === cardIdParam) return;
+    if (brandGroups.length === 0 || templates.length === 0) return;
+
+    const loadCardForEditing = async () => {
+      setIsLoadingCard(true);
+      try {
+        const response = await fetch(`/api/mockups/${cardIdParam}`);
+        if (!response.ok) {
+          throw new Error('Failed to load card');
+        }
+        const result = await response.json();
+        const mockup = result.data?.mockup;
+
+        if (!mockup) {
+          throw new Error('Card not found');
+        }
+
+        // Set edit mode
+        setIsEditMode(true);
+        setEditingCardId(cardIdParam);
+        setMockupName(mockup.mockup_name || '');
+
+        // Set folder if present
+        if (mockup.folder_id) {
+          setSelectedFolderId(mockup.folder_id);
+        }
+
+        // Find and load the logo
+        if (mockup.logo_id) {
+          for (const brand of brandGroups) {
+            const variant = brand.variants.find(v => v.id === mockup.logo_id);
+            if (variant) {
+              setSelectedBrandIdForSave(brand.id);
+              setExpandedBrand(brand.id);
+              loadBrandImage(variant);
+
+              // Set logo position and scale after loading
+              // Position values are stored as percentages (0-100)
+              if (mockup.logo_x !== undefined && mockup.logo_y !== undefined) {
+                const x = (mockup.logo_x / 100) * stageWidth;
+                const y = (mockup.logo_y / 100) * stageHeight;
+                setLogoPosition({ x, y });
+              }
+              if (mockup.logo_scale !== undefined) {
+                setLogoScale(mockup.logo_scale);
+              }
+              break;
+            }
+          }
+        }
+
+        // Find and load the template
+        if (mockup.template_id) {
+          const template = templates.find(t => t.id === mockup.template_id);
+          if (template) {
+            loadTemplateImage(template);
+          }
+        }
+
+      } catch (error) {
+        console.error('Error loading card for editing:', error);
+        showToast('Failed to load card for editing', 'error');
+      } finally {
+        setIsLoadingCard(false);
+      }
+    };
+
+    loadCardForEditing();
+  }, [searchParams, brandGroups, templates, stageWidth, stageHeight, editingCardId, isLoadingCard]);
 
 
   // Handle responsive canvas sizing
@@ -730,9 +815,14 @@ function DesignerPageContent() {
       formData.append('logoY', ((logoPosition.y / stageHeight) * 100).toString());
       formData.append('logoScale', logoScale.toString());
 
-      // Save via API
-      const apiResponse = await fetch('/api/mockups', {
-        method: 'POST',
+      // Save via API - use PUT for editing, POST for creating
+      const apiUrl = isEditMode && editingCardId
+        ? `/api/mockups/${editingCardId}`
+        : '/api/mockups';
+      const apiMethod = isEditMode && editingCardId ? 'PUT' : 'POST';
+
+      const apiResponse = await fetch(apiUrl, {
+        method: apiMethod,
         body: formData
       });
 
@@ -752,9 +842,12 @@ function DesignerPageContent() {
       const result = await apiResponse.json();
       console.log('Mockup saved successfully:', result);
 
-      showToast('Mockup saved successfully!', 'success');
-      // Reset form
-      setMockupName('');
+      showToast(isEditMode ? 'Mockup updated successfully!' : 'Mockup saved successfully!', 'success');
+
+      // If creating new mockup, reset form. If editing, keep the state.
+      if (!isEditMode) {
+        setMockupName('');
+      }
     } catch (error) {
       console.error('Error saving mockup:', {
         error: error,
@@ -770,8 +863,12 @@ function DesignerPageContent() {
   return (
     <GmailLayout>
       <div className="max-w-full">
-        <h2 className="text-3xl font-bold text-gray-900 mb-2">Asset Designer</h2>
-        <p className="text-gray-600 mb-6">Create custom assets with your brands</p>
+        <h2 className="text-3xl font-bold text-gray-900 mb-2">
+          {isEditMode ? 'Edit Asset' : 'Asset Designer'}
+        </h2>
+        <p className="text-gray-600 mb-6">
+          {isEditMode ? 'Modify your existing asset' : 'Create custom assets with your brands'}
+        </p>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Control Panel */}
@@ -859,6 +956,7 @@ function DesignerPageContent() {
                 onSave={saveMockup}
                 saving={saving}
                 canSave={!!mockupName.trim()}
+                isEditMode={isEditMode}
               />
             )}
           </div>
@@ -893,6 +991,11 @@ function DesignerPageContent() {
                       onGuideMove={handleGuideMove}
                       activeSnapGuideId={activeSnapGuideId}
                     />
+                  </div>
+                ) : isLoadingCard ? (
+                  <div className="flex flex-col items-center justify-center h-96 text-gray-400">
+                    <Loader2 className="h-16 w-16 mb-4 animate-spin" />
+                    <p>Loading card for editing...</p>
                   </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center h-96 text-gray-400">
@@ -929,20 +1032,37 @@ function DesignerPageContent() {
               </div>
               <div className="p-6 overflow-y-auto max-h-[60vh]">
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                  {templates.map((template) => (
-                    <button
-                      key={template.id}
-                      onClick={() => loadTemplateImage(template)}
-                      className="border border-gray-200 rounded-lg hover:border-[#374151] hover:shadow-md transition-all overflow-hidden"
-                    >
-                      <img
-                        src={template.template_url}
-                        alt={template.template_name}
-                        className="w-full h-32 object-cover"
-                      />
-                      <p className="p-2 text-sm text-gray-700 truncate">{template.template_name}</p>
-                    </button>
-                  ))}
+                  {templates.map((template) => {
+                    const templateType = template.template_type_id
+                      ? TEMPLATE_TYPES[template.template_type_id as TemplateTypeId]
+                      : null;
+                    return (
+                      <button
+                        key={template.id}
+                        onClick={() => loadTemplateImage(template)}
+                        className="border border-gray-200 rounded-lg hover:border-[#374151] hover:shadow-md transition-all overflow-hidden text-left"
+                      >
+                        <img
+                          src={template.template_url}
+                          alt={template.template_name}
+                          className="w-full h-32 object-cover"
+                        />
+                        <div className="p-2">
+                          {templateType && (
+                            <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-1">
+                              {templateType.category === 'digital' ? (
+                                <Wallet size={12} className="text-purple-500" />
+                              ) : (
+                                <CreditCard size={12} className="text-blue-500" />
+                              )}
+                              <span className="font-medium">{templateType.name}</span>
+                            </div>
+                          )}
+                          <p className="text-sm text-gray-700 truncate">{template.template_name}</p>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
               <div className="p-6 border-t">
