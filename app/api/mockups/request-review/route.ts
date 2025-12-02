@@ -38,19 +38,23 @@ export async function POST(request: NextRequest) {
     }
 
     // First, check if mockup exists at all (for debugging)
+    console.log('[request-review] Querying assets table for mockupId:', mockupId);
+
     const { data: mockupCheck, error: checkError } = await supabase
       .from('assets')
       .select('id, organization_id, mockup_name, mockup_image_url, status')
       .eq('id', mockupId)
       .single();
 
+    console.log('[request-review] Query result:', {
+      hasData: !!mockupCheck,
+      hasError: !!checkError,
+      error: checkError ? JSON.stringify(checkError) : null,
+      data: mockupCheck ? { id: mockupCheck.id, name: mockupCheck.mockup_name } : null
+    });
+
     if (checkError || !mockupCheck) {
-      logger.error('Request review - mockup does not exist', checkError ? {
-        message: checkError.message,
-        code: checkError.code,
-        details: checkError.details,
-        hint: checkError.hint,
-      } : null, { mockupId });
+      console.error('[request-review] MOCKUP NOT FOUND - Full error:', JSON.stringify(checkError, null, 2));
       return notFoundResponse('Mockup not found');
     }
 
