@@ -39,7 +39,8 @@ export function createServerAdminClient() {
   }
 
   if (!supabaseServiceKey) {
-    // Fall back to anon key if service key not available
+    // WARNING: Service key not available - using anon key means RLS applies!
+    console.warn('[Supabase] SUPABASE_SERVICE_ROLE_KEY not set - falling back to anon key. RLS policies will apply!');
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     if (!supabaseAnonKey) {
       throw new Error('Neither SUPABASE_SERVICE_ROLE_KEY nor NEXT_PUBLIC_SUPABASE_ANON_KEY is set');
