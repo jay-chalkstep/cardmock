@@ -40,14 +40,26 @@ export async function POST(request: NextRequest) {
     // First, check if mockup exists at all (for debugging)
     const { data: mockupCheck, error: checkError } = await supabase
       .from('assets')
-      .select('id, organization_id, mockup_name')
+      .select('id, organization_id, mockup_name, mockup_image_url, status')
       .eq('id', mockupId)
       .single();
 
     if (checkError || !mockupCheck) {
-      logger.error('Request review - mockup does not exist', checkError, { mockupId });
+      logger.error('Request review - mockup does not exist', checkError ? {
+        message: checkError.message,
+        code: checkError.code,
+        details: checkError.details,
+        hint: checkError.hint,
+      } : null, { mockupId });
       return notFoundResponse('Mockup not found');
     }
+
+    logger.info('Request review - mockup found', {
+      mockupId,
+      mockupOrgId: mockupCheck.organization_id,
+      requestOrgId: orgId,
+      mockupName: mockupCheck.mockup_name,
+    });
 
     // Log if there's an organization mismatch
     if (mockupCheck.organization_id !== orgId) {
@@ -68,18 +80,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify mockup exists and belongs to org
-    const { data: mockup, error: mockupError } = await supabase
-      .from('assets')
-      .select('id, mockup_name, mockup_image_url, organization_id, status')
-      .eq('id', mockupId)
-      .eq('organization_id', orgId)
-      .single();
-
-    if (mockupError || !mockup) {
-      logger.error('Request review - mockup query failed', mockupError, { mockupId, orgId });
-      return notFoundResponse('Mockup not found');
-    }
+    // Use the mockup data from the first query (already verified org matches)
+    const mockup = mockupCheck;
 
     // Get reviewer details from Clerk for org members
     let orgReviewers: { id: string; name: string; email: string }[] = [];
