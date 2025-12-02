@@ -164,6 +164,136 @@ export async function PATCH(
 }
 
 /**
+ * PUT /api/mockups/[id]
+ *
+ * Update an existing mockup (for editing in designer)
+ *
+ * Accepts FormData with:
+ * - image: Blob (new mockup image)
+ * - mockupName: string
+ * - logoId: string
+ * - templateId: string
+ * - folderId?: string
+ * - logoX: number (percentage)
+ * - logoY: number (percentage)
+ * - logoScale: number (percentage)
+ */
+export async function PUT(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const authResult = await getAuthContext();
+    if (authResult instanceof Response) return authResult;
+    const { userId, orgId } = authResult;
+
+    const { id } = await context.params;
+
+    logger.api(`/api/mockups/${id}`, 'PUT', { orgId, userId });
+
+    // Get the mockup to check ownership
+    const { data: existingMockup, error: fetchError } = await supabaseServer
+      .from('assets')
+      .select('*')
+      .eq('id', id)
+      .eq('organization_id', orgId)
+      .single();
+
+    if (fetchError || !existingMockup) {
+      return notFoundResponse('Mockup not found');
+    }
+
+    // Check if user owns this mockup (or if it's legacy data without created_by)
+    if (existingMockup.created_by && existingMockup.created_by !== userId) {
+      return forbiddenResponse('You do not have permission to modify this mockup');
+    }
+
+    // Parse form data
+    const formData = await request.formData();
+    const imageBlob = formData.get('image') as Blob;
+    const mockupName = formData.get('mockupName') as string;
+    const logoId = formData.get('logoId') as string;
+    const templateId = formData.get('templateId') as string;
+    const folderId = formData.get('folderId') as string | null;
+    const logoX = parseFloat(formData.get('logoX') as string);
+    const logoY = parseFloat(formData.get('logoY') as string);
+    const logoScale = parseFloat(formData.get('logoScale') as string);
+
+    if (!mockupName || !logoId || !templateId || !imageBlob) {
+      return errorResponse(new Error('Missing required fields'), 'Missing required fields: mockupName, logoId, templateId, or image');
+    }
+
+    // Delete old image from storage if it exists
+    if (existingMockup.mockup_image_url) {
+      const url = existingMockup.mockup_image_url;
+      const match = url.match(/\/card-mockups\/([^?]+)/);
+
+      if (match && match[1]) {
+        const { error: deleteError } = await supabaseServer.storage
+          .from('card-mockups')
+          .remove([match[1]]);
+
+        if (deleteError) {
+          logger.warn('Error deleting old storage file, continuing with update', { error: deleteError });
+        }
+      }
+    }
+
+    // Upload new image to storage
+    const fileName = `${Date.now()}-${mockupName.toLowerCase().replace(/[^a-z0-9]/g, '-')}.png`;
+
+    const { data: uploadData, error: uploadError } = await supabaseServer.storage
+      .from('card-mockups')
+      .upload(fileName, imageBlob, {
+        contentType: 'image/png',
+        cacheControl: '3600'
+      });
+
+    if (uploadError) {
+      logger.error('Storage upload error', uploadError, { fileName, bucket: 'card-mockups' });
+      return errorResponse(uploadError, 'Failed to upload image');
+    }
+
+    // Get public URL
+    const { data: urlData } = supabaseServer.storage
+      .from('card-mockups')
+      .getPublicUrl(fileName);
+
+    const publicUrl = urlData.publicUrl;
+
+    // Update database record
+    const updateData = {
+      mockup_name: mockupName,
+      logo_id: logoId,
+      template_id: templateId,
+      folder_id: folderId || null,
+      logo_x: logoX,
+      logo_y: logoY,
+      logo_scale: logoScale,
+      mockup_image_url: publicUrl,
+      updated_at: new Date().toISOString()
+    };
+
+    const { data: updatedMockup, error: updateError } = await supabaseServer
+      .from('assets')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (updateError) {
+      return handleSupabaseError(updateError);
+    }
+
+    logger.info('Mockup updated successfully', { mockupId: id, mockupName });
+
+    return successResponse({ mockup: updatedMockup });
+  } catch (error) {
+    return errorResponse(error, 'Failed to update mockup');
+  }
+}
+
+/**
  * DELETE /api/mockups/[id]
  *
  * Delete a mockup

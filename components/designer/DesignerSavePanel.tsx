@@ -26,6 +26,7 @@ interface DesignerSavePanelProps {
   onSave: () => void;
   saving: boolean;
   canSave: boolean;
+  isEditMode?: boolean;
 }
 
 export default function DesignerSavePanel({
@@ -41,10 +42,13 @@ export default function DesignerSavePanel({
   onSave,
   saving,
   canSave,
+  isEditMode = false,
 }: DesignerSavePanelProps) {
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-      <h3 className="font-semibold text-gray-900 mb-3">Save Mockup</h3>
+      <h3 className="font-semibold text-gray-900 mb-3">
+        {isEditMode ? 'Update Mockup' : 'Save Mockup'}
+      </h3>
       <div className="space-y-3">
         <div>
           <label className="text-sm text-gray-600 mb-1 block">Mockup Name</label>
@@ -90,12 +94,12 @@ export default function DesignerSavePanel({
           {saving ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
-              Saving...
+              {isEditMode ? 'Updating...' : 'Saving...'}
             </>
           ) : (
             <>
               <Save className="h-4 w-4" />
-              Save Mockup
+              {isEditMode ? 'Update Mockup' : 'Save Mockup'}
             </>
           )}
         </button>

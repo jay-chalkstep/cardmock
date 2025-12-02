@@ -112,7 +112,7 @@ export default function CardMockDetailModal({
   }, [isOpen, onClose]);
 
   const handleEdit = () => {
-    router.push(`/designer/${cardMock.id}`);
+    router.push(`/designer?cardId=${cardMock.id}`);
     onClose();
   };
 
