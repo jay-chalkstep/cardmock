@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
 
     const { data: mockupCheck, error: checkError } = await supabase
       .from('assets')
-      .select('id, organization_id, mockup_name, mockup_image_url, status')
+      .select('id, organization_id, mockup_name, mockup_image_url')
       .eq('id', mockupId)
       .single();
 
