@@ -116,18 +116,25 @@ export default function RequestReviewModal({
     setIsSubmitting(true);
     setError('');
 
+    // Debug: Log what we're sending
+    console.log('Request Review - cardMock:', cardMock);
+    console.log('Request Review - cardMock.id:', cardMock.id);
+
     try {
+      const requestBody = {
+        mockupId: cardMock.id,
+        reviewerIds: selectedReviewers,
+        externalEmails: externalReviewers.map(r => r.email),
+        dueDate: dueDate || null,
+        message,
+        reviewType,
+      };
+      console.log('Request Review - sending:', requestBody);
+
       const response = await fetch('/api/mockups/request-review', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          mockupId: cardMock.id,
-          reviewerIds: selectedReviewers,
-          externalEmails: externalReviewers.map(r => r.email),
-          dueDate: dueDate || null,
-          message,
-          reviewType,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {

@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getAuthContext, getUserInfo, getOrgMembers } from '@/lib/api/auth';
 import { successResponse, errorResponse, badRequestResponse, notFoundResponse } from '@/lib/api/response';
 import { handleSupabaseError } from '@/lib/api/error-handler';
@@ -23,8 +23,10 @@ export async function POST(request: NextRequest) {
     const { mockupId, reviewerIds = [], externalEmails = [], dueDate, message, reviewType } = body;
 
     logger.api('/api/mockups/request-review', 'POST', { orgId, userId, mockupId });
+    logger.info('Request review - auth context', { orgId, userId, mockupId });
 
     if (!mockupId) {
+      logger.error('Request review - mockupId is missing', null, { body });
       return badRequestResponse('mockupId is required');
     }
 
@@ -33,6 +35,37 @@ export async function POST(request: NextRequest) {
 
     if (!hasOrgReviewers && !hasExternalReviewers) {
       return badRequestResponse('At least one reviewer is required');
+    }
+
+    // First, check if mockup exists at all (for debugging)
+    const { data: mockupCheck, error: checkError } = await supabase
+      .from('assets')
+      .select('id, organization_id, mockup_name')
+      .eq('id', mockupId)
+      .single();
+
+    if (checkError || !mockupCheck) {
+      logger.error('Request review - mockup does not exist', checkError, { mockupId });
+      return notFoundResponse('Mockup not found');
+    }
+
+    // Log if there's an organization mismatch
+    if (mockupCheck.organization_id !== orgId) {
+      logger.error('Request review - organization mismatch', null, {
+        mockupId,
+        mockupOrgId: mockupCheck.organization_id,
+        requestOrgId: orgId,
+        mockupName: mockupCheck.mockup_name,
+      });
+      // Return a more helpful error message for organization mismatch
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'This mockup belongs to a different organization. Please refresh the page and try again.',
+          code: 'ORG_MISMATCH'
+        },
+        { status: 403 }
+      );
     }
 
     // Verify mockup exists and belongs to org
@@ -44,6 +77,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (mockupError || !mockup) {
+      logger.error('Request review - mockup query failed', mockupError, { mockupId, orgId });
       return notFoundResponse('Mockup not found');
     }
 

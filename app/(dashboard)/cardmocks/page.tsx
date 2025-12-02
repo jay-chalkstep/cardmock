@@ -82,9 +82,11 @@ export default function CardMocksPage() {
     setActiveNav('cardmocks');
   }, [setActiveNav]);
 
-  // Fetch all org CardMocks
+  // Fetch all org CardMocks and close any open modal when org changes
   useEffect(() => {
     if (organization?.id) {
+      // Close any open modal when organization changes to prevent stale data
+      closeDetailModal();
       fetchCardMocks();
     }
   }, [organization?.id]);
