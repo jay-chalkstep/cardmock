@@ -18,8 +18,10 @@ import PrecisionToolsPanel from '@/components/designer/PrecisionToolsPanel';
 import {
   Grid,
   Loader2,
-  CreditCard
+  CreditCard,
+  Wallet
 } from 'lucide-react';
+import { TEMPLATE_TYPES, TemplateTypeId } from '@/lib/templateTypes';
 import { KonvaEventObject } from 'konva/lib/Node';
 import type { KonvaCanvasRef } from '@/components/designer/KonvaCanvas';
 import {
@@ -1030,20 +1032,37 @@ function DesignerPageContent() {
               </div>
               <div className="p-6 overflow-y-auto max-h-[60vh]">
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                  {templates.map((template) => (
-                    <button
-                      key={template.id}
-                      onClick={() => loadTemplateImage(template)}
-                      className="border border-gray-200 rounded-lg hover:border-[#374151] hover:shadow-md transition-all overflow-hidden"
-                    >
-                      <img
-                        src={template.template_url}
-                        alt={template.template_name}
-                        className="w-full h-32 object-cover"
-                      />
-                      <p className="p-2 text-sm text-gray-700 truncate">{template.template_name}</p>
-                    </button>
-                  ))}
+                  {templates.map((template) => {
+                    const templateType = template.template_type_id
+                      ? TEMPLATE_TYPES[template.template_type_id as TemplateTypeId]
+                      : null;
+                    return (
+                      <button
+                        key={template.id}
+                        onClick={() => loadTemplateImage(template)}
+                        className="border border-gray-200 rounded-lg hover:border-[#374151] hover:shadow-md transition-all overflow-hidden text-left"
+                      >
+                        <img
+                          src={template.template_url}
+                          alt={template.template_name}
+                          className="w-full h-32 object-cover"
+                        />
+                        <div className="p-2">
+                          {templateType && (
+                            <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-1">
+                              {templateType.category === 'digital' ? (
+                                <Wallet size={12} className="text-purple-500" />
+                              ) : (
+                                <CreditCard size={12} className="text-blue-500" />
+                              )}
+                              <span className="font-medium">{templateType.name}</span>
+                            </div>
+                          )}
+                          <p className="text-sm text-gray-700 truncate">{template.template_name}</p>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
               <div className="p-6 border-t">
